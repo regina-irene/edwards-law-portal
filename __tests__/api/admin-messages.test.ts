@@ -38,4 +38,25 @@ describe("POST /api/admin/messages", () => {
     const res = await POST(req)
     expect(res.status).toBe(201)
   })
+
+  it("returns 401 for unauthenticated request", async () => {
+    mockAuth.mockResolvedValueOnce(null)
+    const req = new Request("http://localhost/api/admin/messages", {
+      method: "POST",
+      body: JSON.stringify({ clientId: "C001", body: "test" }),
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(401)
+  })
+
+  it("returns 400 when body is missing", async () => {
+    mockAuth.mockResolvedValueOnce({ user: { email: "admin@edwardslaw.com" } })
+    mockSql.mockResolvedValueOnce({ rows: [{ email: "admin@edwardslaw.com" }] })
+    const req = new Request("http://localhost/api/admin/messages", {
+      method: "POST",
+      body: JSON.stringify({ clientId: "C001" }),
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(400)
+  })
 })

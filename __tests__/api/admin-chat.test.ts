@@ -34,6 +34,21 @@ describe("GET /api/admin/chat", () => {
     const body = await res.json()
     expect(body.messages).toHaveLength(1)
   })
+
+  it("returns 401 for unauthenticated request", async () => {
+    mockAuth.mockResolvedValueOnce(null)
+    const req = new Request("http://localhost/api/admin/chat?clientId=C001")
+    const res = await GET(req)
+    expect(res.status).toBe(401)
+  })
+
+  it("returns 400 when clientId is missing", async () => {
+    mockAuth.mockResolvedValueOnce({ user: { email: "admin@edwardslaw.com" } })
+    mockSql.mockResolvedValueOnce({ rows: [{ email: "admin@edwardslaw.com" }] })
+    const req = new Request("http://localhost/api/admin/chat")
+    const res = await GET(req)
+    expect(res.status).toBe(400)
+  })
 })
 
 describe("POST /api/admin/chat", () => {
