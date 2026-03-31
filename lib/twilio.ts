@@ -1,5 +1,5 @@
-// lib/twilio.ts
-import twilio from "twilio"
+// lib/twilio.ts — SMS disabled until Twilio is configured
+// To enable: install twilio package and replace this stub
 
 interface ReminderSMSOptions {
   to: string
@@ -9,21 +9,6 @@ interface ReminderSMSOptions {
 }
 
 export async function sendReminderSMS(opts: ReminderSMSOptions): Promise<void> {
-  const { to, taskName, overdue } = opts
-  const PORTAL_URL = process.env.AUTH_URL ?? "https://portal.edwardslaw.com"
-
-  const client = twilio(
-    process.env.TWILIO_ACCOUNT_SID!,
-    process.env.TWILIO_AUTH_TOKEN!
-  )
-
-  const body = overdue
-    ? `Edwards Family Law: OVERDUE — "${taskName}" requires your immediate attention. Log in: ${PORTAL_URL}`
-    : `Edwards Family Law: Reminder — "${taskName}" is due soon. Log in: ${PORTAL_URL}`
-
-  await client.messages.create({
-    body,
-    from: process.env.TWILIO_FROM_NUMBER!,
-    to,
-  })
+  // SMS not yet configured — no-op until Twilio is set up
+  console.log(`[SMS disabled] Would send to ${opts.to}: ${opts.taskName} (overdue: ${opts.overdue})`)
 }
