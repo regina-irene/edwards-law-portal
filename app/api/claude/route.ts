@@ -6,14 +6,24 @@ import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
   const session = await auth()
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const { tasks } = await req.json() as { tasks: AirtableTask[] }
-  if (!Array.isArray(tasks)) {
-    return NextResponse.json({ error: "tasks must be an array" }, { status: 400 })
+  let tasks: AirtableTask[]
+  try {
+    const body = await req.json()
+    if (!Array.isArray(body?.tasks)) {
+      return NextResponse.json({ error: "tasks must be an array" }, { status: 400 })
+    }
+    tasks = body.tasks
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
   }
 
-  const today = new Date().toISOString().split("T")[0]
-  const dashboard = await processTasks(tasks, today)
-  return NextResponse.json(dashboard)
+  try {
+    const today = new Date().toISOString().split("T")[0]
+    const dashboard = await processTasks(tasks, today)
+    return NextResponse.json(dashboard)
+  } catch {
+    return NextResponse.json({ error: "Failed to process tasks" }, { status: 500 })
+  }
 }

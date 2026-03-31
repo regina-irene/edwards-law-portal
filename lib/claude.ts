@@ -80,5 +80,15 @@ export async function processTasks(
   })
 
   const text = message.content[0].type === "text" ? message.content[0].text : ""
-  return JSON.parse(text) as DashboardData
+  try {
+    return JSON.parse(text) as DashboardData
+  } catch {
+    return {
+      sections: [
+        { title: "Outstanding Documents", items: [] },
+        { title: "In Progress", items: [] },
+        { title: "Completed", items: [] },
+      ],
+    }
+  }
 }
