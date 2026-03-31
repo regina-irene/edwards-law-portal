@@ -41,7 +41,7 @@ export default async function MessagesPage() {
     LIMIT 50
   `
 
-  const messages: Message[] = result.rows
+  const messages = result.rows as Message[]
 
   return (
     <div className="space-y-6 max-w-2xl">
