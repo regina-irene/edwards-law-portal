@@ -16,18 +16,26 @@ const DEFAULT_PAGES = [
 ]
 
 async function getNavPages(): Promise<string[]> {
-  const result = await sql`SELECT pages FROM nav_order LIMIT 1`
-  return result.rows[0]?.pages ?? DEFAULT_PAGES
+  try {
+    const result = await sql`SELECT pages FROM nav_order LIMIT 1`
+    return result.rows[0]?.pages ?? DEFAULT_PAGES
+  } catch {
+    return DEFAULT_PAGES
+  }
 }
 
 async function getUnreadCounts(clientId: string) {
-  const [msgResult, chatResult] = await Promise.all([
-    sql`SELECT COUNT(*) as count FROM messages WHERE client_id = ${clientId} AND read = false`,
-    sql`SELECT COUNT(*) as count FROM chat_messages WHERE client_id = ${clientId} AND sender = 'firm' AND read = false`,
-  ])
-  return {
-    messages: parseInt(msgResult.rows[0]?.count ?? "0"),
-    chat: parseInt(chatResult.rows[0]?.count ?? "0"),
+  try {
+    const [msgResult, chatResult] = await Promise.all([
+      sql`SELECT COUNT(*) as count FROM messages WHERE client_id = ${clientId} AND read = false`,
+      sql`SELECT COUNT(*) as count FROM chat_messages WHERE client_id = ${clientId} AND sender = 'firm' AND read = false`,
+    ])
+    return {
+      messages: parseInt(msgResult.rows[0]?.count ?? "0"),
+      chat: parseInt(chatResult.rows[0]?.count ?? "0"),
+    }
+  } catch {
+    return { messages: 0, chat: 0 }
   }
 }
 
@@ -43,6 +51,19 @@ export default async function ClientLayout({ children }: { children: React.React
           <h1 className="text-xl font-semibold text-gray-900">Access Not Found</h1>
           <p className="mt-2 text-gray-600">
             Your email is not linked to a client account. Please contact your attorney.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!client.clientId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-xl font-semibold text-gray-900">Account Setup Incomplete</h1>
+          <p className="mt-2 text-gray-600">
+            Your account is missing a client ID. Please contact your attorney.
           </p>
         </div>
       </div>
