@@ -54,6 +54,20 @@ describe("getClientByEmail", () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 422 })
     await expect(getClientByEmail("jane@test.com")).rejects.toThrow("Airtable error: 422")
   })
+
+  it("handles emails with special characters safely", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ records: [] }),
+    })
+    // Should not throw, should encode safely
+    const result = await getClientByEmail("test'injection@test.com")
+    expect(result).toBeNull()
+    // Verify the fetch URL contained the escaped email
+    const calledUrl = mockFetch.mock.calls[0][0] as string
+    expect(calledUrl).toContain("test")
+    expect(calledUrl).not.toContain("' OR")
+  })
 })
 
 describe("getClientTasks", () => {

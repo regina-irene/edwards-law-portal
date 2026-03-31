@@ -34,7 +34,8 @@ async function airtableFetch(url: string) {
 }
 
 export async function getClientByEmail(email: string): Promise<AirtableClient | null> {
-  const formula = encodeURIComponent(`{Email}='${email}'`)
+  const escapedEmail = email.replace(/'/g, "\\'")
+  const formula = encodeURIComponent(`{Email}='${escapedEmail}'`)
   const data = await airtableFetch(
     `https://api.airtable.com/v0/${MAIN_BASE_ID}/Clients?filterByFormula=${formula}&maxRecords=1`
   )
