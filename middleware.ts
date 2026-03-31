@@ -1,0 +1,39 @@
+import { auth } from "@/auth"
+import { NextResponse } from "next/server"
+
+const PROTECTED_PATHS = [
+  "/dashboard",
+  "/document-requests",
+  "/pleadings",
+  "/discovery",
+  "/calendar",
+  "/messages",
+  "/chat",
+  "/admin",
+]
+
+export default auth((req) => {
+  const { pathname } = req.nextUrl
+  const isProtected = PROTECTED_PATHS.some((p) => pathname.startsWith(p))
+
+  if (isProtected && !req.auth) {
+    const loginUrl = new URL("/login", req.url)
+    loginUrl.searchParams.set("callbackUrl", pathname)
+    return NextResponse.redirect(loginUrl)
+  }
+
+  return NextResponse.next()
+})
+
+export const config = {
+  matcher: [
+    "/dashboard/:path*",
+    "/document-requests/:path*",
+    "/pleadings/:path*",
+    "/discovery/:path*",
+    "/calendar/:path*",
+    "/messages/:path*",
+    "/chat/:path*",
+    "/admin/:path*",
+  ],
+}
