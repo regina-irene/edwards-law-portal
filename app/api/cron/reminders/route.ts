@@ -20,6 +20,9 @@ function shouldRemind(dueDate: string, today: Date): { remind: boolean; overdue:
 }
 
 export async function GET(req: Request) {
+  if (!process.env.CRON_SECRET) {
+    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 })
+  }
   const authHeader = req.headers.get("authorization")
   const expected = `Bearer ${process.env.CRON_SECRET}`
   if (authHeader !== expected) {
