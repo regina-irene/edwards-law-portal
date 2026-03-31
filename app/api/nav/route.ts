@@ -30,12 +30,8 @@ export async function PUT(req: Request) {
     return Response.json({ error: "pages must be an array" }, { status: 400 })
   }
 
-  const existing = await sql`SELECT id FROM nav_order LIMIT 1`
-  if (existing.rows.length > 0) {
-    await sql`UPDATE nav_order SET pages = ${JSON.stringify(pages)}::jsonb WHERE id = ${existing.rows[0].id}`
-  } else {
-    await sql`INSERT INTO nav_order (pages) VALUES (${JSON.stringify(pages)}::jsonb)`
-  }
+  await sql`DELETE FROM nav_order`
+  await sql`INSERT INTO nav_order (pages) VALUES (${JSON.stringify(pages)}::jsonb)`
 
   return Response.json({ pages })
 }

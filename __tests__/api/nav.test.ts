@@ -1,16 +1,18 @@
 // __tests__/api/nav.test.ts
 import { GET, PUT } from "@/app/api/nav/route"
-import { sql } from "@vercel/postgres"
 
-jest.mock("@vercel/postgres", () => ({
+jest.mock("@/lib/db", () => ({
   sql: jest.fn(),
 }))
+
+import { sql } from "@/lib/db"
 
 jest.mock("@/auth", () => ({
   auth: jest.fn(),
 }))
 
 import { auth } from "@/auth"
+
 
 const mockSql = sql as unknown as jest.Mock
 const mockAuth = auth as jest.Mock
@@ -39,18 +41,44 @@ describe("GET /api/nav", () => {
     const body = await res.json()
     expect(body.pages).toEqual(custom)
   })
+
+  it("returns 401 when not authenticated", async () => {
+    mockAuth.mockResolvedValueOnce(null)
+    const req = new Request("http://localhost/api/nav")
+    const res = await GET(req)
+    expect(res.status).toBe(401)
+  })
 })
 
 describe("PUT /api/nav", () => {
   it("saves new page order", async () => {
     const newOrder = ["messages", "dashboard", "chat"]
-    mockSql.mockResolvedValueOnce({ rows: [] }) // check existing
-    mockSql.mockResolvedValueOnce({ rows: [] }) // upsert
+    mockSql.mockResolvedValueOnce({ rows: [] }) // DELETE
+    mockSql.mockResolvedValueOnce({ rows: [] }) // INSERT
     const req = new Request("http://localhost/api/nav", {
       method: "PUT",
       body: JSON.stringify({ pages: newOrder }),
     })
     const res = await PUT(req)
     expect(res.status).toBe(200)
+  })
+
+  it("returns 401 when not authenticated", async () => {
+    mockAuth.mockResolvedValueOnce(null)
+    const req = new Request("http://localhost/api/nav", {
+      method: "PUT",
+      body: JSON.stringify({ pages: ["dashboard"] }),
+    })
+    const res = await PUT(req)
+    expect(res.status).toBe(401)
+  })
+
+  it("returns 400 when pages is not an array", async () => {
+    const req = new Request("http://localhost/api/nav", {
+      method: "PUT",
+      body: JSON.stringify({ pages: "not-an-array" }),
+    })
+    const res = await PUT(req)
+    expect(res.status).toBe(400)
   })
 })
