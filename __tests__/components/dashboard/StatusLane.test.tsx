@@ -26,4 +26,15 @@ describe("StatusLane", () => {
     render(<StatusLane section={{ ...section, items: [] }} color="red" />)
     expect(screen.getByText(/nothing here/i)).toBeInTheDocument()
   })
+
+  it("shows item count in header", () => {
+    render(<StatusLane section={section} color="red" />)
+    expect(screen.getByText("(2)")).toBeInTheDocument()
+  })
+
+  it("applies green color classes when color is green", () => {
+    const { container } = render(<StatusLane section={section} color="green" />)
+    const header = container.querySelector(".bg-green-50")
+    expect(header).toBeInTheDocument()
+  })
 })

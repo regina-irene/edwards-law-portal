@@ -32,4 +32,11 @@ describe("TaskCard", () => {
     render(<TaskCard item={baseItem} />)
     expect(screen.queryByText("OVERDUE")).not.toBeInTheDocument()
   })
+
+  it("applies red styling when overdue", () => {
+    const overdueItem = { ...baseItem, overdue: true }
+    const { container } = render(<TaskCard item={overdueItem} />)
+    expect(container.firstChild).toHaveClass("bg-red-50")
+    expect(container.firstChild).toHaveClass("border-red-300")
+  })
 })

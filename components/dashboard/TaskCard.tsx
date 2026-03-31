@@ -16,7 +16,7 @@ function formatDate(dateStr: string | null): string {
 
 export default function TaskCard({ item }: TaskCardProps) {
   return (
-    <div className={`bg-white rounded-lg border p-4 space-y-2 ${item.overdue ? "border-red-300 bg-red-50" : "border-gray-200"}`}>
+    <div className={`rounded-lg border p-4 space-y-2 ${item.overdue ? "border-red-300 bg-red-50" : "border-gray-200 bg-white"}`}>
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium text-gray-900 leading-snug">{item.name}</p>
         {item.overdue && (
