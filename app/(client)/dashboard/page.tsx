@@ -6,6 +6,7 @@ import { processTasks, DashboardData } from "@/lib/claude"
 import StatusLane from "@/components/dashboard/StatusLane"
 
 const LANE_COLORS: ("red" | "yellow" | "green")[] = ["red", "yellow", "green"]
+const DEFAULT_LANE_COLOR = "red" as const
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -19,7 +20,8 @@ export default async function DashboardPage() {
     const tasks = await getClientTasks(client.clientBaseId)
     const today = new Date().toISOString().split("T")[0]
     dashboard = await processTasks(tasks, today)
-  } catch {
+  } catch (err) {
+    console.error("[DashboardPage] Failed to load tasks:", err)
     dashboard = {
       sections: [
         { title: "Outstanding Documents", items: [] },
@@ -49,7 +51,7 @@ export default async function DashboardPage() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {dashboard.sections.map((section, i) => (
-          <StatusLane key={section.title} section={section} color={LANE_COLORS[i]} />
+          <StatusLane key={section.title} section={section} color={LANE_COLORS[i] ?? DEFAULT_LANE_COLOR} />
         ))}
       </div>
     </div>
