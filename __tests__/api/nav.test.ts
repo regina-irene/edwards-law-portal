@@ -53,7 +53,21 @@ describe("GET /api/nav", () => {
 describe("PUT /api/nav", () => {
   it("saves new page order", async () => {
     const newOrder = ["messages", "dashboard", "chat"]
-    mockSql.mockResolvedValueOnce({ rows: [] }) // DELETE
+    mockSql.mockResolvedValueOnce({ rows: [{ id: "existing-uuid" }] }) // SELECT existing
+    mockSql.mockResolvedValueOnce({ rows: [] }) // UPDATE
+    const req = new Request("http://localhost/api/nav", {
+      method: "PUT",
+      body: JSON.stringify({ pages: newOrder }),
+    })
+    const res = await PUT(req)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.pages).toEqual(newOrder)
+  })
+
+  it("inserts when no existing row", async () => {
+    const newOrder = ["chat", "dashboard"]
+    mockSql.mockResolvedValueOnce({ rows: [] }) // SELECT - no row
     mockSql.mockResolvedValueOnce({ rows: [] }) // INSERT
     const req = new Request("http://localhost/api/nav", {
       method: "PUT",
@@ -61,6 +75,8 @@ describe("PUT /api/nav", () => {
     })
     const res = await PUT(req)
     expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.pages).toEqual(newOrder)
   })
 
   it("returns 401 when not authenticated", async () => {
