@@ -58,4 +58,23 @@ describe("POST /api/chat", () => {
     const res = await POST(req)
     expect(res.status).toBe(400)
   })
+
+  it("returns 401 when not authenticated", async () => {
+    mockAuth.mockResolvedValueOnce(null)
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({ body: "Hello" }),
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(401)
+  })
+
+  it("rejects whitespace-only body", async () => {
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({ body: "   " }),
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(400)
+  })
 })

@@ -39,6 +39,8 @@ export default function ChatPage() {
     if (res.ok) {
       const data = await res.json()
       setMessages((prev) => [...prev, data.message])
+    } else {
+      alert("Failed to send message. Please try again.")
     }
   }
 
