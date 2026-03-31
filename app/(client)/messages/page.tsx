@@ -8,7 +8,6 @@ interface Message {
   id: string
   body: string
   created_at: string
-  read: boolean
 }
 
 function formatDateTime(ts: string): string {

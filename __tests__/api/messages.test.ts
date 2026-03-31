@@ -24,6 +24,14 @@ describe("GET /api/messages", () => {
     expect(res.status).toBe(401)
   })
 
+  it("returns 404 when client not found", async () => {
+    mockAuth.mockResolvedValueOnce({ user: { email: "unknown@test.com" } })
+    mockGetClient.mockResolvedValueOnce(null)
+    const req = new Request("http://localhost/api/messages")
+    const res = await GET(req)
+    expect(res.status).toBe(404)
+  })
+
   it("returns messages for authenticated client", async () => {
     mockAuth.mockResolvedValueOnce({ user: { email: "client@test.com" } })
     mockGetClient.mockResolvedValueOnce({ clientId: "C001" })
