@@ -14,12 +14,20 @@ interface ChatMessage {
 export default function AdminChatPage({ params }: { params: Promise<{ clientId: string }> }) {
   const { clientId } = use(params)
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [fetchError, setFetchError] = useState(false)
 
   const fetchMessages = useCallback(async () => {
-    const res = await fetch(`/api/admin/chat?clientId=${clientId}`)
-    if (res.ok) {
-      const data = await res.json()
-      setMessages(data.messages)
+    try {
+      const res = await fetch(`/api/admin/chat?clientId=${clientId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setMessages(data.messages)
+        setFetchError(false)
+      } else {
+        setFetchError(true)
+      }
+    } catch {
+      setFetchError(true)
     }
   }, [clientId])
 
@@ -29,7 +37,7 @@ export default function AdminChatPage({ params }: { params: Promise<{ clientId: 
     return () => clearInterval(interval)
   }, [fetchMessages])
 
-  async function handleSend(body: string) {
+  async function handleSend(body: string): Promise<boolean> {
     const res = await fetch("/api/admin/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -38,7 +46,9 @@ export default function AdminChatPage({ params }: { params: Promise<{ clientId: 
     if (res.ok) {
       const data = await res.json()
       setMessages((prev) => [...prev, data.message])
+      return true
     }
+    return false
   }
 
   return (
@@ -46,6 +56,11 @@ export default function AdminChatPage({ params }: { params: Promise<{ clientId: 
       <h1 className="text-2xl font-bold text-gray-900 mb-4">
         Chat — <span className="text-gray-500 font-normal">{clientId}</span>
       </h1>
+      {fetchError && (
+        <p className="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2 mb-3">
+          Connection issue — messages may not be up to date. Retrying...
+        </p>
+      )}
       <div className="flex-1 overflow-y-auto bg-gray-50 rounded-xl border border-gray-200 px-4">
         <ChatThread messages={messages} />
       </div>

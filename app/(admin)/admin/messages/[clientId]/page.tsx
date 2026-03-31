@@ -36,7 +36,10 @@ export default function AdminMessagesPage({ params }: { params: Promise<{ client
       <div className="space-y-4">
         <textarea
           value={body}
-          onChange={(e) => setBody(e.target.value)}
+          onChange={(e) => {
+            setBody(e.target.value)
+            if (status === "error") setStatus("idle")
+          }}
           placeholder="Write your message to the client..."
           rows={6}
           className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"

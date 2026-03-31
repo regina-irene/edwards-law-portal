@@ -30,7 +30,7 @@ export default function ChatPage() {
     return () => clearInterval(interval)
   }, [fetchMessages])
 
-  async function handleSend(body: string) {
+  async function handleSend(body: string): Promise<boolean> {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -39,9 +39,10 @@ export default function ChatPage() {
     if (res.ok) {
       const data = await res.json()
       setMessages((prev) => [...prev, data.message])
-    } else {
-      alert("Failed to send message. Please try again.")
+      return true
     }
+    alert("Failed to send message. Please try again.")
+    return false
   }
 
   return (

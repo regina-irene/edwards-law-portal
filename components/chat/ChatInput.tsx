@@ -4,7 +4,7 @@
 import { useState, KeyboardEvent } from "react"
 
 interface ChatInputProps {
-  onSend: (body: string) => Promise<void>
+  onSend: (body: string) => Promise<boolean>
 }
 
 export default function ChatInput({ onSend }: ChatInputProps) {
@@ -15,8 +15,10 @@ export default function ChatInput({ onSend }: ChatInputProps) {
     const trimmed = value.trim()
     if (!trimmed || sending) return
     setSending(true)
-    await onSend(trimmed)
-    setValue("")
+    const success = await onSend(trimmed)
+    if (success) {
+      setValue("")
+    }
     setSending(false)
   }
 
