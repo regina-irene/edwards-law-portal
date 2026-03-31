@@ -51,12 +51,9 @@ export default async function AdminPage() {
               <span className="text-sm font-medium text-gray-900">{c.client_id}</span>
               <div className="flex items-center gap-4">
                 {c.unread_chat > 0 && (
-                  <Link
-                    href={`/admin/chat/${c.client_id}`}
-                    className="text-xs bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full font-medium hover:bg-blue-200"
-                  >
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full font-medium">
                     {c.unread_chat} unread chat
-                  </Link>
+                  </span>
                 )}
                 <Link
                   href={`/admin/chat/${c.client_id}`}
