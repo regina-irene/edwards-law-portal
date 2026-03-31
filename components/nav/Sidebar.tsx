@@ -1,5 +1,6 @@
 // components/nav/Sidebar.tsx
 import NavItem from "./NavItem"
+import SignOutButton from "./SignOutButton"
 
 interface SidebarProps {
   pages: string[]
@@ -27,12 +28,7 @@ export default function Sidebar({ pages, clientName, unreadMessages, unreadChat 
         ))}
       </nav>
       <div className="p-4 border-t border-gray-100">
-        <a
-          href="/api/auth/signout"
-          className="text-xs text-gray-400 hover:text-gray-600"
-        >
-          Sign out
-        </a>
+        <SignOutButton />
       </div>
     </aside>
   )
