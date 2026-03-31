@@ -1,0 +1,66 @@
+// app/(client)/messages/page.tsx
+import { auth } from "@/auth"
+import { redirect } from "next/navigation"
+import { getClientByEmail } from "@/lib/airtable"
+import { sql } from "@/lib/db"
+
+interface Message {
+  id: string
+  body: string
+  created_at: string
+  read: boolean
+}
+
+function formatDateTime(ts: string): string {
+  return new Date(ts).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
+
+export default async function MessagesPage() {
+  const session = await auth()
+  if (!session?.user?.email) redirect("/login")
+
+  const client = await getClientByEmail(session.user.email)
+  if (!client) redirect("/login")
+
+  // Mark unread as read
+  await sql`
+    UPDATE messages SET read = true
+    WHERE client_id = ${client.clientId} AND read = false
+  `
+
+  const result = await sql`
+    SELECT id, body, created_at
+    FROM messages
+    WHERE client_id = ${client.clientId}
+    ORDER BY created_at DESC
+    LIMIT 50
+  `
+
+  const messages: Message[] = result.rows
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+      {messages.length === 0 ? (
+        <div className="text-center py-12 text-gray-400">
+          <p>No messages yet.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {messages.map((msg) => (
+            <div key={msg.id} className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
+              <p className="text-gray-800 whitespace-pre-wrap">{msg.body}</p>
+              <p className="mt-3 text-xs text-gray-400">{formatDateTime(msg.created_at)}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
