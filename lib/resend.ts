@@ -1,9 +1,6 @@
 // lib/resend.ts
 import { Resend } from "resend"
 
-const FROM = process.env.EMAIL_FROM ?? "portal@edwardslaw.com"
-const PORTAL_URL = process.env.AUTH_URL ?? "https://portal.edwardslaw.com"
-
 interface ReminderEmailOptions {
   to: string
   clientName: string
@@ -19,6 +16,8 @@ function getClient() {
 export async function sendReminderEmail(opts: ReminderEmailOptions): Promise<void> {
   const { to, clientName, taskName, dueDate, overdue } = opts
   const resend = getClient()
+  const FROM = process.env.EMAIL_FROM ?? "portal@edwardslaw.com"
+  const PORTAL_URL = process.env.AUTH_URL ?? "https://portal.edwardslaw.com"
 
   const subject = overdue
     ? `OVERDUE — Action Required: ${taskName}`
