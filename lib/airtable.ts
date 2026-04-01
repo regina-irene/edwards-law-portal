@@ -12,6 +12,7 @@ export interface AirtableClient {
   pleadingsViewLink: string
   discoveryViewLink: string
   calendarViewLink: string
+  statusViewLink: string
   smsReminders: boolean
 }
 
@@ -52,6 +53,7 @@ export async function getClientByEmail(email: string): Promise<AirtableClient | 
     pleadingsViewLink: r.fields["Pleadings View Link"] ?? "",
     discoveryViewLink: r.fields["Discovery View Link"] ?? "",
     calendarViewLink: r.fields["Calendar View Link"] ?? "",
+    statusViewLink: r.fields["Status View Link"] ?? "",
     smsReminders: r.fields["SMS Reminders"] === true,
   }
 }
@@ -87,6 +89,7 @@ export async function getAllClients(): Promise<AirtableClient[]> {
     pleadingsViewLink: r.fields["Pleadings View Link"] ?? "",
     discoveryViewLink: r.fields["Discovery View Link"] ?? "",
     calendarViewLink: r.fields["Calendar View Link"] ?? "",
+    statusViewLink: r.fields["Status View Link"] ?? "",
     smsReminders: r.fields["SMS Reminders"] === true,
   }))
 }
