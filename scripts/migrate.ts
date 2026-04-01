@@ -67,6 +67,33 @@ export const MIGRATION_SQL = `
     email TEXT NOT NULL UNIQUE,
     name TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS task_templates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+
+  CREATE TABLE IF NOT EXISTS client_tasks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id TEXT NOT NULL,
+    template_id UUID REFERENCES task_templates(id) ON DELETE SET NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'done')),
+    due_date DATE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+
+  CREATE TABLE IF NOT EXISTS page_content (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id TEXT NOT NULL,
+    page TEXT NOT NULL,
+    header TEXT,
+    announcement TEXT,
+    UNIQUE(client_id, page)
+  );
 `
 
 async function migrate(): Promise<void> {
