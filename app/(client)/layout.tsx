@@ -43,7 +43,12 @@ export default async function ClientLayout({ children }: { children: React.React
   const session = await auth()
   if (!session?.user?.email) redirect("/login")
 
-  const client = await getClientByEmail(session.user.email)
+  let client
+  try {
+    client = await getClientByEmail(session.user.email)
+  } catch (e) {
+    console.error("[layout] getClientByEmail failed:", e)
+  }
   if (!client) {
     return (
       <div className="min-h-screen flex items-center justify-center">
