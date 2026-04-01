@@ -4,25 +4,14 @@ import { auth } from "@/auth"
 import { getClientByEmail } from "@/lib/airtable"
 import { sql } from "@/lib/db"
 import Sidebar from "@/components/nav/Sidebar"
-
-const DEFAULT_PAGES = [
-  "dashboard",
-  "document-requests",
-  "pleadings",
-  "discovery",
-  "status",
-  "tasks",
-  "calendar",
-  "messages",
-  "chat",
-]
+import { PORTAL_PAGES } from "@/lib/pages"
 
 async function getNavPages(): Promise<string[]> {
   try {
     const result = await sql`SELECT pages FROM nav_order LIMIT 1`
-    return result.rows[0]?.pages ?? DEFAULT_PAGES
+    return result.rows[0]?.pages ?? [...PORTAL_PAGES]
   } catch {
-    return DEFAULT_PAGES
+    return [...PORTAL_PAGES]
   }
 }
 

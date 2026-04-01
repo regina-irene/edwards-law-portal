@@ -25,6 +25,23 @@ export interface AirtableTask {
   matter: string
 }
 
+function mapClientRecord(r: any): AirtableClient {
+  return {
+    id: r.id,
+    clientId: r.fields["Client ID"] ?? "",
+    name: r.fields["Name"] ?? "",
+    email: r.fields["Email"] ?? "",
+    phone: r.fields["Phone"] ?? "",
+    clientBaseId: r.fields["Client Base ID"] ?? "",
+    fileflowLink: r.fields["FileFlow Link"] ?? "",
+    pleadingsViewLink: r.fields["Pleadings View Link"] ?? "",
+    discoveryViewLink: r.fields["Discovery View Link"] ?? "",
+    calendarViewLink: r.fields["Calendar View Link"] ?? "",
+    statusViewLink: r.fields["Status View Link"] ?? "",
+    smsReminders: r.fields["SMS Reminders"] === true,
+  }
+}
+
 async function airtableFetch(url: string) {
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
@@ -42,20 +59,7 @@ export async function getClientByEmail(email: string): Promise<AirtableClient | 
   )
   if (!data.records || data.records.length === 0) return null
   const r = data.records[0]
-  return {
-    id: r.id,
-    clientId: r.fields["Client ID"] ?? "",
-    name: r.fields["Name"] ?? "",
-    email: r.fields["Email"] ?? "",
-    phone: r.fields["Phone"] ?? "",
-    clientBaseId: r.fields["Client Base ID"] ?? "",
-    fileflowLink: r.fields["FileFlow Link"] ?? "",
-    pleadingsViewLink: r.fields["Pleadings View Link"] ?? "",
-    discoveryViewLink: r.fields["Discovery View Link"] ?? "",
-    calendarViewLink: r.fields["Calendar View Link"] ?? "",
-    statusViewLink: r.fields["Status View Link"] ?? "",
-    smsReminders: r.fields["SMS Reminders"] === true,
-  }
+  return mapClientRecord(r)
 }
 
 export async function getClientTasks(clientBaseId: string): Promise<AirtableTask[]> {
@@ -78,18 +82,5 @@ export async function getAllClients(): Promise<AirtableClient[]> {
     `https://api.airtable.com/v0/${MAIN_BASE_ID}/Clients`
   )
   if (!data.records) return []
-  return data.records.map((r: any): AirtableClient => ({
-    id: r.id,
-    clientId: r.fields["Client ID"] ?? "",
-    name: r.fields["Name"] ?? "",
-    email: r.fields["Email"] ?? "",
-    phone: r.fields["Phone"] ?? "",
-    clientBaseId: r.fields["Client Base ID"] ?? "",
-    fileflowLink: r.fields["FileFlow Link"] ?? "",
-    pleadingsViewLink: r.fields["Pleadings View Link"] ?? "",
-    discoveryViewLink: r.fields["Discovery View Link"] ?? "",
-    calendarViewLink: r.fields["Calendar View Link"] ?? "",
-    statusViewLink: r.fields["Status View Link"] ?? "",
-    smsReminders: r.fields["SMS Reminders"] === true,
-  }))
+  return data.records.map((r: any): AirtableClient => mapClientRecord(r))
 }

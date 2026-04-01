@@ -2,18 +2,7 @@
 "use client"
 
 import { useState, useEffect, use } from "react"
-
-const PAGES = [
-  "dashboard",
-  "document-requests",
-  "pleadings",
-  "discovery",
-  "status",
-  "tasks",
-  "calendar",
-  "messages",
-  "chat",
-]
+import { PORTAL_PAGES } from "@/lib/pages"
 
 interface PageContent {
   header: string
@@ -64,7 +53,7 @@ export default function ClientPagesEditor({ params }: { params: Promise<{ client
         <h1 className="text-2xl font-bold text-gray-900">Page Editor</h1>
         <p className="text-sm text-gray-500 mt-1">Client: <span className="font-medium">{clientId}</span></p>
       </div>
-      {PAGES.map((page) => {
+      {PORTAL_PAGES.map((page) => {
         const c = get(page)
         return (
           <div key={page} className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">

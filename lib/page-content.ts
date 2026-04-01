@@ -14,7 +14,8 @@ export async function getPageContent(clientId: string, page: string): Promise<Pa
     `
     if (result.rows.length === 0) return { header: null, announcement: null }
     return { header: result.rows[0].header, announcement: result.rows[0].announcement }
-  } catch {
+  } catch (e) {
+    console.error("[getPageContent]", e)
     return { header: null, announcement: null }
   }
 }
