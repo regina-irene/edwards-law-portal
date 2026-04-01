@@ -10,6 +10,8 @@ const DEFAULT_PAGES = [
   "document-requests",
   "pleadings",
   "discovery",
+  "status",
+  "tasks",
   "calendar",
   "messages",
   "chat",
