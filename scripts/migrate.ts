@@ -3,7 +3,7 @@ import { Pool } from "pg"
 export const MIGRATION_SQL = `
   -- Auth.js required tables
   CREATE TABLE IF NOT EXISTS users (
-    id TEXT NOT NULL PRIMARY KEY,
+    id TEXT NOT NULL DEFAULT gen_random_uuid()::TEXT PRIMARY KEY,
     name TEXT,
     email TEXT NOT NULL,
     "emailVerified" TIMESTAMPTZ,
@@ -11,7 +11,7 @@ export const MIGRATION_SQL = `
   );
 
   CREATE TABLE IF NOT EXISTS accounts (
-    id TEXT NOT NULL,
+    id TEXT NOT NULL DEFAULT gen_random_uuid()::TEXT,
     "userId" TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type TEXT NOT NULL,
     provider TEXT NOT NULL,
@@ -85,10 +85,7 @@ async function migrate(): Promise<void> {
   }
 }
 
-// Only run when executed directly
-if (require.main === module) {
-  migrate().catch((err) => {
-    console.error(err)
-    process.exit(1)
-  })
-}
+migrate().catch((err) => {
+  console.error(err)
+  process.exit(1)
+})
