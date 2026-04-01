@@ -1,59 +1,38 @@
 // app/(client)/chat/page.tsx
-"use client"
+import { auth } from "@/auth"
+import { redirect } from "next/navigation"
+import { getClientByEmail } from "@/lib/airtable"
+import { getPageContent } from "@/lib/page-content"
+import PageHeader from "@/components/ui/PageHeader"
+import Script from "next/script"
 
-import { useState, useEffect, useCallback } from "react"
-import ChatThread from "@/components/chat/ChatThread"
-import ChatInput from "@/components/chat/ChatInput"
+export default async function ChatPage() {
+  const session = await auth()
+  if (!session?.user?.email) redirect("/login")
+  const client = await getClientByEmail(session.user.email)
+  if (!client) redirect("/login")
 
-interface ChatMessage {
-  id: string
-  sender: "client" | "firm"
-  body: string
-  created_at: string
-}
-
-export default function ChatPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-
-  const fetchMessages = useCallback(async () => {
-    const res = await fetch("/api/chat")
-    if (res.ok) {
-      const data = await res.json()
-      setMessages(data.messages)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchMessages()
-    // Poll every 60 seconds for new messages from firm
-    const interval = setInterval(fetchMessages, 60_000)
-    return () => clearInterval(interval)
-  }, [fetchMessages])
-
-  async function handleSend(body: string): Promise<boolean> {
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body }),
-    })
-    if (res.ok) {
-      const data = await res.json()
-      setMessages((prev) => [...prev, data.message])
-      return true
-    }
-    alert("Failed to send message. Please try again.")
-    return false
-  }
+  const pageContent = await getPageContent(client.clientId, "chat")
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-4">Chat</h1>
-      <div className="flex-1 overflow-y-auto bg-gray-50 rounded-xl border border-gray-200 px-4">
-        <ChatThread messages={messages} />
+    <div className="space-y-6">
+      <PageHeader defaultTitle="Chat" header={pageContent.header} announcement={pageContent.announcement} />
+      <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg border border-gray-200">
+        <p className="text-sm text-gray-500">
+          Click the chat bubble in the bottom corner to start a conversation.
+        </p>
       </div>
-      <div className="mt-4">
-        <ChatInput onSend={handleSend} />
-      </div>
+      <Script
+        src="https://chat-assets.frontapp.com/v1/chat.bundle.js"
+        strategy="afterInteractive"
+        onLoad={() => {
+          // @ts-ignore
+          window.FrontChat("init", {
+            chatId: "4ba9a1366a0c3ac55355eceb11901b9e",
+            useDefaultLauncher: true,
+          })
+        }}
+      />
     </div>
   )
 }

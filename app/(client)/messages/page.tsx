@@ -3,6 +3,8 @@ import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { getClientByEmail } from "@/lib/airtable"
 import { sql } from "@/lib/db"
+import PageHeader from "@/components/ui/PageHeader"
+import { getPageContent } from "@/lib/page-content"
 
 interface Message {
   id: string
@@ -27,6 +29,8 @@ export default async function MessagesPage() {
   const client = await getClientByEmail(session.user.email)
   if (!client) redirect("/login")
 
+  const pageContent = await getPageContent(client.clientId, "messages")
+
   // Mark unread as read
   await sql`
     UPDATE messages SET read = true
@@ -45,7 +49,7 @@ export default async function MessagesPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+      <PageHeader defaultTitle="Messages" header={pageContent.header} announcement={pageContent.announcement} />
       {messages.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <p>No messages yet.</p>
