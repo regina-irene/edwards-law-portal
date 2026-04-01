@@ -9,7 +9,10 @@ import { PORTAL_PAGES } from "@/lib/pages"
 async function getNavPages(): Promise<string[]> {
   try {
     const result = await sql`SELECT pages FROM nav_order LIMIT 1`
-    return result.rows[0]?.pages ?? [...PORTAL_PAGES]
+    const saved: string[] = result.rows[0]?.pages ?? [...PORTAL_PAGES]
+    // Append any pages from PORTAL_PAGES not yet in the saved order
+    const missing = PORTAL_PAGES.filter((p) => !saved.includes(p))
+    return [...saved, ...missing]
   } catch {
     return [...PORTAL_PAGES]
   }

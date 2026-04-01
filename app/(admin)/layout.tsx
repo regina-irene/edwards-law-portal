@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation"
 import { requireAdmin } from "@/lib/admin"
 import Link from "next/link"
+import SignOutButton from "@/components/admin/SignOutButton"
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const check = await requireAdmin()
@@ -17,7 +18,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <nav className="p-3 space-y-1">
           <Link href="/admin" className="block px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-100">Clients</Link>
           <Link href="/admin/tasks" className="block px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-100">Tasks</Link>
+          <Link href="/admin/pages" className="block px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-100">Global Pages</Link>
           <Link href="/admin/settings" className="block px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-100">Settings</Link>
+          <SignOutButton />
         </nav>
       </aside>
       <main className="flex-1 p-8">{children}</main>

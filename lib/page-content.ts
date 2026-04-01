@@ -10,7 +10,9 @@ export async function getPageContent(clientId: string, page: string): Promise<Pa
   try {
     const result = await sql`
       SELECT header, announcement FROM page_content
-      WHERE client_id = ${clientId} AND page = ${page}
+      WHERE (client_id = ${clientId} OR client_id = '_global') AND page = ${page}
+      ORDER BY CASE WHEN client_id = ${clientId} THEN 0 ELSE 1 END
+      LIMIT 1
     `
     if (result.rows.length === 0) return { header: null, announcement: null }
     return { header: result.rows[0].header, announcement: result.rows[0].announcement }
