@@ -2,7 +2,6 @@
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { getClientByEmail } from "@/lib/airtable"
-import AirtableEmbed from "@/components/ui/AirtableEmbed"
 import PageHeader from "@/components/ui/PageHeader"
 import { getPageContent } from "@/lib/page-content"
 
@@ -17,7 +16,13 @@ export default async function StatusPage() {
   return (
     <div className="space-y-6">
       <PageHeader defaultTitle="Case Status" header={pageContent.header} announcement={pageContent.announcement} />
-      <AirtableEmbed url={client.statusViewLink} title="Case Status" />
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        {client.statusOfCase ? (
+          <p className="text-gray-800 whitespace-pre-wrap">{client.statusOfCase}</p>
+        ) : (
+          <p className="text-sm text-gray-500">No status update available. Please contact your attorney.</p>
+        )}
+      </div>
     </div>
   )
 }

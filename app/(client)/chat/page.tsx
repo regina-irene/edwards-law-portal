@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import { getClientByEmail } from "@/lib/airtable"
 import { getPageContent } from "@/lib/page-content"
 import PageHeader from "@/components/ui/PageHeader"
-import Script from "next/script"
+import FrontChatWidget from "@/components/chat/FrontChatWidget"
 
 export default async function ChatPage() {
   const session = await auth()
@@ -22,17 +22,7 @@ export default async function ChatPage() {
           Click the chat bubble in the bottom corner to start a conversation.
         </p>
       </div>
-      <Script
-        src="https://chat-assets.frontapp.com/v1/chat.bundle.js"
-        strategy="afterInteractive"
-        onLoad={() => {
-          // @ts-ignore
-          window.FrontChat("init", {
-            chatId: "4ba9a1366a0c3ac55355eceb11901b9e",
-            useDefaultLauncher: true,
-          })
-        }}
-      />
+      <FrontChatWidget />
     </div>
   )
 }

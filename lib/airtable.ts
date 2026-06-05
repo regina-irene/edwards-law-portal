@@ -13,6 +13,7 @@ export interface AirtableClient {
   discoveryViewLink: string
   calendarViewLink: string
   statusViewLink: string
+  statusOfCase: string
   smsReminders: boolean
 }
 
@@ -38,6 +39,7 @@ function mapClientRecord(r: any): AirtableClient {
     discoveryViewLink: r.fields["Discovery View Link"] ?? "",
     calendarViewLink: r.fields["Calendar View Link"] ?? "",
     statusViewLink: r.fields["Status View Link"] ?? "",
+    statusOfCase: r.fields["Status of Case"] ?? "",
     smsReminders: r.fields["SMS Reminders"] === true,
   }
 }

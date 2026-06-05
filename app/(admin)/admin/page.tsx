@@ -1,10 +1,16 @@
 // app/(admin)/admin/page.tsx
 import { sql } from "@/lib/db"
 import { getAllClients } from "@/lib/airtable"
+import { revalidatePath } from "next/cache"
 import Link from "next/link"
 
+async function refreshClients() {
+  "use server"
+  revalidatePath("/admin")
+}
+
 export default async function AdminPage() {
-  const [clients, activityResult] = await Promise.all([
+  const [clientsUnsorted, activityResult] = await Promise.all([
     getAllClients(),
     sql`
       SELECT
@@ -23,6 +29,10 @@ export default async function AdminPage() {
     `.catch(() => ({ rows: [] as any[] })),
   ])
 
+  const clients = [...clientsUnsorted].sort((a, b) =>
+    (a.name || a.clientId).localeCompare(b.name || b.clientId, undefined, { sensitivity: "base" })
+  )
+
   const activityMap = new Map<string, { unread_chat: number; unread_messages: number }>()
   for (const row of activityResult.rows) {
     const existing = activityMap.get(row.client_id) ?? { unread_chat: 0, unread_messages: 0 }
@@ -34,7 +44,17 @@ export default async function AdminPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
+        <form action={refreshClients}>
+          <button
+            type="submit"
+            className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700"
+          >
+            Refresh from Airtable
+          </button>
+        </form>
+      </div>
       {clients.length === 0 ? (
         <p className="text-gray-500">No clients found in Airtable.</p>
       ) : (
