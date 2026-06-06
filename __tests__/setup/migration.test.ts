@@ -15,5 +15,6 @@ describe("migration SQL", () => {
     expect(MIGRATION_SQL).toContain("CREATE TABLE IF NOT EXISTS chat_messages")
     expect(MIGRATION_SQL).toContain("CREATE TABLE IF NOT EXISTS nav_order")
     expect(MIGRATION_SQL).toContain("CREATE TABLE IF NOT EXISTS admin_users")
+    expect(MIGRATION_SQL).toContain("CREATE TABLE IF NOT EXISTS client_labels")
   })
 })

@@ -86,3 +86,28 @@ export async function getAllClients(): Promise<AirtableClient[]> {
   if (!data.records) return []
   return data.records.map((r: any): AirtableClient => mapClientRecord(r))
 }
+
+// Client names are stored in Airtable as "Lastname | Firstname".
+// Turn that into a friendly "Lastname, F" label for the admin list.
+export function clientDisplayLabel(name: string): string {
+  const raw = (name ?? "").trim()
+  if (!raw) return ""
+  const parts = raw.split("|").map((s) => s.trim()).filter(Boolean)
+  const last = parts[0] ?? ""
+  const first = parts[1] ?? ""
+  if (last && first) return `${last}, ${first.charAt(0).toUpperCase()}`
+  return last || first
+}
+
+// Uncached fetch of all clients (no Next data-cache layer). The cached,
+// timestamped wrapper lives in lib/clients-cache.ts so this module stays free
+// of next/cache imports (which break the node test environment).
+export async function fetchAllClientsRaw(): Promise<AirtableClient[]> {
+  const res = await fetch(`https://api.airtable.com/v0/${MAIN_BASE_ID}/Clients`, {
+    headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
+    cache: "no-store",
+  })
+  if (!res.ok) throw new Error(`Airtable error: ${res.status}`)
+  const data = await res.json()
+  return (data.records ?? []).map((r: any): AirtableClient => mapClientRecord(r))
+}

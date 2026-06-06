@@ -94,6 +94,12 @@ export const MIGRATION_SQL = `
     announcement TEXT,
     UNIQUE(client_id, page)
   );
+
+  CREATE TABLE IF NOT EXISTS client_labels (
+    client_id TEXT PRIMARY KEY,
+    label TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
 `
 
 async function migrate(): Promise<void> {

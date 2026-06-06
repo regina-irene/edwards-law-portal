@@ -1,4 +1,4 @@
-import { getClientByEmail, getClientTasks } from "@/lib/airtable"
+import { getClientByEmail, getClientTasks, clientDisplayLabel } from "@/lib/airtable"
 
 global.fetch = jest.fn()
 const mockFetch = global.fetch as jest.Mock
@@ -67,6 +67,25 @@ describe("getClientByEmail", () => {
     const calledUrl = mockFetch.mock.calls[0][0] as string
     expect(calledUrl).toContain("test")
     expect(calledUrl).not.toContain("' OR")
+  })
+})
+
+describe("clientDisplayLabel", () => {
+  it("formats 'Lastname | Firstname' as 'Lastname, F'", () => {
+    expect(clientDisplayLabel("Boatman | Deja")).toBe("Boatman, D")
+    expect(clientDisplayLabel("Ofori-Darkwa | Patience")).toBe("Ofori-Darkwa, P")
+  })
+
+  it("trims surrounding whitespace", () => {
+    expect(clientDisplayLabel("Tyson | Shabrae ")).toBe("Tyson, S")
+  })
+
+  it("falls back to the name when there is no first part", () => {
+    expect(clientDisplayLabel("Madonna")).toBe("Madonna")
+  })
+
+  it("returns empty string for empty input", () => {
+    expect(clientDisplayLabel("")).toBe("")
   })
 })
 

@@ -1,17 +1,27 @@
 // app/(admin)/admin/page.tsx
 import { sql } from "@/lib/db"
-import { getAllClients } from "@/lib/airtable"
-import { revalidatePath } from "next/cache"
+import { clientDisplayLabel } from "@/lib/airtable"
+import { getAllClientsWithMeta } from "@/lib/clients-cache"
+import { getClientLabels } from "@/lib/client-labels"
+import { refreshClients } from "./actions"
+import ClientLabelEditor from "./ClientLabelEditor"
 import Link from "next/link"
 
-async function refreshClients() {
-  "use server"
-  revalidatePath("/admin")
+function formatRefreshed(ms: number): string {
+  return new Date(ms).toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  })
 }
 
 export default async function AdminPage() {
-  const [clientsUnsorted, activityResult] = await Promise.all([
-    getAllClients(),
+  const [{ clients: clientsRaw, fetchedAt }, labels, activityResult] = await Promise.all([
+    getAllClientsWithMeta(),
+    getClientLabels(),
     sql`
       SELECT
         client_id,
@@ -29,9 +39,17 @@ export default async function AdminPage() {
     `.catch(() => ({ rows: [] as any[] })),
   ])
 
-  const clients = [...clientsUnsorted].sort((a, b) =>
-    (a.name || a.clientId).localeCompare(b.name || b.clientId, undefined, { sensitivity: "base" })
-  )
+  // "Client ID" is an Airtable linked-record field, so at runtime it can be an
+  // array. It coerces to the bare record id everywhere else (URLs, keys), so
+  // normalize to that same bare string for stable label lookups/writes.
+  const clients = clientsRaw
+    .map((c) => {
+      const id = String(c.clientId)
+      return { ...c, id, label: labels[id] || clientDisplayLabel(c.name) }
+    })
+    .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }))
+
+  const refreshedAt = formatRefreshed(fetchedAt)
 
   const activityMap = new Map<string, { unread_chat: number; unread_messages: number }>()
   for (const row of activityResult.rows) {
@@ -44,15 +62,16 @@ export default async function AdminPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
-        <form action={refreshClients}>
+        <form action={refreshClients} className="flex flex-col items-end gap-1">
           <button
             type="submit"
             className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700"
           >
             Refresh from Airtable
           </button>
+          <span className="text-xs text-gray-400">Last refreshed {refreshedAt}</span>
         </form>
       </div>
       {clients.length === 0 ? (
@@ -60,12 +79,12 @@ export default async function AdminPage() {
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
           {clients.map((c) => {
-            const activity = activityMap.get(c.clientId) ?? { unread_chat: 0, unread_messages: 0 }
+            const activity = activityMap.get(c.id) ?? { unread_chat: 0, unread_messages: 0 }
             return (
-              <div key={c.clientId} className="flex items-center justify-between px-6 py-4 flex-wrap gap-3">
+              <div key={c.id} className="flex items-center justify-between px-6 py-4 flex-wrap gap-3">
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{c.name || c.clientId}</p>
-                  <p className="text-xs text-gray-400">{c.email} · ID: {c.clientId}</p>
+                  <ClientLabelEditor clientId={c.id} label={c.label} />
+                  <p className="text-xs text-gray-400">{c.email} · Updated {refreshedAt}</p>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
                   {activity.unread_chat > 0 && (
@@ -73,9 +92,9 @@ export default async function AdminPage() {
                       {activity.unread_chat} unread chat
                     </span>
                   )}
-                  <Link href={`/admin/chat/${c.clientId}`} className="text-sm text-blue-600 hover:underline">Chat</Link>
-                  <Link href={`/admin/messages/${c.clientId}`} className="text-sm text-blue-600 hover:underline">Message</Link>
-                  <Link href={`/admin/clients/${c.clientId}/pages`} className="text-sm text-blue-600 hover:underline">Pages</Link>
+                  <Link href={`/admin/chat/${c.id}`} className="text-sm text-blue-600 hover:underline">Chat</Link>
+                  <Link href={`/admin/messages/${c.id}`} className="text-sm text-blue-600 hover:underline">Message</Link>
+                  <Link href={`/admin/clients/${c.id}/pages`} className="text-sm text-blue-600 hover:underline">Pages</Link>
                 </div>
               </div>
             )
