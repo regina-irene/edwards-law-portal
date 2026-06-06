@@ -1,22 +1,21 @@
 // app/api/tasks/route.ts
 import { auth } from "@/auth"
 import { getClientByEmail } from "@/lib/airtable"
+import { getPortalClient } from "@/lib/portal-client"
 import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
 
 export async function GET() {
-  const session = await auth()
-  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
-  const client = await getClientByEmail(session.user.email)
+  // Honors admin preview so a previewed client's tasks render too.
+  const client = await getPortalClient()
   if (!client?.clientId) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   try {
     const result = await sql`
-      SELECT id, title, description, status, due_date, created_at
+      SELECT id, title, description, status, due_date, stage, tag, stage_order, sort_order, created_at
       FROM client_tasks
-      WHERE client_id = ${client.clientId}
-      ORDER BY created_at ASC
+      WHERE client_id = ${String(client.clientId)}
+      ORDER BY stage_order ASC, sort_order ASC, created_at ASC
     `
     return NextResponse.json({ tasks: result.rows })
   } catch {
@@ -48,7 +47,7 @@ export async function PATCH(req: Request) {
     const result = await sql`
       UPDATE client_tasks
       SET status = ${status as string}
-      WHERE id = ${id} AND client_id = ${client.clientId}
+      WHERE id = ${id} AND client_id = ${String(client.clientId)}
       RETURNING id, status
     `
     if (result.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 })

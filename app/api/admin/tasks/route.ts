@@ -9,8 +9,10 @@ export async function GET() {
 
   try {
     const [templates, tasks] = await Promise.all([
-      sql`SELECT id, title, description, created_at FROM task_templates ORDER BY created_at ASC`,
-      sql`SELECT id, client_id, title, description, status, due_date, created_at FROM client_tasks ORDER BY created_at DESC`,
+      sql`SELECT id, title, description, stage, tag, stage_order, sort_order, created_at
+          FROM task_templates ORDER BY stage_order ASC, sort_order ASC, created_at ASC`,
+      sql`SELECT id, client_id, title, description, status, due_date, stage, tag, stage_order, sort_order, created_at
+          FROM client_tasks ORDER BY client_id ASC, stage_order ASC, sort_order ASC, created_at DESC`,
     ])
     return NextResponse.json({ templates: templates.rows, tasks: tasks.rows })
   } catch {
@@ -22,7 +24,7 @@ export async function POST(req: Request) {
   const check = await requireAdmin()
   if (check.status !== "ok") return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  let action: unknown, title: unknown, description: unknown, clientId: unknown, templateId: unknown, dueDate: unknown
+  let action: unknown, title: unknown, description: unknown, clientId: unknown, templateId: unknown, dueDate: unknown, stage: unknown, tag: unknown
   try {
     const parsed = await req.json()
     action = parsed?.action
@@ -31,6 +33,8 @@ export async function POST(req: Request) {
     clientId = parsed?.clientId
     templateId = parsed?.templateId
     dueDate = parsed?.dueDate
+    stage = parsed?.stage
+    tag = parsed?.tag
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
   }
@@ -39,11 +43,23 @@ export async function POST(req: Request) {
     if (typeof title !== "string" || !title.trim()) {
       return NextResponse.json({ error: "title required" }, { status: 400 })
     }
+    const stageName = typeof stage === "string" && stage.trim() ? stage.trim() : "Other"
+    const tagVal = typeof tag === "string" && tag.trim() ? tag.trim() : null
     try {
+      // Place the new task at the end of its stage, reusing the stage's order.
+      const ord = await sql`
+        SELECT
+          COALESCE(MAX(stage_order), (SELECT COALESCE(MAX(stage_order) + 1, 0) FROM task_templates)) AS stage_order,
+          COALESCE(MAX(sort_order) + 1, 0) AS sort_order
+        FROM task_templates WHERE stage = ${stageName}
+      `
+      const stageOrder = ord.rows[0]?.stage_order ?? 0
+      const sortOrder = ord.rows[0]?.sort_order ?? 0
       const result = await sql`
-        INSERT INTO task_templates (title, description)
-        VALUES (${title.trim()}, ${typeof description === "string" ? description.trim() || null : null})
-        RETURNING id, title, description, created_at
+        INSERT INTO task_templates (title, description, stage, tag, stage_order, sort_order)
+        VALUES (${title.trim()}, ${typeof description === "string" ? description.trim() || null : null},
+                ${stageName}, ${tagVal}, ${stageOrder}, ${sortOrder})
+        RETURNING id, title, description, stage, tag, stage_order, sort_order, created_at
       `
       return NextResponse.json({ template: result.rows[0] }, { status: 201 })
     } catch {
@@ -67,17 +83,25 @@ export async function POST(req: Request) {
     try {
       let finalTitle = taskTitle
       let finalDesc = taskDesc
+      let finalStage: string | null = typeof stage === "string" && stage.trim() ? stage.trim() : null
+      let finalTag: string | null = typeof tag === "string" && tag.trim() ? tag.trim() : null
+      let finalStageOrder = 0
+      let finalSortOrder = 0
       if (taskTemplateId && !taskTitle) {
-        const tmpl = await sql`SELECT title, description FROM task_templates WHERE id = ${taskTemplateId}`
+        const tmpl = await sql`SELECT title, description, stage, tag, stage_order, sort_order FROM task_templates WHERE id = ${taskTemplateId}`
         if (tmpl.rows.length === 0) return NextResponse.json({ error: "Template not found" }, { status: 404 })
         finalTitle = tmpl.rows[0].title
         finalDesc = tmpl.rows[0].description
+        finalStage = tmpl.rows[0].stage
+        finalTag = tmpl.rows[0].tag
+        finalStageOrder = tmpl.rows[0].stage_order ?? 0
+        finalSortOrder = tmpl.rows[0].sort_order ?? 0
       }
 
       const result = await sql`
-        INSERT INTO client_tasks (client_id, template_id, title, description, due_date)
-        VALUES (${clientId}, ${taskTemplateId}, ${finalTitle!}, ${finalDesc}, ${taskDueDate})
-        RETURNING id, client_id, title, description, status, due_date, created_at
+        INSERT INTO client_tasks (client_id, template_id, title, description, due_date, stage, tag, stage_order, sort_order)
+        VALUES (${clientId}, ${taskTemplateId}, ${finalTitle!}, ${finalDesc}, ${taskDueDate}, ${finalStage}, ${finalTag}, ${finalStageOrder}, ${finalSortOrder})
+        RETURNING id, client_id, title, description, status, due_date, stage, tag, stage_order, sort_order, created_at
       `
       return NextResponse.json({ task: result.rows[0] }, { status: 201 })
     } catch {
@@ -86,6 +110,54 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ error: "Invalid action" }, { status: 400 })
+}
+
+export async function PATCH(req: Request) {
+  const check = await requireAdmin()
+  if (check.status !== "ok") return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  let id: unknown, title: unknown, tag: unknown, oldStage: unknown, newStage: unknown
+  try {
+    const parsed = await req.json()
+    id = parsed?.id
+    title = parsed?.title
+    tag = parsed?.tag
+    oldStage = parsed?.oldStage
+    newStage = parsed?.newStage
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
+  }
+
+  // Rename a stage (category) across templates and assigned tasks.
+  if (typeof oldStage === "string" && oldStage && typeof newStage === "string" && newStage.trim()) {
+    const to = newStage.trim()
+    try {
+      await sql`UPDATE task_templates SET stage = ${to} WHERE stage = ${oldStage}`
+      await sql`UPDATE client_tasks SET stage = ${to} WHERE stage = ${oldStage}`
+      return NextResponse.json({ ok: true })
+    } catch {
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
+  }
+
+  // Edit a single task template (title + tag).
+  if (typeof id !== "string" || !id || typeof title !== "string" || !title.trim()) {
+    return NextResponse.json({ error: "id and title required" }, { status: 400 })
+  }
+  const tagVal = typeof tag === "string" && tag.trim() ? tag.trim() : null
+
+  try {
+    const result = await sql`
+      UPDATE task_templates
+      SET title = ${title.trim()}, tag = ${tagVal}
+      WHERE id = ${id}
+      RETURNING id, title, description, stage, tag, stage_order, sort_order, created_at
+    `
+    if (result.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 })
+    return NextResponse.json({ template: result.rows[0] })
+  } catch {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
 }
 
 export async function DELETE(req: Request) {
