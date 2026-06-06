@@ -5,6 +5,12 @@ import { useState, useEffect } from "react"
 import { groupByStage } from "@/lib/task-stages"
 import { RichTextView } from "@/components/ui/RichTextEditor"
 
+interface Attachment {
+  id: string
+  file_name: string
+  size: number | null
+}
+
 interface Task {
   id: string
   title: string
@@ -14,6 +20,8 @@ interface Task {
   stage: string | null
   tag: string | null
   notes: string | null
+  firmFiles?: Attachment[]
+  myFiles?: Attachment[]
   stage_order?: number
   sort_order?: number
   created_at: string
@@ -34,13 +42,35 @@ export default function TasksClient() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [openId, setOpenId] = useState<string | null>(null)
+  const [uploadingId, setUploadingId] = useState<string | null>(null)
+
+  function reload() {
+    return fetch("/api/tasks")
+      .then((r) => r.json())
+      .then((d) => setTasks(d.tasks ?? []))
+      .catch(() => {})
+  }
 
   useEffect(() => {
-    fetch("/api/tasks")
-      .then((r) => r.json())
-      .then((d) => { setTasks(d.tasks ?? []); setLoading(false) })
-      .catch(() => setLoading(false))
+    reload().finally(() => setLoading(false))
   }, [])
+
+  async function uploadMyFile(taskId: string, file: File) {
+    setUploadingId(taskId)
+    const fd = new FormData()
+    fd.append("file", file)
+    fd.append("scope", "client_task")
+    fd.append("refId", taskId)
+    const res = await fetch("/api/task-files", { method: "POST", body: fd })
+    setUploadingId(null)
+    if (res.ok) reload()
+    else alert("Upload failed (max 25MB).")
+  }
+
+  async function deleteMyFile(id: string) {
+    await fetch(`/api/task-files/${id}`, { method: "DELETE" })
+    reload()
+  }
 
   async function toggleStatus(task: Task) {
     const newStatus = task.status === "pending" ? "done" : "pending"
@@ -105,18 +135,54 @@ export default function TasksClient() {
                       )}
                     </div>
                     {task.tag && <TagBadge tag={task.tag} />}
-                    {task.notes && (
-                      <button
-                        onClick={() => setOpenId(openId === task.id ? null : task.id)}
-                        className="text-xs text-blue-600 hover:underline flex-shrink-0"
-                      >
-                        {openId === task.id ? "Hide details" : "Details"}
-                      </button>
-                    )}
+                    <button
+                      onClick={() => setOpenId(openId === task.id ? null : task.id)}
+                      className="text-xs text-blue-600 hover:underline flex-shrink-0"
+                    >
+                      {openId === task.id ? "Hide details" : "Details"}
+                    </button>
                   </div>
-                  {task.notes && openId === task.id && (
-                    <div className="mt-3 ml-8 rounded-lg bg-gray-50 border border-gray-200 p-3">
-                      <RichTextView html={task.notes} />
+                  {openId === task.id && (
+                    <div className="mt-3 ml-8 rounded-lg bg-gray-50 border border-gray-200 p-3 space-y-3">
+                      {task.notes && <RichTextView html={task.notes} />}
+
+                      {(task.firmFiles ?? []).length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 mb-1">From the firm</p>
+                          <ul className="space-y-1">
+                            {(task.firmFiles ?? []).map((f) => (
+                              <li key={f.id}>
+                                <a href={`/api/task-files/${f.id}`} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">📎 {f.file_name}</a>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 mb-1">Your uploads</p>
+                        {(task.myFiles ?? []).length > 0 ? (
+                          <ul className="space-y-1 mb-1">
+                            {(task.myFiles ?? []).map((f) => (
+                              <li key={f.id} className="flex items-center gap-3">
+                                <a href={`/api/task-files/${f.id}`} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">📎 {f.file_name}</a>
+                                <button onClick={() => deleteMyFile(f.id)} className="text-xs text-gray-300 hover:text-red-600">Remove</button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-xs text-gray-400 mb-1">No files uploaded yet.</p>
+                        )}
+                        <label className="inline-flex items-center gap-2 text-sm text-blue-600 cursor-pointer hover:underline">
+                          {uploadingId === task.id ? "Uploading…" : "+ Upload a file"}
+                          <input
+                            type="file"
+                            className="hidden"
+                            disabled={uploadingId === task.id}
+                            onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadMyFile(task.id, f); e.target.value = "" }}
+                          />
+                        </label>
+                      </div>
                     </div>
                   )}
                 </li>

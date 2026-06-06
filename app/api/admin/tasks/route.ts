@@ -2,6 +2,7 @@
 import { requireAdmin } from "@/lib/admin"
 import { sql } from "@/lib/db"
 import { sanitizeNotesHtml } from "@/lib/sanitize"
+import { getTemplateAttachments } from "@/lib/task-attachments"
 import { NextResponse } from "next/server"
 
 export async function GET() {
@@ -15,7 +16,8 @@ export async function GET() {
       sql`SELECT id, client_id, title, description, status, due_date, stage, tag, stage_order, sort_order, created_at
           FROM client_tasks ORDER BY client_id ASC, stage_order ASC, sort_order ASC, created_at DESC`,
     ])
-    return NextResponse.json({ templates: templates.rows, tasks: tasks.rows })
+    const attachmentsByTemplate = await getTemplateAttachments(templates.rows.map((t) => t.id))
+    return NextResponse.json({ templates: templates.rows, tasks: tasks.rows, attachmentsByTemplate })
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }

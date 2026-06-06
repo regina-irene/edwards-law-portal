@@ -115,6 +115,22 @@ export const MIGRATION_SQL = `
   -- Rich-text notes on tasks
   ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS notes TEXT;
   ALTER TABLE client_tasks ADD COLUMN IF NOT EXISTS notes TEXT;
+
+  -- File attachments on tasks (private Vercel Blob)
+  CREATE TABLE IF NOT EXISTS task_attachments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    scope TEXT NOT NULL CHECK (scope IN ('template','client_task')),
+    ref_id TEXT NOT NULL,
+    client_id TEXT,
+    file_name TEXT NOT NULL,
+    pathname TEXT NOT NULL,
+    url TEXT NOT NULL,
+    content_type TEXT,
+    size BIGINT,
+    uploaded_by TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_task_attachments_ref ON task_attachments (scope, ref_id);
 `
 
 async function migrate(): Promise<void> {

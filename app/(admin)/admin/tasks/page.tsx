@@ -31,6 +31,12 @@ interface ClientTask {
   created_at: string
 }
 
+interface Attachment {
+  id: string
+  file_name: string
+  size: number | null
+}
+
 function TagBadge({ tag }: { tag: string }) {
   return (
     <span className="inline-flex items-center gap-1 text-xs text-gray-500 whitespace-nowrap">
@@ -45,6 +51,8 @@ function TagBadge({ tag }: { tag: string }) {
 export default function AdminTasksPage() {
   const [templates, setTemplates] = useState<Template[]>([])
   const [tasks, setTasks] = useState<ClientTask[]>([])
+  const [attachments, setAttachments] = useState<Record<string, Attachment[]>>({})
+  const [uploading, setUploading] = useState(false)
   const [loading, setLoading] = useState(true)
 
   // inline add-task state, keyed by stage
@@ -80,8 +88,26 @@ export default function AdminTasksPage() {
       const d = await res.json()
       setTemplates(d.templates ?? [])
       setTasks(d.tasks ?? [])
+      setAttachments(d.attachmentsByTemplate ?? {})
     }
     setLoading(false)
+  }
+
+  async function uploadFile(templateId: string, file: File) {
+    setUploading(true)
+    const fd = new FormData()
+    fd.append("file", file)
+    fd.append("scope", "template")
+    fd.append("refId", templateId)
+    const res = await fetch("/api/task-files", { method: "POST", body: fd })
+    setUploading(false)
+    if (res.ok) load()
+    else alert("Upload failed (max 25MB).")
+  }
+
+  async function deleteFile(id: string) {
+    await fetch(`/api/task-files/${id}`, { method: "DELETE" })
+    load()
   }
 
   useEffect(() => { load() }, [])
@@ -302,12 +328,36 @@ export default function AdminTasksPage() {
                       {notesSaved && <span className="text-xs text-green-600 font-medium">Saved</span>}
                     </div>
                     <RichTextEditor key={t.id} value={t.notes ?? ""} onChange={setNotesDraft} />
-                    <p className="text-xs text-gray-400">Notes (and any files, coming soon) show on the client&apos;s task. File attachments are the next step.</p>
                     <div className="flex items-center gap-3">
                       <button onClick={() => saveNotes(t)} disabled={savingNotes} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50">
                         {savingNotes ? "Saving…" : "Save notes"}
                       </button>
                       <button onClick={() => setOpenTaskId(null)} className="text-sm text-gray-400 hover:underline">Close</button>
+                    </div>
+
+                    <div className="pt-2 border-t border-gray-200 space-y-2">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Files (shown to clients with this task)</p>
+                      {(attachments[t.id] ?? []).length > 0 ? (
+                        <ul className="space-y-1">
+                          {(attachments[t.id] ?? []).map((f) => (
+                            <li key={f.id} className="flex items-center gap-3 text-sm">
+                              <a href={`/api/task-files/${f.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline truncate max-w-xs">{f.file_name}</a>
+                              <button onClick={() => deleteFile(f.id)} className="text-xs text-gray-300 hover:text-red-600">Remove</button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-gray-400">No files yet.</p>
+                      )}
+                      <label className="inline-flex items-center gap-2 text-sm text-blue-600 cursor-pointer hover:underline">
+                        {uploading ? "Uploading…" : "+ Upload PDF / document"}
+                        <input
+                          type="file"
+                          className="hidden"
+                          disabled={uploading}
+                          onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile(t.id, f); e.target.value = "" }}
+                        />
+                      </label>
                     </div>
                   </div>
                 )
