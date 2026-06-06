@@ -1,10 +1,10 @@
 // app/(admin)/admin/page.tsx
 import { sql } from "@/lib/db"
-import { clientDisplayLabel } from "@/lib/airtable"
-import { getAllClientsWithMeta } from "@/lib/clients-cache"
+import { clientDisplayLabel, fetchAllClientsRaw } from "@/lib/airtable"
 import { getClientLabels } from "@/lib/client-labels"
 import { refreshClients } from "./actions"
 import ClientLabelEditor from "./ClientLabelEditor"
+import RefreshButton from "./RefreshButton"
 import Link from "next/link"
 
 function formatRefreshed(ms: number): string {
@@ -14,13 +14,14 @@ function formatRefreshed(ms: number): string {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    second: "2-digit",
     timeZoneName: "short",
   })
 }
 
 export default async function AdminPage() {
-  const [{ clients: clientsRaw, fetchedAt }, labels, activityResult] = await Promise.all([
-    getAllClientsWithMeta(),
+  const [clientsRaw, labels, activityResult] = await Promise.all([
+    fetchAllClientsRaw(),
     getClientLabels(),
     sql`
       SELECT
@@ -38,6 +39,10 @@ export default async function AdminPage() {
       GROUP BY client_id
     `.catch(() => ({ rows: [] as any[] })),
   ])
+
+  // Page is dynamic and fetches fresh each render (fetchAllClientsRaw uses
+  // no-store), so the data is current as of now.
+  const fetchedAt = Date.now()
 
   // "Client ID" is an Airtable linked-record field, so at runtime it can be an
   // array. It coerces to the bare record id everywhere else (URLs, keys), so
@@ -64,14 +69,11 @@ export default async function AdminPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
-        <form action={refreshClients} className="flex flex-col items-end gap-1">
-          <button
-            type="submit"
-            className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700"
-          >
-            Refresh from Airtable
-          </button>
-          <span className="text-xs text-gray-400">Last refreshed {refreshedAt}</span>
+        <form action={refreshClients}>
+          <RefreshButton />
+          <span className="block text-right text-xs text-gray-400 mt-1">
+            Last refreshed {refreshedAt}
+          </span>
         </form>
       </div>
       {clients.length === 0 ? (

@@ -1,12 +1,12 @@
 "use server"
 
-import { revalidatePath, updateTag } from "next/cache"
+import { revalidatePath } from "next/cache"
 import { setClientLabel } from "@/lib/client-labels"
 
 export async function refreshClients() {
-  // updateTag (Server Action only) expires the "clients" cache immediately so
-  // the re-render fetches fresh Airtable data, rather than serving stale.
-  updateTag("clients")
+  // The /admin page fetches fresh from Airtable on each render, so re-rendering
+  // the path is enough to pull the latest data and update the timestamp.
+  revalidatePath("/admin")
 }
 
 export async function saveClientLabel(clientId: string, label: string) {
