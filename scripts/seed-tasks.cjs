@@ -78,6 +78,10 @@ async function main() {
       ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS tag TEXT;
       ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS stage_order INT NOT NULL DEFAULT 0;
       ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0;
+      ALTER TABLE client_tasks ADD COLUMN IF NOT EXISTS stage TEXT;
+      ALTER TABLE client_tasks ADD COLUMN IF NOT EXISTS tag TEXT;
+      ALTER TABLE client_tasks ADD COLUMN IF NOT EXISTS stage_order INT NOT NULL DEFAULT 0;
+      ALTER TABLE client_tasks ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0;
     `)
 
     await client.query("BEGIN")
