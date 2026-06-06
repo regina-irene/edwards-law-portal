@@ -3,6 +3,7 @@ import { sql } from "@/lib/db"
 import { clientDisplayLabel, fetchAllClientsRaw } from "@/lib/airtable"
 import { getClientLabels } from "@/lib/client-labels"
 import { refreshClients } from "./actions"
+import { startPreview } from "@/app/preview-actions"
 import ClientLabelEditor from "./ClientLabelEditor"
 import RefreshButton from "./RefreshButton"
 import Link from "next/link"
@@ -97,6 +98,9 @@ export default async function AdminPage() {
                   <Link href={`/admin/chat/${c.id}`} className="text-sm text-blue-600 hover:underline">Chat</Link>
                   <Link href={`/admin/messages/${c.id}`} className="text-sm text-blue-600 hover:underline">Message</Link>
                   <Link href={`/admin/clients/${c.id}/pages`} className="text-sm text-blue-600 hover:underline">Pages</Link>
+                  <form action={startPreview.bind(null, c.id)}>
+                    <button type="submit" className="text-sm text-blue-600 hover:underline">Preview</button>
+                  </form>
                 </div>
               </div>
             )

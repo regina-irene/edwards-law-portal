@@ -1,7 +1,7 @@
 // app/(client)/chat/page.tsx
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
-import { getClientByEmail } from "@/lib/airtable"
+import { getPortalClient } from "@/lib/portal-client"
 import { getPageContent } from "@/lib/page-content"
 import PageHeader from "@/components/ui/PageHeader"
 import FrontChatWidget from "@/components/chat/FrontChatWidget"
@@ -9,7 +9,7 @@ import FrontChatWidget from "@/components/chat/FrontChatWidget"
 export default async function ChatPage() {
   const session = await auth()
   if (!session?.user?.email) redirect("/login")
-  const client = await getClientByEmail(session.user.email)
+  const client = await getPortalClient()
   if (!client) redirect("/login")
 
   const pageContent = await getPageContent(client.clientId, "chat")

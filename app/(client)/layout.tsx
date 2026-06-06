@@ -1,7 +1,8 @@
 // app/(client)/layout.tsx
 import { redirect } from "next/navigation"
 import { auth } from "@/auth"
-import { getClientByEmail } from "@/lib/airtable"
+import { getPortalClient, getActivePreviewEmail } from "@/lib/portal-client"
+import { stopPreview } from "@/app/preview-actions"
 import { sql } from "@/lib/db"
 import Sidebar from "@/components/nav/Sidebar"
 import { PORTAL_PAGES } from "@/lib/pages"
@@ -39,10 +40,11 @@ export default async function ClientLayout({ children }: { children: React.React
 
   let client
   try {
-    client = await getClientByEmail(session.user.email)
+    client = await getPortalClient()
   } catch (e) {
-    console.error("[layout] getClientByEmail failed:", e)
+    console.error("[layout] getPortalClient failed:", e)
   }
+  const previewEmail = await getActivePreviewEmail()
   if (!client) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -75,14 +77,28 @@ export default async function ClientLayout({ children }: { children: React.React
   ])
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar
-        pages={pages}
-        clientName={client.name}
-        unreadMessages={unread.messages}
-        unreadChat={unread.chat}
-      />
-      <main className="flex-1 p-8 overflow-auto">{children}</main>
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      {previewEmail && (
+        <div className="bg-amber-100 border-b border-amber-300 text-amber-900 text-sm px-4 py-2 flex items-center justify-center gap-3">
+          <span>
+            Admin preview — viewing the portal as <strong>{client.name}</strong>
+          </span>
+          <form action={stopPreview}>
+            <button type="submit" className="underline font-medium hover:text-amber-950">
+              Exit preview
+            </button>
+          </form>
+        </div>
+      )}
+      <div className="flex flex-1 min-h-0">
+        <Sidebar
+          pages={pages}
+          clientName={client.name}
+          unreadMessages={unread.messages}
+          unreadChat={unread.chat}
+        />
+        <main className="flex-1 p-8 overflow-auto">{children}</main>
+      </div>
     </div>
   )
 }

@@ -1,7 +1,8 @@
 // app/(client)/dashboard/page.tsx
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
-import { getClientByEmail, getClientTasks } from "@/lib/airtable"
+import { getClientTasks } from "@/lib/airtable"
+import { getPortalClient } from "@/lib/portal-client"
 import { processTasks, DashboardData } from "@/lib/claude"
 import StatusLane from "@/components/dashboard/StatusLane"
 import PageHeader from "@/components/ui/PageHeader"
@@ -14,7 +15,7 @@ export default async function DashboardPage() {
   const session = await auth()
   if (!session?.user?.email) redirect("/login")
 
-  const client = await getClientByEmail(session.user.email)
+  const client = await getPortalClient()
   if (!client) redirect("/login")
 
   const [pageContent, dashboard] = await Promise.all([

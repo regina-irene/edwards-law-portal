@@ -1,7 +1,21 @@
 // app/api/admin/page-content/route.ts
 import { requireAdmin } from "@/lib/admin"
 import { sql } from "@/lib/db"
+import { fetchAllClientsRaw, clientDisplayLabel } from "@/lib/airtable"
+import { getClientLabels } from "@/lib/client-labels"
 import { NextResponse } from "next/server"
+
+async function resolveClientLabel(clientId: string): Promise<string> {
+  if (clientId === "_global") return "All clients (defaults)"
+  try {
+    const [clients, labels] = await Promise.all([fetchAllClientsRaw(), getClientLabels()])
+    const match = clients.find((c) => String(c.clientId) === clientId)
+    if (!match) return clientId
+    return labels[clientId] || clientDisplayLabel(match.name) || clientId
+  } catch {
+    return clientId
+  }
+}
 
 export async function GET(req: Request) {
   const check = await requireAdmin()
@@ -19,7 +33,8 @@ export async function GET(req: Request) {
     for (const row of result.rows) {
       content[row.page] = { header: row.header ?? "", announcement: row.announcement ?? "" }
     }
-    return NextResponse.json({ content })
+    const clientLabel = await resolveClientLabel(clientId)
+    return NextResponse.json({ content, clientLabel })
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }

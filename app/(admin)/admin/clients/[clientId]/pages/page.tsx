@@ -3,6 +3,7 @@
 
 import { useState, useEffect, use } from "react"
 import { PORTAL_PAGES } from "@/lib/pages"
+import { startPreview } from "@/app/preview-actions"
 
 interface PageContent {
   header: string
@@ -14,6 +15,7 @@ type ContentMap = Record<string, PageContent>
 export default function ClientPagesEditor({ params }: { params: Promise<{ clientId: string }> }) {
   const { clientId } = use(params)
   const [content, setContent] = useState<ContentMap>({})
+  const [clientLabel, setClientLabel] = useState("")
   const [saving, setSaving] = useState<string | null>(null)
   const [saved, setSaved] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -21,7 +23,7 @@ export default function ClientPagesEditor({ params }: { params: Promise<{ client
   useEffect(() => {
     fetch(`/api/admin/page-content?clientId=${encodeURIComponent(clientId)}`)
       .then((r) => r.json())
-      .then((d) => { setContent(d.content ?? {}); setLoading(false) })
+      .then((d) => { setContent(d.content ?? {}); setClientLabel(d.clientLabel ?? ""); setLoading(false) })
       .catch(() => setLoading(false))
   }, [clientId])
 
@@ -49,9 +51,23 @@ export default function ClientPagesEditor({ params }: { params: Promise<{ client
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Page Editor</h1>
-        <p className="text-sm text-gray-500 mt-1">Client: <span className="font-medium">{clientId}</span></p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Page Editor</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Client: <span className="font-medium">{clientLabel || clientId}</span>
+          </p>
+        </div>
+        {clientId !== "_global" && (
+          <form action={startPreview.bind(null, clientId)}>
+            <button
+              type="submit"
+              className="text-sm border border-blue-600 text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50"
+            >
+              Preview portal as this client ↗
+            </button>
+          </form>
+        )}
       </div>
       {PORTAL_PAGES.map((page) => {
         const c = get(page)
