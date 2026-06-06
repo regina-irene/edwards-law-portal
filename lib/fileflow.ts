@@ -5,8 +5,9 @@ import { Pool } from "pg"
 let pool: Pool | null = null
 function getPool(): Pool {
   if (!pool) {
+    // Trim to tolerate stray whitespace/newlines that can sneak into the env var.
     pool = new Pool({
-      connectionString: process.env.FILEFLOW_DATABASE_URL,
+      connectionString: (process.env.FILEFLOW_DATABASE_URL || "").trim(),
       ssl: { rejectUnauthorized: false },
       max: 3,
     })
