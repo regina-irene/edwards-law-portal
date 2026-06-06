@@ -1,0 +1,149 @@
+"use client"
+
+import { useEffect, useState } from "react"
+
+interface FormField {
+  id: string
+  fieldKey: string
+  label: string
+  type: string
+  placeholder: string | null
+  helpText: string | null
+  required: boolean
+  width: string | null
+  options: { value: string; label: string }[] | null
+}
+interface FormSection {
+  id: string
+  title: string
+  description: string | null
+  fields: FormField[]
+}
+interface FormDefinition {
+  key: string
+  label: string
+  description: string | null
+  sections: FormSection[]
+}
+
+export default function FormFill({ formKey }: { formKey: string }) {
+  const [form, setForm] = useState<FormDefinition | null>(null)
+  const [values, setValues] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch(`/api/forms/${encodeURIComponent(formKey)}`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error("load")
+        return r.json()
+      })
+      .then((d) => { setForm(d.form); setValues(d.values ?? {}) })
+      .catch(() => setError("This form could not be loaded."))
+      .finally(() => setLoading(false))
+  }, [formKey])
+
+  function set(fieldKey: string, value: string) {
+    setValues((p) => ({ ...p, [fieldKey]: value }))
+    setSaved(false)
+  }
+
+  async function save() {
+    setSaving(true)
+    setError(null)
+    const res = await fetch(`/api/forms/${encodeURIComponent(formKey)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ values }),
+    })
+    setSaving(false)
+    if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 2500) }
+    else setError("Could not save. Please try again.")
+  }
+
+  if (loading) return <p className="text-sm text-gray-400">Loading form…</p>
+  if (error && !form) return <p className="text-sm text-red-500">{error}</p>
+  if (!form) return null
+
+  return (
+    <div className="space-y-5">
+      {form.description && <p className="text-sm text-gray-500">{form.description}</p>}
+      {form.sections.map((section) => (
+        <div key={section.id} className="space-y-3">
+          <div>
+            <h4 className="text-sm font-semibold text-gray-800">{section.title}</h4>
+            {section.description && <p className="text-xs text-gray-500">{section.description}</p>}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {section.fields.map((f) => (
+              <Field key={f.id} field={f} value={values[f.fieldKey] ?? ""} onChange={(v) => set(f.fieldKey, v)} />
+            ))}
+          </div>
+        </div>
+      ))}
+      <div className="flex items-center gap-3 pt-2 border-t border-gray-200">
+        <button onClick={save} disabled={saving} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50">
+          {saving ? "Saving…" : "Save answers"}
+        </button>
+        {saved && <span className="text-xs text-green-600 font-medium">Saved ✓</span>}
+        {error && <span className="text-xs text-red-500">{error}</span>}
+      </div>
+    </div>
+  )
+}
+
+function Field({ field, value, onChange }: { field: FormField; value: string; onChange: (v: string) => void }) {
+  const full = field.width !== "half"
+  const base = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+  const label = (
+    <label className="block text-xs font-medium text-gray-600 mb-1">
+      {field.label}{field.required && <span className="text-red-500"> *</span>}
+    </label>
+  )
+
+  let input
+  if (field.type === "textarea") {
+    input = <textarea value={value} onChange={(e) => onChange(e.target.value)} placeholder={field.placeholder ?? ""} rows={3} className={`${base} resize-none`} />
+  } else if (field.type === "select") {
+    input = (
+      <select value={value} onChange={(e) => onChange(e.target.value)} className={base}>
+        <option value="">Select…</option>
+        {(field.options ?? []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    )
+  } else if (field.type === "radio") {
+    input = (
+      <div className="flex flex-wrap gap-3 pt-1">
+        {(field.options ?? []).map((o) => (
+          <label key={o.value} className="flex items-center gap-1.5 text-sm text-gray-700">
+            <input type="radio" name={field.fieldKey} checked={value === o.value} onChange={() => onChange(o.value)} />
+            {o.label}
+          </label>
+        ))}
+      </div>
+    )
+  } else if (field.type === "checkbox") {
+    return (
+      <div className={full ? "sm:col-span-2" : ""}>
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" checked={value === "true"} onChange={(e) => onChange(e.target.checked ? "true" : "false")} />
+          {field.label}{field.required && <span className="text-red-500"> *</span>}
+        </label>
+        {field.helpText && <p className="text-xs text-gray-400 mt-0.5">{field.helpText}</p>}
+      </div>
+    )
+  } else {
+    const type = ["email", "tel", "date", "number"].includes(field.type) ? field.type : field.type === "currency" ? "number" : "text"
+    input = <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={field.placeholder ?? ""} className={base} />
+  }
+
+  return (
+    <div className={full ? "sm:col-span-2" : ""}>
+      {label}
+      {input}
+      {field.helpText && <p className="text-xs text-gray-400 mt-0.5">{field.helpText}</p>}
+    </div>
+  )
+}

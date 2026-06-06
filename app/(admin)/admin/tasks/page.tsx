@@ -12,10 +12,13 @@ interface Template {
   stage: string | null
   tag: string | null
   notes: string | null
+  form_key: string | null
   stage_order?: number
   sort_order?: number
   created_at: string
 }
+
+interface FormSummary { key: string; label: string }
 
 interface ClientTask {
   id: string
@@ -52,6 +55,7 @@ export default function AdminTasksPage() {
   const [templates, setTemplates] = useState<Template[]>([])
   const [tasks, setTasks] = useState<ClientTask[]>([])
   const [attachments, setAttachments] = useState<Record<string, Attachment[]>>({})
+  const [forms, setForms] = useState<FormSummary[]>([])
   const [uploading, setUploading] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -110,7 +114,22 @@ export default function AdminTasksPage() {
     load()
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    fetch("/api/admin/fileflow-forms")
+      .then((r) => r.json())
+      .then((d) => setForms(d.forms ?? []))
+      .catch(() => {})
+  }, [])
+
+  async function setFormKey(templateId: string, formKey: string) {
+    const res = await fetch("/api/admin/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: templateId, formKey: formKey || "" }),
+    })
+    if (res.ok) load()
+  }
 
   async function addTask(stage: string, e: React.FormEvent) {
     e.preventDefault()
@@ -333,6 +352,23 @@ export default function AdminTasksPage() {
                         {savingNotes ? "Saving…" : "Save notes"}
                       </button>
                       <button onClick={() => setOpenTaskId(null)} className="text-sm text-gray-400 hover:underline">Close</button>
+                    </div>
+
+                    <div className="pt-2 border-t border-gray-200 space-y-2">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Linked intake form</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <select
+                          value={t.form_key ?? ""}
+                          onChange={(e) => setFormKey(t.id, e.target.value)}
+                          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">No form</option>
+                          {forms.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+                        </select>
+                        <span className="text-xs text-gray-400">
+                          {t.form_key ? "Clients fill this form from the task." : "Pick a FileFlow form to attach."}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="pt-2 border-t border-gray-200 space-y-2">

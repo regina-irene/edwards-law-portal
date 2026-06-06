@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react"
 import { groupByStage } from "@/lib/task-stages"
 import { RichTextView } from "@/components/ui/RichTextEditor"
+import FormFill from "@/components/tasks/FormFill"
 
 interface Attachment {
   id: string
@@ -20,6 +21,7 @@ interface Task {
   stage: string | null
   tag: string | null
   notes: string | null
+  form_key: string | null
   firmFiles?: Attachment[]
   myFiles?: Attachment[]
   stage_order?: number
@@ -145,6 +147,12 @@ export default function TasksClient() {
                   {openId === task.id && (
                     <div className="mt-3 ml-8 rounded-lg bg-gray-50 border border-gray-200 p-3 space-y-3">
                       {task.notes && <RichTextView html={task.notes} />}
+
+                      {task.form_key && (
+                        <div className="rounded-lg bg-white border border-gray-200 p-3">
+                          <FormFill formKey={task.form_key} />
+                        </div>
+                      )}
 
                       {(task.firmFiles ?? []).length > 0 && (
                         <div>

@@ -131,6 +131,21 @@ export const MIGRATION_SQL = `
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
   CREATE INDEX IF NOT EXISTS idx_task_attachments_ref ON task_attachments (scope, ref_id);
+
+  -- Link tasks to a FileFlow intake form + store answers locally
+  ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS form_key TEXT;
+  ALTER TABLE client_tasks ADD COLUMN IF NOT EXISTS form_key TEXT;
+  CREATE TABLE IF NOT EXISTS form_responses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id TEXT NOT NULL,
+    form_key TEXT NOT NULL,
+    field_key TEXT NOT NULL,
+    value TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (client_id, form_key, field_key)
+  );
+  CREATE INDEX IF NOT EXISTS idx_form_responses_client_form ON form_responses (client_id, form_key);
 `
 
 async function migrate(): Promise<void> {
