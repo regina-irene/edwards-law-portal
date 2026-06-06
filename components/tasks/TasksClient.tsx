@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react"
 import { groupByStage } from "@/lib/task-stages"
+import { RichTextView } from "@/components/ui/RichTextEditor"
 
 interface Task {
   id: string
@@ -12,6 +13,7 @@ interface Task {
   due_date: string | null
   stage: string | null
   tag: string | null
+  notes: string | null
   stage_order?: number
   sort_order?: number
   created_at: string
@@ -31,6 +33,7 @@ function TagBadge({ tag }: { tag: string }) {
 export default function TasksClient() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
+  const [openId, setOpenId] = useState<string | null>(null)
 
   useEffect(() => {
     fetch("/api/tasks")
@@ -76,34 +79,46 @@ export default function TasksClient() {
             </div>
             <ul className="divide-y divide-gray-100">
               {group.tasks.map((task) => (
-                <li key={task.id} className="flex items-center gap-3 px-4 py-3">
-                  <button
-                    onClick={() => toggleStatus(task)}
-                    className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
-                      task.status === "done"
-                        ? "bg-green-600 border-green-600 text-white"
-                        : "border-gray-300 hover:border-green-400"
-                    }`}
-                    aria-label={task.status === "done" ? "Mark not done" : "Mark done"}
-                  >
-                    {task.status === "done" && (
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm ${task.status === "done" ? "line-through text-gray-400" : "text-gray-800"}`}>
-                      {task.title}
-                    </p>
-                    {task.description && (
-                      <p className="text-xs text-gray-500 mt-0.5">{task.description}</p>
-                    )}
-                    {task.due_date && (
-                      <p className="text-xs text-gray-400 mt-0.5">Due: {new Date(task.due_date).toLocaleDateString()}</p>
+                <li key={task.id} className="px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => toggleStatus(task)}
+                      className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
+                        task.status === "done"
+                          ? "bg-green-600 border-green-600 text-white"
+                          : "border-gray-300 hover:border-green-400"
+                      }`}
+                      aria-label={task.status === "done" ? "Mark not done" : "Mark done"}
+                    >
+                      {task.status === "done" && (
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm ${task.status === "done" ? "line-through text-gray-400" : "text-gray-800"}`}>
+                        {task.title}
+                      </p>
+                      {task.due_date && (
+                        <p className="text-xs text-gray-400 mt-0.5">Due: {new Date(task.due_date).toLocaleDateString()}</p>
+                      )}
+                    </div>
+                    {task.tag && <TagBadge tag={task.tag} />}
+                    {task.notes && (
+                      <button
+                        onClick={() => setOpenId(openId === task.id ? null : task.id)}
+                        className="text-xs text-blue-600 hover:underline flex-shrink-0"
+                      >
+                        {openId === task.id ? "Hide details" : "Details"}
+                      </button>
                     )}
                   </div>
-                  {task.tag && <TagBadge tag={task.tag} />}
+                  {task.notes && openId === task.id && (
+                    <div className="mt-3 ml-8 rounded-lg bg-gray-50 border border-gray-200 p-3">
+                      <RichTextView html={task.notes} />
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

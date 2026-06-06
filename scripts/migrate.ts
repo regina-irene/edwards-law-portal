@@ -111,6 +111,10 @@ export const MIGRATION_SQL = `
   ALTER TABLE client_tasks ADD COLUMN IF NOT EXISTS tag TEXT;
   ALTER TABLE client_tasks ADD COLUMN IF NOT EXISTS stage_order INT NOT NULL DEFAULT 0;
   ALTER TABLE client_tasks ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0;
+
+  -- Rich-text notes on tasks
+  ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS notes TEXT;
+  ALTER TABLE client_tasks ADD COLUMN IF NOT EXISTS notes TEXT;
 `
 
 async function migrate(): Promise<void> {

@@ -1,6 +1,7 @@
 // app/api/admin/tasks/route.ts
 import { requireAdmin } from "@/lib/admin"
 import { sql } from "@/lib/db"
+import { sanitizeNotesHtml } from "@/lib/sanitize"
 import { NextResponse } from "next/server"
 
 export async function GET() {
@@ -9,7 +10,7 @@ export async function GET() {
 
   try {
     const [templates, tasks] = await Promise.all([
-      sql`SELECT id, title, description, stage, tag, stage_order, sort_order, created_at
+      sql`SELECT id, title, description, stage, tag, notes, stage_order, sort_order, created_at
           FROM task_templates ORDER BY stage_order ASC, sort_order ASC, created_at ASC`,
       sql`SELECT id, client_id, title, description, status, due_date, stage, tag, stage_order, sort_order, created_at
           FROM client_tasks ORDER BY client_id ASC, stage_order ASC, sort_order ASC, created_at DESC`,
@@ -116,7 +117,7 @@ export async function PATCH(req: Request) {
   const check = await requireAdmin()
   if (check.status !== "ok") return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  let id: unknown, title: unknown, tag: unknown, oldStage: unknown, newStage: unknown
+  let id: unknown, title: unknown, tag: unknown, oldStage: unknown, newStage: unknown, notes: unknown
   try {
     const parsed = await req.json()
     id = parsed?.id
@@ -124,6 +125,7 @@ export async function PATCH(req: Request) {
     tag = parsed?.tag
     oldStage = parsed?.oldStage
     newStage = parsed?.newStage
+    notes = parsed?.notes
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
   }
@@ -147,12 +149,19 @@ export async function PATCH(req: Request) {
   const tagVal = typeof tag === "string" && tag.trim() ? tag.trim() : null
 
   try {
-    const result = await sql`
-      UPDATE task_templates
-      SET title = ${title.trim()}, tag = ${tagVal}
-      WHERE id = ${id}
-      RETURNING id, title, description, stage, tag, stage_order, sort_order, created_at
-    `
+    // Only overwrite notes when the caller included a notes field.
+    const result =
+      notes === undefined
+        ? await sql`
+            UPDATE task_templates SET title = ${title.trim()}, tag = ${tagVal}
+            WHERE id = ${id}
+            RETURNING id, title, description, stage, tag, notes, stage_order, sort_order, created_at
+          `
+        : await sql`
+            UPDATE task_templates SET title = ${title.trim()}, tag = ${tagVal}, notes = ${sanitizeNotesHtml(notes) || null}
+            WHERE id = ${id}
+            RETURNING id, title, description, stage, tag, notes, stage_order, sort_order, created_at
+          `
     if (result.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 })
     return NextResponse.json({ template: result.rows[0] })
   } catch {

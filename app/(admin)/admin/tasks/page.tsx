@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react"
 import { groupByStage } from "@/lib/task-stages"
+import { RichTextEditor } from "@/components/ui/RichTextEditor"
 
 interface Template {
   id: string
@@ -10,6 +11,7 @@ interface Template {
   description: string | null
   stage: string | null
   tag: string | null
+  notes: string | null
   stage_order?: number
   sort_order?: number
   created_at: string
@@ -58,6 +60,12 @@ export default function AdminTasksPage() {
   // inline rename-stage state
   const [editingStage, setEditingStage] = useState<string | null>(null)
   const [stageDraft, setStageDraft] = useState("")
+
+  // expanded task (notes editor) state
+  const [openTaskId, setOpenTaskId] = useState<string | null>(null)
+  const [notesDraft, setNotesDraft] = useState("")
+  const [savingNotes, setSavingNotes] = useState(false)
+  const [notesSaved, setNotesSaved] = useState(false)
 
   // new stage state
   const [newStageName, setNewStageName] = useState("")
@@ -115,6 +123,24 @@ export default function AdminTasksPage() {
       body: JSON.stringify({ id, title: editTitle, tag: editTag || undefined }),
     })
     if (res.ok) { setEditingTaskId(null); load() }
+  }
+
+  function toggleOpen(t: Template) {
+    if (openTaskId === t.id) { setOpenTaskId(null); return }
+    setOpenTaskId(t.id)
+    setNotesDraft(t.notes ?? "")
+    setNotesSaved(false)
+  }
+
+  async function saveNotes(t: Template) {
+    setSavingNotes(true)
+    const res = await fetch("/api/admin/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: t.id, title: t.title, tag: t.tag ?? undefined, notes: notesDraft }),
+    })
+    setSavingNotes(false)
+    if (res.ok) { setNotesSaved(true); load(); setTimeout(() => setNotesSaved(false), 2000) }
   }
 
   async function saveStageRename(oldStage: string) {
@@ -253,8 +279,12 @@ export default function AdminTasksPage() {
                     ) : (
                       <>
                         <span className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0" />
-                        <span className="flex-1 min-w-0 text-sm text-gray-800">{t.title}</span>
+                        <span className="flex-1 min-w-0 text-sm text-gray-800">
+                          {t.title}
+                          {t.notes && <span className="ml-2 text-xs text-gray-400">📝</span>}
+                        </span>
                         {t.tag && <TagBadge tag={t.tag} />}
+                        <button onClick={() => toggleOpen(t)} className="text-xs text-blue-600 hover:underline">{openTaskId === t.id ? "Close" : "Open"}</button>
                         <button onClick={() => startEdit(t)} className="text-xs text-gray-400 hover:text-blue-600 hover:underline">Edit</button>
                         <button onClick={() => deleteTemplate(t.id)} className="text-xs text-gray-300 hover:text-red-600 transition-colors">Delete</button>
                       </>
@@ -262,6 +292,26 @@ export default function AdminTasksPage() {
                   </li>
                 ))}
               </ul>
+              {/* Expanded task detail (notes) */}
+              {group.tasks.some((t) => t.id === openTaskId) && (() => {
+                const t = group.tasks.find((x) => x.id === openTaskId)!
+                return (
+                  <div className="px-4 py-4 bg-gray-50 border-t border-gray-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Notes for: {t.title}</p>
+                      {notesSaved && <span className="text-xs text-green-600 font-medium">Saved</span>}
+                    </div>
+                    <RichTextEditor key={t.id} value={t.notes ?? ""} onChange={setNotesDraft} />
+                    <p className="text-xs text-gray-400">Notes (and any files, coming soon) show on the client&apos;s task. File attachments are the next step.</p>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => saveNotes(t)} disabled={savingNotes} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                        {savingNotes ? "Saving…" : "Save notes"}
+                      </button>
+                      <button onClick={() => setOpenTaskId(null)} className="text-sm text-gray-400 hover:underline">Close</button>
+                    </div>
+                  </div>
+                )
+              })()}
               <div className="px-4 py-2.5 bg-gray-50 border-t border-gray-100">
                 {addingStage === group.stage ? (
                   <form onSubmit={(e) => addTask(group.stage, e)} className="flex items-center gap-2 flex-wrap">

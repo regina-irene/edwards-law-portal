@@ -12,10 +12,13 @@ export async function GET() {
 
   try {
     const result = await sql`
-      SELECT id, title, description, status, due_date, stage, tag, stage_order, sort_order, created_at
-      FROM client_tasks
-      WHERE client_id = ${String(client.clientId)}
-      ORDER BY stage_order ASC, sort_order ASC, created_at ASC
+      SELECT ct.id, ct.title, ct.description, ct.status, ct.due_date,
+             ct.stage, ct.tag, ct.stage_order, ct.sort_order, ct.created_at,
+             COALESCE(ct.notes, tt.notes) AS notes
+      FROM client_tasks ct
+      LEFT JOIN task_templates tt ON tt.id = ct.template_id
+      WHERE ct.client_id = ${String(client.clientId)}
+      ORDER BY ct.stage_order ASC, ct.sort_order ASC, ct.created_at ASC
     `
     return NextResponse.json({ tasks: result.rows })
   } catch {
