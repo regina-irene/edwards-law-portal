@@ -3,7 +3,7 @@
 import { useRef, useEffect, useState } from "react"
 
 // Full WYSIWYG editor: formatting, alignment, color, highlight, font size,
-// indent, lists, headings, links, and inline image upload.
+// indent, lists, headings, links, inline image upload + resize/position.
 export function RichTextEditor({
   value,
   onChange,
@@ -14,8 +14,9 @@ export function RichTextEditor({
   const ref = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const savedRange = useRef<Range | null>(null)
-  const selectedImg = useRef<HTMLImageElement | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [imgEl, setImgEl] = useState<HTMLImageElement | null>(null)
+  const [imgWidth, setImgWidth] = useState(100)
 
   useEffect(() => {
     if (ref.current) ref.current.innerHTML = value || ""
@@ -55,33 +56,27 @@ export function RichTextEditor({
     emit()
   }
 
-  // Align — if an image is selected, position the image directly; otherwise
-  // align the text block.
   function align(dir: "left" | "center" | "right" | "justify") {
-    const img = selectedImg.current
-    if (img && ref.current?.contains(img)) {
-      img.style.float = "none"
-      img.style.marginLeft = ""
-      img.style.marginRight = ""
-      if (dir === "center") {
-        img.style.display = "block"
-        img.style.marginLeft = "auto"
-        img.style.marginRight = "auto"
-      } else if (dir === "left") {
-        img.style.display = "inline"
-        img.style.float = "left"
-        img.style.marginRight = "1rem"
-      } else if (dir === "right") {
-        img.style.display = "inline"
-        img.style.float = "right"
-        img.style.marginLeft = "1rem"
-      } else {
-        img.style.display = ""
-      }
+    if (imgEl && ref.current?.contains(imgEl)) {
+      imgEl.style.float = "none"
+      imgEl.style.marginLeft = ""
+      imgEl.style.marginRight = ""
+      if (dir === "center") { imgEl.style.display = "block"; imgEl.style.marginLeft = "auto"; imgEl.style.marginRight = "auto" }
+      else if (dir === "left") { imgEl.style.display = "inline"; imgEl.style.float = "left"; imgEl.style.marginRight = "1rem" }
+      else if (dir === "right") { imgEl.style.display = "inline"; imgEl.style.float = "right"; imgEl.style.marginLeft = "1rem" }
+      else { imgEl.style.display = "" }
       emit()
       return
     }
     exec(dir === "center" ? "justifyCenter" : dir === "right" ? "justifyRight" : dir === "left" ? "justifyLeft" : "justifyFull")
+  }
+
+  function resizeImg(pct: number) {
+    if (!imgEl || !ref.current?.contains(imgEl)) return
+    imgEl.style.width = `${pct}%`
+    imgEl.style.height = "auto"
+    setImgWidth(pct)
+    emit()
   }
 
   function addLink() {
@@ -171,6 +166,22 @@ export function RichTextEditor({
         <input ref={fileRef} type="file" accept="image/*" className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) onImagePicked(f); e.target.value = "" }} />
       </div>
+
+      {/* Image controls — appear when an image is selected */}
+      {imgEl && (
+        <div className="flex items-center gap-3 flex-wrap border-b border-gray-200 bg-blue-50 px-3 py-1.5 text-xs text-gray-700">
+          <span className="font-medium">Image:</span>
+          <span>Size</span>
+          <input type="range" min={10} max={100} value={imgWidth}
+            onChange={(e) => resizeImg(parseInt(e.target.value))} className="w-32" />
+          <span className="w-8 tabular-nums">{imgWidth}%</span>
+          <button type="button" onMouseDown={hold(() => resizeImg(25))} className="px-2 py-0.5 rounded hover:bg-blue-100">25%</button>
+          <button type="button" onMouseDown={hold(() => resizeImg(50))} className="px-2 py-0.5 rounded hover:bg-blue-100">50%</button>
+          <button type="button" onMouseDown={hold(() => resizeImg(100))} className="px-2 py-0.5 rounded hover:bg-blue-100">Full</button>
+          <span className="text-gray-400">— use the align buttons above to center/float it</span>
+        </div>
+      )}
+
       <div
         ref={ref}
         contentEditable
@@ -181,7 +192,14 @@ export function RichTextEditor({
         onBlur={saveSelection}
         onClick={(e) => {
           const t = e.target as HTMLElement
-          selectedImg.current = t.tagName === "IMG" ? (t as HTMLImageElement) : null
+          if (t.tagName === "IMG") {
+            const im = t as HTMLImageElement
+            setImgEl(im)
+            const w = parseInt(im.style.width)
+            setImgWidth(im.style.width.endsWith("%") && w ? w : 100)
+          } else {
+            setImgEl(null)
+          }
         }}
         className="min-h-[140px] px-3 py-2 text-sm text-gray-800 focus:outline-none [&_a]:text-blue-600 [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:text-base [&_h3]:font-semibold [&_img]:max-w-full [&_img]:rounded [&_img]:my-2"
       />
@@ -189,8 +207,7 @@ export function RichTextEditor({
   )
 }
 
-// Renders sanitized rich content (read-only). Inline styles (color, highlight,
-// alignment), images, and lists are preserved by the sanitizer.
+// Renders sanitized rich content (read-only).
 export function RichTextView({ html, className = "" }: { html: string; className?: string }) {
   return (
     <div
