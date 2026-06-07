@@ -14,6 +14,7 @@ export function RichTextEditor({
   const ref = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const savedRange = useRef<Range | null>(null)
+  const selectedImg = useRef<HTMLImageElement | null>(null)
   const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
@@ -52,6 +53,35 @@ export function RichTextEditor({
     try { document.execCommand("styleWithCSS", false, "true") } catch {}
     document.execCommand(cmd, false, arg)
     emit()
+  }
+
+  // Align — if an image is selected, position the image directly; otherwise
+  // align the text block.
+  function align(dir: "left" | "center" | "right" | "justify") {
+    const img = selectedImg.current
+    if (img && ref.current?.contains(img)) {
+      img.style.float = "none"
+      img.style.marginLeft = ""
+      img.style.marginRight = ""
+      if (dir === "center") {
+        img.style.display = "block"
+        img.style.marginLeft = "auto"
+        img.style.marginRight = "auto"
+      } else if (dir === "left") {
+        img.style.display = "inline"
+        img.style.float = "left"
+        img.style.marginRight = "1rem"
+      } else if (dir === "right") {
+        img.style.display = "inline"
+        img.style.float = "right"
+        img.style.marginLeft = "1rem"
+      } else {
+        img.style.display = ""
+      }
+      emit()
+      return
+    }
+    exec(dir === "center" ? "justifyCenter" : dir === "right" ? "justifyRight" : dir === "left" ? "justifyLeft" : "justifyFull")
   }
 
   function addLink() {
@@ -109,10 +139,10 @@ export function RichTextEditor({
         </select>
         <Divider />
 
-        <button type="button" title="Align left" onMouseDown={hold(() => exec("justifyLeft"))} className={btn}>⫷</button>
-        <button type="button" title="Align center" onMouseDown={hold(() => exec("justifyCenter"))} className={btn}>☰</button>
-        <button type="button" title="Align right" onMouseDown={hold(() => exec("justifyRight"))} className={btn}>⫸</button>
-        <button type="button" title="Justify" onMouseDown={hold(() => exec("justifyFull"))} className={btn}>▤</button>
+        <button type="button" title="Align left (or float image left)" onMouseDown={hold(() => align("left"))} className={btn}>⫷</button>
+        <button type="button" title="Align center (or center image)" onMouseDown={hold(() => align("center"))} className={btn}>☰</button>
+        <button type="button" title="Align right (or float image right)" onMouseDown={hold(() => align("right"))} className={btn}>⫸</button>
+        <button type="button" title="Justify" onMouseDown={hold(() => align("justify"))} className={btn}>▤</button>
         <Divider />
 
         <button type="button" title="Bulleted list" onMouseDown={hold(() => exec("insertUnorderedList"))} className={btn}>• List</button>
@@ -149,6 +179,10 @@ export function RichTextEditor({
         onKeyUp={saveSelection}
         onMouseUp={saveSelection}
         onBlur={saveSelection}
+        onClick={(e) => {
+          const t = e.target as HTMLElement
+          selectedImg.current = t.tagName === "IMG" ? (t as HTMLImageElement) : null
+        }}
         className="min-h-[140px] px-3 py-2 text-sm text-gray-800 focus:outline-none [&_a]:text-blue-600 [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:text-base [&_h3]:font-semibold [&_img]:max-w-full [&_img]:rounded [&_img]:my-2"
       />
     </div>
