@@ -153,6 +153,15 @@ export const MIGRATION_SQL = `
   ALTER TABLE page_content ADD COLUMN IF NOT EXISTS image_pathname TEXT;
   ALTER TABLE page_content ADD COLUMN IF NOT EXISTS image_name TEXT;
   ALTER TABLE page_content ADD COLUMN IF NOT EXISTS image_url TEXT;
+
+  -- Inline images embedded inside rich-text content (private blob)
+  CREATE TABLE IF NOT EXISTS content_images (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    pathname TEXT NOT NULL,
+    url TEXT NOT NULL,
+    uploaded_by TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
 `
 
 async function migrate(): Promise<void> {
