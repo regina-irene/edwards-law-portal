@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin"
 import { sql } from "@/lib/db"
 import { fetchAllClientsRaw, clientDisplayLabel } from "@/lib/airtable"
 import { getClientLabels } from "@/lib/client-labels"
+import { sanitizeNotesHtml } from "@/lib/sanitize"
 import { NextResponse } from "next/server"
 
 async function resolveClientLabel(clientId: string): Promise<string> {
@@ -27,11 +28,17 @@ export async function GET(req: Request) {
 
   try {
     const result = await sql`
-      SELECT page, header, announcement FROM page_content WHERE client_id = ${clientId}
+      SELECT page, header, announcement, embed_url, body, image_name FROM page_content WHERE client_id = ${clientId}
     `
-    const content: Record<string, { header: string; announcement: string }> = {}
+    const content: Record<string, { header: string; announcement: string; embed_url: string; body: string; image_name: string }> = {}
     for (const row of result.rows) {
-      content[row.page] = { header: row.header ?? "", announcement: row.announcement ?? "" }
+      content[row.page] = {
+        header: row.header ?? "",
+        announcement: row.announcement ?? "",
+        embed_url: row.embed_url ?? "",
+        body: row.body ?? "",
+        image_name: row.image_name ?? "",
+      }
     }
     const clientLabel = await resolveClientLabel(clientId)
     return NextResponse.json({ content, clientLabel })
@@ -44,13 +51,15 @@ export async function PUT(req: Request) {
   const check = await requireAdmin()
   if (check.status !== "ok") return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  let clientId: unknown, page: unknown, header: unknown, announcement: unknown
+  let clientId: unknown, page: unknown, header: unknown, announcement: unknown, embedUrl: unknown, body: unknown
   try {
     const parsed = await req.json()
     clientId = parsed?.clientId
     page = parsed?.page
     header = parsed?.header
     announcement = parsed?.announcement
+    embedUrl = parsed?.embed_url
+    body = parsed?.body
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
   }
@@ -60,15 +69,25 @@ export async function PUT(req: Request) {
   }
 
   const headerVal = typeof header === "string" ? header.trim() || null : null
-  const announcementVal = typeof announcement === "string" ? announcement.trim() || null : null
+  // Announcement and body are rich text (HTML) — sanitize.
+  const announcementVal = typeof announcement === "string" ? sanitizeNotesHtml(announcement) || null : null
+  const bodyVal = typeof body === "string" ? sanitizeNotesHtml(body) || null : null
+  // Embed URL: only allow http(s).
+  let embedVal: string | null = null
+  if (typeof embedUrl === "string" && embedUrl.trim()) {
+    const u = embedUrl.trim()
+    embedVal = /^https?:\/\//i.test(u) ? u : null
+  }
 
   try {
     await sql`
-      INSERT INTO page_content (client_id, page, header, announcement)
-      VALUES (${clientId}, ${page}, ${headerVal}, ${announcementVal})
+      INSERT INTO page_content (client_id, page, header, announcement, embed_url, body)
+      VALUES (${clientId}, ${page}, ${headerVal}, ${announcementVal}, ${embedVal}, ${bodyVal})
       ON CONFLICT (client_id, page) DO UPDATE
         SET header = EXCLUDED.header,
-            announcement = EXCLUDED.announcement
+            announcement = EXCLUDED.announcement,
+            embed_url = EXCLUDED.embed_url,
+            body = EXCLUDED.body
     `
     return NextResponse.json({ ok: true })
   } catch {

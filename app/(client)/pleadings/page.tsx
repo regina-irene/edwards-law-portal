@@ -16,7 +16,7 @@ export default async function PleadingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader defaultTitle="Pleadings" header={pageContent.header} announcement={pageContent.announcement} />
+      <PageHeader defaultTitle="Pleadings" page="pleadings" content={pageContent} />
       <AirtableEmbed url={client.pleadingsViewLink} title="Pleadings" />
     </div>
   )

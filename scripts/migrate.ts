@@ -146,6 +146,13 @@ export const MIGRATION_SQL = `
     UNIQUE (client_id, form_key, field_key)
   );
   CREATE INDEX IF NOT EXISTS idx_form_responses_client_form ON form_responses (client_id, form_key);
+
+  -- Richer editable page content (admin-managed: embed, body, image)
+  ALTER TABLE page_content ADD COLUMN IF NOT EXISTS embed_url TEXT;
+  ALTER TABLE page_content ADD COLUMN IF NOT EXISTS body TEXT;
+  ALTER TABLE page_content ADD COLUMN IF NOT EXISTS image_pathname TEXT;
+  ALTER TABLE page_content ADD COLUMN IF NOT EXISTS image_name TEXT;
+  ALTER TABLE page_content ADD COLUMN IF NOT EXISTS image_url TEXT;
 `
 
 async function migrate(): Promise<void> {

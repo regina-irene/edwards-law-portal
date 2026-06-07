@@ -49,7 +49,7 @@ export default async function MessagesPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <PageHeader defaultTitle="Messages" header={pageContent.header} announcement={pageContent.announcement} />
+      <PageHeader defaultTitle="Messages" page="messages" content={pageContent} />
       {messages.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <p>No messages yet.</p>

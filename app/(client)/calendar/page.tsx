@@ -16,7 +16,7 @@ export default async function CalendarPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader defaultTitle="Calendar" header={pageContent.header} announcement={pageContent.announcement} />
+      <PageHeader defaultTitle="Calendar" page="calendar" content={pageContent} />
       <AirtableEmbed url={client.calendarViewLink} title="Calendar" />
     </div>
   )

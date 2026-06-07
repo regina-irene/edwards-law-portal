@@ -45,18 +45,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader defaultTitle="Dashboard" header={pageContent.header} announcement={announcement} />
-      <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
-        <iframe
-          src="https://airtable.com/embed/appAuA3Ifddk44H5m/shrXy64JYpuwv9gsY?viewControls=on"
-          title="Firm Announcements"
-          width="100%"
-          height="400"
-          className="block"
-          frameBorder="0"
-          allowFullScreen
-        />
-      </div>
+      <PageHeader defaultTitle="Dashboard" page="dashboard" content={{ ...pageContent, announcement }} />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {dashboard.sections.map((section, i) => (
           <StatusLane key={section.title} section={section} color={LANE_COLORS[i] ?? DEFAULT_LANE_COLOR} />

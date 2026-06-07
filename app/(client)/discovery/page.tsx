@@ -16,7 +16,7 @@ export default async function DiscoveryPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader defaultTitle="Discovery" header={pageContent.header} announcement={pageContent.announcement} />
+      <PageHeader defaultTitle="Discovery" page="discovery" content={pageContent} />
       <AirtableEmbed url={client.discoveryViewLink} title="Discovery" />
     </div>
   )

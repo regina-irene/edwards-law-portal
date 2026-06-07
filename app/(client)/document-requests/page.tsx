@@ -17,7 +17,7 @@ export default async function DocumentRequestsPage() {
   if (!url) {
     return (
       <div className="space-y-6">
-        <PageHeader defaultTitle="Document Requests" header={pageContent.header} announcement={pageContent.announcement} />
+        <PageHeader defaultTitle="Document Requests" page="document-requests" content={pageContent} />
         <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg border border-gray-200">
           <p className="text-sm text-gray-500">Document portal not configured. Please contact your attorney.</p>
         </div>
@@ -27,7 +27,7 @@ export default async function DocumentRequestsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader defaultTitle="Document Requests" header={pageContent.header} announcement={pageContent.announcement} />
+      <PageHeader defaultTitle="Document Requests" page="document-requests" content={pageContent} />
       <div className="flex flex-col items-center justify-center gap-4 py-16 bg-gray-50 rounded-lg border border-gray-200">
         <p className="text-gray-600 text-center max-w-sm">
           Your document portal opens in a new tab where you can upload and manage requested documents.

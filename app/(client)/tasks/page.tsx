@@ -16,7 +16,7 @@ export default async function TasksPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader defaultTitle="Tasks" header={pageContent.header} announcement={pageContent.announcement} />
+      <PageHeader defaultTitle="Tasks" page="tasks" content={pageContent} />
       <TasksClient />
     </div>
   )
