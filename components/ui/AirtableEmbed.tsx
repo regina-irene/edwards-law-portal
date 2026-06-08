@@ -4,7 +4,21 @@ interface AirtableEmbedProps {
   title: string
 }
 
+// Airtable only allows its /embed/ URLs to be framed. Convert a normal shared
+// view link (airtable.com/app.../shr...) into the embeddable form.
+function toEmbedUrl(url: string): string {
+  try {
+    const u = new URL(url)
+    if (/(^|\.)airtable\.com$/i.test(u.hostname) && !u.pathname.startsWith("/embed/")) {
+      const m = url.match(/shr[A-Za-z0-9]+/)
+      if (m) return `https://airtable.com/embed/${m[0]}${u.search}`
+    }
+  } catch {}
+  return url
+}
+
 export default function AirtableEmbed({ url, title }: AirtableEmbedProps) {
+  const embedUrl = toEmbedUrl(url)
   if (!url) {
     return (
       <div className="flex items-center justify-center h-96 bg-gray-50 rounded-lg border border-gray-200">
@@ -18,7 +32,7 @@ export default function AirtableEmbed({ url, title }: AirtableEmbedProps) {
       {/* Desktop: iframe */}
       <div className="hidden md:block rounded-lg overflow-hidden border border-gray-200 shadow-sm">
         <iframe
-          src={url}
+          src={embedUrl}
           title={title}
           width="100%"
           height="600"
