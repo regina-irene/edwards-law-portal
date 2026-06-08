@@ -20,8 +20,9 @@ export async function GET(req: Request) {
       FROM chat_messages
       WHERE client_id = ${clientId}
       ORDER BY created_at ASC
-      LIMIT 100
+      LIMIT 500
     `
+    await sql`UPDATE chat_messages SET read = true WHERE client_id = ${clientId} AND sender = 'client' AND read = false`.catch(() => {})
     return NextResponse.json({ messages: result.rows })
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

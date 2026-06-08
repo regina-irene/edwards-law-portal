@@ -6,7 +6,8 @@ import SignOutButton from "@/components/admin/SignOutButton"
 
 const ITEMS = [
   { href: "/admin", label: "Home", icon: "🏠", match: (p: string) => p === "/admin" },
-  { href: "/admin/clients", label: "Clients", icon: "👥", match: (p: string) => p.startsWith("/admin/clients") || p.startsWith("/admin/chat") || p.startsWith("/admin/messages") },
+  { href: "/admin/clients", label: "Clients", icon: "👥", match: (p: string) => p.startsWith("/admin/clients") },
+  { href: "/admin/messages", label: "Messages", icon: "✉️", match: (p: string) => p.startsWith("/admin/messages") || p.startsWith("/admin/chat") },
   { href: "/admin/tasks", label: "Tasks", icon: "✅", match: (p: string) => p.startsWith("/admin/tasks") },
   { href: "/admin/pages", label: "Pages", icon: "📄", match: (p: string) => p.startsWith("/admin/pages") },
   { href: "/admin/settings", label: "Settings", icon: "⚙️", match: (p: string) => p.startsWith("/admin/settings") },
