@@ -17,7 +17,14 @@ export async function GET() {
     ORDER BY created_at ASC
     LIMIT 500
   `
-  return NextResponse.json({ messages: result.rows })
+  const ids = result.rows.map((r) => r.id)
+  const filesByMsg = new Map<string, any[]>()
+  if (ids.length) {
+    const fa = await sql`SELECT id, message_id, file_name FROM message_attachments WHERE message_id = ANY(${ids as any}::uuid[])`.catch(() => ({ rows: [] as any[] }))
+    for (const f of fa.rows) { const a = filesByMsg.get(f.message_id) ?? []; a.push({ id: f.id, file_name: f.file_name }); filesByMsg.set(f.message_id, a) }
+  }
+  const messages = result.rows.map((m) => ({ ...m, files: filesByMsg.get(m.id) ?? [] }))
+  return NextResponse.json({ messages })
 }
 
 export async function POST(req: Request) {

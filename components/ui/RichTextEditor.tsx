@@ -162,9 +162,14 @@ export function RichTextEditor({
 
         <button type="button" title="Add link" onMouseDown={hold(addLink)} className={btn}>🔗 Link</button>
         <button type="button" title="Remove link" onMouseDown={hold(() => exec("unlink"))} className={btn}>⛌</button>
-        <button type="button" title="Insert image" onMouseDown={hold(() => { saveSelection(); fileRef.current?.click() })} className={btn}>
-          {uploading ? "Uploading…" : "🖼️ Image"}
+        <button type="button" title="Upload image" onMouseDown={hold(() => { saveSelection(); fileRef.current?.click() })} className={btn}>
+          {uploading ? "Uploading…" : "🖼️ Upload"}
         </button>
+        <button type="button" title="Insert image by link/URL" onMouseDown={hold(() => {
+          saveSelection()
+          const url = window.prompt("Image link (https://...)")
+          if (url && url.trim()) { restoreSelection(); exec("insertImage", url.trim()) }
+        })} className={btn}>🔗 Image</button>
         <button type="button" title="Clear formatting" onMouseDown={hold(() => exec("removeFormat"))} className={`${btn} text-gray-400`}>Clear</button>
 
         <input ref={fileRef} type="file" accept="image/*" className="hidden"

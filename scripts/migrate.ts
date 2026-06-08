@@ -184,6 +184,20 @@ export const MIGRATION_SQL = `
     page_key TEXT PRIMARY KEY,
     label TEXT NOT NULL
   );
+
+  -- File attachments on messages (private blob)
+  CREATE TABLE IF NOT EXISTS message_attachments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    message_id UUID NOT NULL,
+    client_id TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    pathname TEXT NOT NULL,
+    url TEXT NOT NULL,
+    content_type TEXT,
+    size BIGINT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_message_attachments_msg ON message_attachments (message_id);
 `
 
 async function migrate(): Promise<void> {

@@ -26,7 +26,6 @@ const BUILTIN_LABELS: Record<string, string> = {
   tasks: "Tasks",
   calendar: "Calendar",
   messages: "Messages",
-  chat: "Chat",
 }
 const BUILTIN_KEYS = Object.keys(BUILTIN_LABELS)
 

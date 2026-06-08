@@ -23,7 +23,14 @@ export async function GET(req: Request) {
       LIMIT 500
     `
     await sql`UPDATE chat_messages SET read = true WHERE client_id = ${clientId} AND sender = 'client' AND read = false`.catch(() => {})
-    return NextResponse.json({ messages: result.rows })
+    const ids = result.rows.map((r) => r.id)
+    const filesByMsg = new Map<string, any[]>()
+    if (ids.length) {
+      const fa = await sql`SELECT id, message_id, file_name FROM message_attachments WHERE message_id = ANY(${ids as any}::uuid[])`.catch(() => ({ rows: [] as any[] }))
+      for (const f of fa.rows) { const a = filesByMsg.get(f.message_id) ?? []; a.push({ id: f.id, file_name: f.file_name }); filesByMsg.set(f.message_id, a) }
+    }
+    const messages = result.rows.map((m) => ({ ...m, files: filesByMsg.get(m.id) ?? [] }))
+    return NextResponse.json({ messages })
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
