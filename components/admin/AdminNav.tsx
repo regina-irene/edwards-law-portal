@@ -21,9 +21,8 @@ export default function AdminNav({ initials }: { initials: string }) {
       aria-label="Admin navigation"
     >
       <Link href="/admin" className="mb-3" aria-label="Home">
-        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-[13px] font-bold tracking-wider" style={{ background: "#1B2D45", fontFamily: "var(--font-fraunces), serif" }}>
-          EFL
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/efl-logo.png" alt="Edwards Family Law" className="w-16 h-16 object-contain" />
       </Link>
 
       <div className="flex flex-col items-center gap-1.5 flex-1">

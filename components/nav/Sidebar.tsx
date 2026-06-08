@@ -29,13 +29,8 @@ export default function Sidebar({ pages, unreadMessages, unreadChat }: SidebarPr
       className="w-24 shrink-0 flex flex-col items-center py-4 gap-1.5 border-r"
       style={{ borderColor: "#E8DFD2", background: "#F5EEE3" }}
     >
-      <div
-        className="mb-3 w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-bold"
-        style={{ background: "#1B2D45", fontFamily: "var(--font-fraunces), serif" }}
-        title="Edwards Family Law"
-      >
-        E
-      </div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/efl-logo.png" alt="Edwards Family Law" className="mb-3 w-16 h-16 object-contain" />
       <nav className="flex-1 flex flex-col items-center gap-1">
         {pages.map((p) => (
           <NavItem key={p.key} href={p.href} label={p.label} icon={ICONS[p.key] ?? "📄"} unreadCount={getUnread(p.key)} />
