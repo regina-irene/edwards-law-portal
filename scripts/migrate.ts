@@ -198,6 +198,21 @@ export const MIGRATION_SQL = `
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
   CREATE INDEX IF NOT EXISTS idx_message_attachments_msg ON message_attachments (message_id);
+
+  -- Drive dropzone uploads + dismissed dashboard activity
+  CREATE TABLE IF NOT EXISTS dropzone_files (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    file_name TEXT NOT NULL,
+    pathname TEXT NOT NULL,
+    url TEXT NOT NULL,
+    drive_status TEXT NOT NULL DEFAULT 'pending',
+    uploaded_by TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+  CREATE TABLE IF NOT EXISTS dismissed_activity (
+    event_id TEXT PRIMARY KEY,
+    dismissed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
 `
 
 async function migrate(): Promise<void> {

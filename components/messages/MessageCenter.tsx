@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
+import UploadDocsButton from "@/components/messages/UploadDocsButton"
 
 interface Conversation {
   id: string
@@ -114,11 +115,14 @@ export default function MessageCenter() {
   let lastDay = ""
 
   return (
-    <div className="flex h-[calc(100vh-7.5rem)] rounded-xl border border-gray-200 overflow-hidden bg-white">
+    <div className="flex h-[calc(100vh-7.5rem)] max-w-5xl mx-auto rounded-xl border border-gray-200 overflow-hidden bg-white">
       {/* Conversation list */}
       <div className="w-80 shrink-0 border-r border-gray-200 flex flex-col" style={{ background: "#FBF8F3" }}>
         <div className="p-3 border-b border-gray-200">
-          <h1 className="serif text-lg font-semibold text-gray-900 mb-2">Messages</h1>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <h1 className="serif text-lg font-semibold text-gray-900">Messages</h1>
+            <UploadDocsButton />
+          </div>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search messages…" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <div className="flex-1 overflow-auto">

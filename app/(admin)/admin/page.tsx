@@ -2,6 +2,7 @@
 import { sql } from "@/lib/db"
 import { fetchAllClientsRaw, clientDisplayLabel } from "@/lib/airtable"
 import { getClientLabels } from "@/lib/client-labels"
+import { dismissActivity } from "./actions"
 import Link from "next/link"
 
 function relTime(d: string | Date): string {
@@ -26,23 +27,26 @@ export default async function AdminHome() {
     sql`SELECT COUNT(*) AS count FROM messages WHERE read=false`.catch(() => ({ rows: [{ count: "0" }] })),
     sql`SELECT COUNT(*) AS count FROM client_tasks WHERE status='pending'`.catch(() => ({ rows: [{ count: "0" }] })),
     sql`
-      SELECT kind, client_id, detail, created_at FROM (
-        SELECT 'chat' AS kind, client_id, body AS detail, created_at FROM chat_messages WHERE sender='client'
-        UNION ALL SELECT 'message', client_id, body, created_at FROM messages
-        UNION ALL SELECT 'upload', client_id, file_name, created_at FROM task_attachments WHERE scope='client_task'
-        UNION ALL SELECT 'form', client_id, form_key, updated_at FROM form_responses
-      ) a ORDER BY created_at DESC LIMIT 12
+      SELECT * FROM (
+        SELECT 'chat' AS kind, id::text AS id, client_id, body AS detail, sender, created_at FROM chat_messages
+        UNION ALL SELECT 'message', id::text, client_id, body, 'firm', created_at FROM messages
+        UNION ALL SELECT 'upload', id::text, client_id, file_name, 'client', created_at FROM task_attachments WHERE scope='client_task'
+        UNION ALL SELECT 'form', id::text, client_id, form_key, 'client', updated_at FROM form_responses
+      ) a
+      WHERE a.id NOT IN (SELECT event_id FROM dismissed_activity)
+      ORDER BY created_at DESC LIMIT 15
     `.catch(() => ({ rows: [] as any[] })),
   ])
 
   const labelById = new Map(clients.map((c) => [String(c.clientId), labels[String(c.clientId)] || clientDisplayLabel(c.name)]))
   const nameFor = (id: string) => labelById.get(id) || "A client"
 
-  const verb: Record<string, (d: string) => string> = {
-    chat: () => "sent a chat message",
-    message: () => "sent a message",
-    upload: (d) => `uploaded ${d}`,
-    form: (d) => `updated the ${d.replace(/-/g, " ")} form`,
+  const describe = (a: any): string => {
+    if (a.kind === "chat") return a.sender === "firm" ? "— you sent a message" : "sent a message"
+    if (a.kind === "message") return "— you sent a message"
+    if (a.kind === "upload") return `uploaded ${a.detail}`
+    if (a.kind === "form") return `updated the ${String(a.detail).replace(/-/g, " ")} form`
+    return "activity"
   }
 
   const stats = [
@@ -77,18 +81,21 @@ export default async function AdminHome() {
           <div className="px-5 py-12 text-center text-sm text-gray-400">No recent client activity yet.</div>
         ) : (
           <ul className="divide-y divide-gray-100">
-            {activity.rows.map((a, i) => (
-              <li key={i} className="flex items-center gap-3 px-5 py-3">
+            {activity.rows.map((a) => (
+              <li key={a.id} className="flex items-center gap-3 px-5 py-3 group">
                 <span className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0" style={{ background: "#F0E7DA" }}>
-                  {a.kind === "chat" ? "💬" : a.kind === "message" ? "✉️" : a.kind === "upload" ? "📎" : "📝"}
+                  {a.kind === "chat" || a.kind === "message" ? "💬" : a.kind === "upload" ? "📎" : "📝"}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-gray-800 truncate">
                     <span className="font-semibold text-gray-900">{nameFor(a.client_id)}</span>{" "}
-                    {verb[a.kind]?.(a.detail ?? "") ?? "activity"}
+                    {describe(a)}
                   </p>
                 </div>
                 <span className="text-xs text-gray-400 tabular-nums flex-shrink-0">{relTime(a.created_at)}</span>
+                <form action={dismissActivity.bind(null, a.id)} className="flex-shrink-0">
+                  <button type="submit" title="Clear" className="text-gray-300 hover:text-red-600 text-sm">✕</button>
+                </form>
               </li>
             ))}
           </ul>
