@@ -18,10 +18,14 @@ export function RichTextEditor({
   const [imgEl, setImgEl] = useState<HTMLImageElement | null>(null)
   const [imgWidth, setImgWidth] = useState(100)
 
+  // Sync external value changes (initial load + "Copy from global") into the
+  // editor, but never while the user is typing in it (avoids caret jumps).
   useEffect(() => {
-    if (ref.current) ref.current.innerHTML = value || ""
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    const el = ref.current
+    if (el && document.activeElement !== el && el.innerHTML !== (value || "")) {
+      el.innerHTML = value || ""
+    }
+  }, [value])
 
   function emit() {
     if (ref.current) onChange(ref.current.innerHTML)

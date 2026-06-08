@@ -57,7 +57,7 @@ export default function PageContentEditor({ clientId, allowRename = false }: { c
     const g = globalContent[page] ?? EMPTY
     setContent((p) => ({
       ...p,
-      [page]: { ...get(page), header: g.header, announcement: g.announcement, embed_url: g.embed_url, body: g.body },
+      [page]: { ...get(page), header: g.header, announcement: g.announcement, embed_url: g.embed_url, embed_height: g.embed_height, body: g.body },
     }))
   }
 
