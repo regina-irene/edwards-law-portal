@@ -20,11 +20,10 @@ function relTime(d: string | Date): string {
 const num = (r: any) => parseInt(r?.rows?.[0]?.count ?? "0", 10) || 0
 
 export default async function AdminHome() {
-  const [clients, labels, unreadChat, unreadMsg, pendingTasks, activity] = await Promise.all([
+  const [clients, labels, unreadMessages, pendingTasks, activity] = await Promise.all([
     fetchAllClientsRaw().catch(() => []),
     getClientLabels().catch(() => ({} as Record<string, string>)),
     sql`SELECT COUNT(*) AS count FROM chat_messages WHERE sender='client' AND read=false`.catch(() => ({ rows: [{ count: "0" }] })),
-    sql`SELECT COUNT(*) AS count FROM messages WHERE read=false`.catch(() => ({ rows: [{ count: "0" }] })),
     sql`SELECT COUNT(*) AS count FROM client_tasks WHERE status='pending'`.catch(() => ({ rows: [{ count: "0" }] })),
     sql`
       SELECT * FROM (
@@ -59,8 +58,7 @@ export default async function AdminHome() {
 
   const stats = [
     { label: "Clients", value: clients.length, href: "/admin/clients" },
-    { label: "Unread chats", value: num(unreadChat), href: "/admin/clients" },
-    { label: "Unread messages", value: num(unreadMsg), href: "/admin/clients" },
+    { label: "Unread messages", value: num(unreadMessages), href: "/admin/messages" },
     { label: "Pending tasks", value: num(pendingTasks), href: "/admin/tasks" },
   ]
 
@@ -71,7 +69,7 @@ export default async function AdminHome() {
         <h1 className="text-3xl font-bold text-gray-900 mt-1">Dashboard</h1>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {stats.map((s) => (
           <Link key={s.label} href={s.href} className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-2 hover:border-gray-300 transition-colors">
             <span className="section-label">{s.label}</span>
