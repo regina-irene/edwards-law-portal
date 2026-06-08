@@ -1,9 +1,10 @@
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Mulish, Fraunces } from "next/font/google"
 import "./globals.css"
 import { SessionProvider } from "next-auth/react"
 
-const inter = Inter({ subsets: ["latin"] })
+const mulish = Mulish({ subsets: ["latin"], variable: "--font-mulish" })
+const fraunces = Fraunces({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-fraunces" })
 
 export const metadata: Metadata = {
   title: "Edwards Family Law — Client Portal",
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${mulish.className} ${mulish.variable} ${fraunces.variable}`}>
         <SessionProvider>{children}</SessionProvider>
       </body>
     </html>

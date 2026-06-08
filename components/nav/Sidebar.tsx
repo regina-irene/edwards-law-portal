@@ -27,11 +27,11 @@ export default function Sidebar({ pages, unreadMessages, unreadChat }: SidebarPr
   return (
     <aside
       className="w-20 shrink-0 flex flex-col items-center py-3 gap-1 border-r"
-      style={{ borderColor: "#E2E8F0", background: "#F5F5F4" }}
+      style={{ borderColor: "#E8DFD2", background: "#F5EEE3" }}
     >
       <div
         className="mb-2 w-9 h-9 rounded-lg flex items-center justify-center text-white font-serif font-bold"
-        style={{ background: "#1A2A4A" }}
+        style={{ background: "#1B2D45" }}
         title="Edwards Family Law"
       >
         E

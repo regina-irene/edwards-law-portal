@@ -16,8 +16,8 @@ export default function PageHeader({ defaultTitle, page, content }: PageHeaderPr
       <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
 
       {content.announcement && (
-        <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900">
-          <RichTextView html={content.announcement} className="!text-blue-900" />
+        <div className="px-4 py-3 rounded-lg text-sm" style={{ background: "#efe2d2", border: "1px solid #e8dfd2", color: "#1b2d45" }}>
+          <RichTextView html={content.announcement} className="!text-[#1b2d45]" />
         </div>
       )}
 

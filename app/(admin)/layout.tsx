@@ -11,10 +11,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const today = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
 
   return (
-    <div className="flex min-h-screen" style={{ background: "#FFFFFF" }}>
+    <div className="flex min-h-screen" style={{ background: "#FBF8F3" }}>
       <AdminNav initials={initials} />
       <div className="flex-1 flex flex-col min-h-0">
-        <div className="flex items-center justify-between px-6 py-2 border-b" style={{ borderColor: "#E2E8F0" }}>
+        <div className="flex items-center justify-between px-6 py-2 border-b" style={{ borderColor: "#E8DFD2" }}>
           <span className="section-label">{today}</span>
           <span className="text-[12px]" style={{ color: "#334155" }}>Edwards Family Law · Admin</span>
         </div>

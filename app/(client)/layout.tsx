@@ -67,7 +67,7 @@ export default async function ClientLayout({ children }: { children: React.React
   const today = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
 
   return (
-    <div className="flex min-h-screen" style={{ background: "#FFFFFF" }}>
+    <div className="flex min-h-screen" style={{ background: "#FBF8F3" }}>
       <Sidebar pages={pages} unreadMessages={unread.messages} unreadChat={unread.chat} />
       <div className="flex-1 flex flex-col min-h-0">
         {previewEmail && (
@@ -79,7 +79,7 @@ export default async function ClientLayout({ children }: { children: React.React
           </div>
         )}
         {/* Meta strip */}
-        <div className="flex items-center justify-between px-6 py-2 border-b" style={{ borderColor: "#E2E8F0" }}>
+        <div className="flex items-center justify-between px-6 py-2 border-b" style={{ borderColor: "#E8DFD2" }}>
           <span className="section-label">{today}</span>
           <span className="text-[12px]" style={{ color: "#334155" }}>{client.name}</span>
         </div>
