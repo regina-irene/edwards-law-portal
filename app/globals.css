@@ -20,12 +20,24 @@
   --color-foreground: var(--ink);
 }
 
-/* Remap the "blue" accent utilities to the navy so buttons, links, active nav,
-   and focus rings across the whole app use the warm-navy theme. */
+/* Remap the "blue" accent utilities to the navy, and warm the entire gray ramp
+   to greige, so every card/border/background/text across the app picks up the
+   warm-navy theme in one place. */
 @theme {
   --color-blue-500: #3a5170;
   --color-blue-600: #1b2d45;
   --color-blue-700: #142337;
+
+  --color-gray-50: #faf8f3;
+  --color-gray-100: #f3ede4;
+  --color-gray-200: #e8dfd2;
+  --color-gray-300: #d8ccbd;
+  --color-gray-400: #b0a493;
+  --color-gray-500: #8a7f70;
+  --color-gray-600: #655c50;
+  --color-gray-700: #4b443b;
+  --color-gray-800: #36302a;
+  --color-gray-900: #262220;
 }
 
 body {
