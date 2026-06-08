@@ -1,29 +1,37 @@
 // app/(admin)/layout.tsx
 import { redirect } from "next/navigation"
 import { requireAdmin } from "@/lib/admin"
-import Link from "next/link"
+import AdminNav from "@/components/admin/AdminNav"
 import SignOutButton from "@/components/admin/SignOutButton"
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const check = await requireAdmin()
   if (check.status !== "ok") redirect("/login")
 
+  const today = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
+
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <aside className="w-56 min-h-screen bg-white border-r border-gray-200">
-        <div className="p-5 border-b border-gray-100">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Admin</p>
-          <p className="text-sm text-gray-600 mt-0.5 truncate">{check.email}</p>
+    <div className="flex min-h-screen" style={{ background: "#FFFFFF" }}>
+      <aside className="w-56 shrink-0 flex flex-col border-r" style={{ borderColor: "#E2E8F0", background: "#F5F5F4" }}>
+        <div className="px-5 py-4 border-b flex items-center gap-2.5" style={{ borderColor: "#E2E8F0" }}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-serif font-bold" style={{ background: "#1A2A4A" }}>E</div>
+          <div className="min-w-0">
+            <p className="section-label">Admin</p>
+            <p className="text-[11px] truncate" style={{ color: "#64748B" }}>{check.email}</p>
+          </div>
         </div>
-        <nav className="p-3 space-y-1">
-          <Link href="/admin" className="block px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-100">Clients</Link>
-          <Link href="/admin/tasks" className="block px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-100">Tasks</Link>
-          <Link href="/admin/pages" className="block px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-100">Global Pages</Link>
-          <Link href="/admin/settings" className="block px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-100">Settings</Link>
+        <AdminNav />
+        <div className="mt-auto p-4 border-t" style={{ borderColor: "#E2E8F0" }}>
           <SignOutButton />
-        </nav>
+        </div>
       </aside>
-      <main className="flex-1 p-8">{children}</main>
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex items-center justify-between px-6 py-2 border-b" style={{ borderColor: "#E2E8F0" }}>
+          <span className="section-label">{today}</span>
+          <span className="text-[12px]" style={{ color: "#334155" }}>Edwards Family Law · Admin</span>
+        </div>
+        <main className="flex-1 px-6 py-6 overflow-auto">{children}</main>
+      </div>
     </div>
   )
 }
