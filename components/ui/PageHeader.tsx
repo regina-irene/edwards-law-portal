@@ -36,7 +36,7 @@ export default function PageHeader({ defaultTitle, page, content }: PageHeaderPr
         </div>
       )}
 
-      {content.embed_url && <AirtableEmbed url={content.embed_url} title={title} />}
+      {content.embed_url && <AirtableEmbed url={content.embed_url} title={title} height={content.embed_height ?? undefined} />}
     </div>
   )
 }

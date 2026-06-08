@@ -40,7 +40,7 @@ export default async function DocumentRequestsPage() {
           </a>
         </div>
       ) : (
-        <AirtableEmbed url={url} title="Document Portal" />
+        <AirtableEmbed url={url} title="Document Portal" height={pageContent.embed_height ?? undefined} />
       )}
     </div>
   )

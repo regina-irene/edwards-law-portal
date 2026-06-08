@@ -153,6 +153,7 @@ export const MIGRATION_SQL = `
   ALTER TABLE page_content ADD COLUMN IF NOT EXISTS image_pathname TEXT;
   ALTER TABLE page_content ADD COLUMN IF NOT EXISTS image_name TEXT;
   ALTER TABLE page_content ADD COLUMN IF NOT EXISTS image_url TEXT;
+  ALTER TABLE page_content ADD COLUMN IF NOT EXISTS embed_height INT;
 
   -- Inline images embedded inside rich-text content (private blob)
   CREATE TABLE IF NOT EXISTS content_images (

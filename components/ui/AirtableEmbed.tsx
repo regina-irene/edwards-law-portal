@@ -2,6 +2,7 @@
 interface AirtableEmbedProps {
   url: string
   title: string
+  height?: number
 }
 
 // Airtable only allows its /embed/ URLs to be framed. Convert a normal shared
@@ -25,7 +26,7 @@ export function toEmbedUrl(url: string): string {
   return url
 }
 
-export default function AirtableEmbed({ url, title }: AirtableEmbedProps) {
+export default function AirtableEmbed({ url, title, height = 600 }: AirtableEmbedProps) {
   const embedUrl = toEmbedUrl(url)
   if (!url) {
     return (
@@ -43,7 +44,7 @@ export default function AirtableEmbed({ url, title }: AirtableEmbedProps) {
           src={embedUrl}
           title={title}
           width="100%"
-          height="600"
+          height={height}
           className="block"
           frameBorder="0"
           allowFullScreen

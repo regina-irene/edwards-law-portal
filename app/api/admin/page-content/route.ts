@@ -28,14 +28,15 @@ export async function GET(req: Request) {
 
   try {
     const result = await sql`
-      SELECT page, header, announcement, embed_url, body, image_name FROM page_content WHERE client_id = ${clientId}
+      SELECT page, header, announcement, embed_url, embed_height, body, image_name FROM page_content WHERE client_id = ${clientId}
     `
-    const content: Record<string, { header: string; announcement: string; embed_url: string; body: string; image_name: string }> = {}
+    const content: Record<string, { header: string; announcement: string; embed_url: string; embed_height: number | null; body: string; image_name: string }> = {}
     for (const row of result.rows) {
       content[row.page] = {
         header: row.header ?? "",
         announcement: row.announcement ?? "",
         embed_url: row.embed_url ?? "",
+        embed_height: row.embed_height ?? null,
         body: row.body ?? "",
         image_name: row.image_name ?? "",
       }
@@ -51,7 +52,7 @@ export async function PUT(req: Request) {
   const check = await requireAdmin()
   if (check.status !== "ok") return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  let clientId: unknown, page: unknown, header: unknown, announcement: unknown, embedUrl: unknown, body: unknown
+  let clientId: unknown, page: unknown, header: unknown, announcement: unknown, embedUrl: unknown, embedHeight: unknown, body: unknown
   try {
     const parsed = await req.json()
     clientId = parsed?.clientId
@@ -59,6 +60,7 @@ export async function PUT(req: Request) {
     header = parsed?.header
     announcement = parsed?.announcement
     embedUrl = parsed?.embed_url
+    embedHeight = parsed?.embed_height
     body = parsed?.body
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
@@ -79,15 +81,20 @@ export async function PUT(req: Request) {
     if (!/^https?:\/\//i.test(u)) u = `https://${u}`
     embedVal = /^https?:\/\/.+\..+/.test(u) ? u : null
   }
+  // Embed height: clamp to a sane range; null = use default.
+  let heightVal: number | null = null
+  const hNum = typeof embedHeight === "number" ? embedHeight : parseInt(String(embedHeight), 10)
+  if (Number.isFinite(hNum) && hNum > 0) heightVal = Math.min(Math.max(Math.round(hNum), 150), 2000)
 
   try {
     await sql`
-      INSERT INTO page_content (client_id, page, header, announcement, embed_url, body)
-      VALUES (${clientId}, ${page}, ${headerVal}, ${announcementVal}, ${embedVal}, ${bodyVal})
+      INSERT INTO page_content (client_id, page, header, announcement, embed_url, embed_height, body)
+      VALUES (${clientId}, ${page}, ${headerVal}, ${announcementVal}, ${embedVal}, ${heightVal}, ${bodyVal})
       ON CONFLICT (client_id, page) DO UPDATE
         SET header = EXCLUDED.header,
             announcement = EXCLUDED.announcement,
             embed_url = EXCLUDED.embed_url,
+            embed_height = EXCLUDED.embed_height,
             body = EXCLUDED.body
     `
     return NextResponse.json({ ok: true })

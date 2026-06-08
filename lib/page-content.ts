@@ -5,6 +5,7 @@ export interface PageContent {
   header: string | null
   announcement: string | null
   embed_url: string | null
+  embed_height: number | null
   body: string | null
   image_pathname: string | null
   image_name: string | null
@@ -14,6 +15,7 @@ const EMPTY: PageContent = {
   header: null,
   announcement: null,
   embed_url: null,
+  embed_height: null,
   body: null,
   image_pathname: null,
   image_name: null,
@@ -25,7 +27,7 @@ export async function getPageContent(clientId: string, page: string): Promise<Pa
   const cid = String(clientId)
   try {
     const result = await sql`
-      SELECT client_id, header, announcement, embed_url, body, image_pathname, image_name FROM page_content
+      SELECT client_id, header, announcement, embed_url, embed_height, body, image_pathname, image_name FROM page_content
       WHERE client_id IN (${cid}, '_global') AND page = ${page}
     `
     const clientRow = result.rows.find((r) => r.client_id === cid)
@@ -38,6 +40,7 @@ export async function getPageContent(clientId: string, page: string): Promise<Pa
       header: pick("header"),
       announcement: pick("announcement"),
       embed_url: pick("embed_url"),
+      embed_height: pick("embed_height"),
       body: pick("body"),
       image_pathname: useClientImage ? clientRow!.image_pathname : globalRow?.image_pathname ?? null,
       image_name: useClientImage ? clientRow!.image_name : globalRow?.image_name ?? null,
