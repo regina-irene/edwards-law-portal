@@ -20,12 +20,12 @@ export default function NavItem({ href, label, icon, unreadCount = 0 }: NavItemP
       href={href}
       title={label}
       aria-label={label}
-      className={`relative w-[68px] py-2 rounded-lg flex flex-col items-center gap-1 transition-colors ${
-        isActive ? "bg-[#1B2D45] text-white" : "text-slate-700 hover:bg-[#efe7da]"
+      className={`relative w-[84px] py-2.5 rounded-xl flex flex-col items-center gap-1.5 transition-colors ${
+        isActive ? "bg-[#1B2D45] text-white" : "text-[#4b443b] hover:bg-[#efe7da]"
       }`}
     >
-      <span className="text-[18px] leading-none">{icon}</span>
-      <span className="text-[10px] font-medium leading-tight text-center px-0.5 break-words">{label}</span>
+      <span className="text-[23px] leading-none">{icon}</span>
+      <span className="text-[11px] font-medium leading-tight text-center px-0.5 break-words">{label}</span>
       {unreadCount > 0 && (
         <span className="absolute top-1 right-1.5 inline-flex items-center justify-center min-w-[16px] h-4 px-1 text-[9px] font-bold rounded-full bg-red-500 text-white">
           {unreadCount > 9 ? "9+" : unreadCount}

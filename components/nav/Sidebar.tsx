@@ -26,12 +26,12 @@ export default function Sidebar({ pages, unreadMessages, unreadChat }: SidebarPr
 
   return (
     <aside
-      className="w-20 shrink-0 flex flex-col items-center py-3 gap-1 border-r"
+      className="w-24 shrink-0 flex flex-col items-center py-4 gap-1.5 border-r"
       style={{ borderColor: "#E8DFD2", background: "#F5EEE3" }}
     >
       <div
-        className="mb-2 w-9 h-9 rounded-lg flex items-center justify-center text-white font-serif font-bold"
-        style={{ background: "#1B2D45" }}
+        className="mb-3 w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-bold"
+        style={{ background: "#1B2D45", fontFamily: "var(--font-fraunces), serif" }}
         title="Edwards Family Law"
       >
         E

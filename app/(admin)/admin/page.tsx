@@ -1,112 +1,99 @@
-// app/(admin)/admin/page.tsx
+// app/(admin)/admin/page.tsx — admin Home / dashboard with activity
 import { sql } from "@/lib/db"
-import { clientDisplayLabel, fetchAllClientsRaw } from "@/lib/airtable"
+import { fetchAllClientsRaw, clientDisplayLabel } from "@/lib/airtable"
 import { getClientLabels } from "@/lib/client-labels"
-import { refreshClients } from "./actions"
-import { startPreview } from "@/app/preview-actions"
-import ClientLabelEditor from "./ClientLabelEditor"
-import RefreshButton from "./RefreshButton"
 import Link from "next/link"
 
-function formatRefreshed(ms: number): string {
-  return new Date(ms).toLocaleString("en-US", {
-    timeZone: "America/New_York",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZoneName: "short",
-  })
+function relTime(d: string | Date): string {
+  const diff = Date.now() - new Date(d).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return "just now"
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  const days = Math.floor(h / 24)
+  if (days < 7) return `${days}d ago`
+  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" })
 }
 
-export default async function AdminPage() {
-  const [clientsRaw, labels, activityResult] = await Promise.all([
-    fetchAllClientsRaw(),
-    getClientLabels(),
+const num = (r: any) => parseInt(r?.rows?.[0]?.count ?? "0", 10) || 0
+
+export default async function AdminHome() {
+  const [clients, labels, unreadChat, unreadMsg, pendingTasks, activity] = await Promise.all([
+    fetchAllClientsRaw().catch(() => []),
+    getClientLabels().catch(() => ({} as Record<string, string>)),
+    sql`SELECT COUNT(*) AS count FROM chat_messages WHERE sender='client' AND read=false`.catch(() => ({ rows: [{ count: "0" }] })),
+    sql`SELECT COUNT(*) AS count FROM messages WHERE read=false`.catch(() => ({ rows: [{ count: "0" }] })),
+    sql`SELECT COUNT(*) AS count FROM client_tasks WHERE status='pending'`.catch(() => ({ rows: [{ count: "0" }] })),
     sql`
-      SELECT
-        client_id,
-        COUNT(*) FILTER (WHERE sender = 'client' AND read = false) AS unread_chat,
-        0 AS unread_messages
-      FROM chat_messages
-      GROUP BY client_id
-      UNION ALL
-      SELECT
-        client_id,
-        0 AS unread_chat,
-        COUNT(*) FILTER (WHERE read = false) AS unread_messages
-      FROM messages
-      GROUP BY client_id
+      SELECT kind, client_id, detail, created_at FROM (
+        SELECT 'chat' AS kind, client_id, body AS detail, created_at FROM chat_messages WHERE sender='client'
+        UNION ALL SELECT 'message', client_id, body, created_at FROM messages
+        UNION ALL SELECT 'upload', client_id, file_name, created_at FROM task_attachments WHERE scope='client_task'
+        UNION ALL SELECT 'form', client_id, form_key, updated_at FROM form_responses
+      ) a ORDER BY created_at DESC LIMIT 12
     `.catch(() => ({ rows: [] as any[] })),
   ])
 
-  // Page is dynamic and fetches fresh each render (fetchAllClientsRaw uses
-  // no-store), so the data is current as of now.
-  const fetchedAt = Date.now()
+  const labelById = new Map(clients.map((c) => [String(c.clientId), labels[String(c.clientId)] || clientDisplayLabel(c.name)]))
+  const nameFor = (id: string) => labelById.get(id) || "A client"
 
-  // "Client ID" is an Airtable linked-record field, so at runtime it can be an
-  // array. It coerces to the bare record id everywhere else (URLs, keys), so
-  // normalize to that same bare string for stable label lookups/writes.
-  const clients = clientsRaw
-    .map((c) => {
-      const id = String(c.clientId)
-      return { ...c, id, label: labels[id] || clientDisplayLabel(c.name) }
-    })
-    .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }))
-
-  const refreshedAt = formatRefreshed(fetchedAt)
-
-  const activityMap = new Map<string, { unread_chat: number; unread_messages: number }>()
-  for (const row of activityResult.rows) {
-    const existing = activityMap.get(row.client_id) ?? { unread_chat: 0, unread_messages: 0 }
-    activityMap.set(row.client_id, {
-      unread_chat: existing.unread_chat + parseInt(row.unread_chat ?? "0"),
-      unread_messages: existing.unread_messages + parseInt(row.unread_messages ?? "0"),
-    })
+  const verb: Record<string, (d: string) => string> = {
+    chat: () => "sent a chat message",
+    message: () => "sent a message",
+    upload: (d) => `uploaded ${d}`,
+    form: (d) => `updated the ${d.replace(/-/g, " ")} form`,
   }
 
+  const stats = [
+    { label: "Clients", value: clients.length, href: "/admin/clients" },
+    { label: "Unread chats", value: num(unreadChat), href: "/admin/clients" },
+    { label: "Unread messages", value: num(unreadMsg), href: "/admin/clients" },
+    { label: "Pending tasks", value: num(pendingTasks), href: "/admin/tasks" },
+  ]
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
-        <form action={refreshClients}>
-          <RefreshButton />
-          <span className="block text-right text-xs text-gray-400 mt-1">
-            Last refreshed {refreshedAt}
-          </span>
-        </form>
+    <div className="space-y-7">
+      <div>
+        <p className="section-label">Welcome back</p>
+        <h1 className="text-3xl font-bold text-gray-900 mt-1">Dashboard</h1>
       </div>
-      {clients.length === 0 ? (
-        <p className="text-gray-500">No clients found in Airtable.</p>
-      ) : (
-        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
-          {clients.map((c) => {
-            const activity = activityMap.get(c.id) ?? { unread_chat: 0, unread_messages: 0 }
-            return (
-              <div key={c.id} className="flex items-center justify-between px-6 py-4 flex-wrap gap-3">
-                <div>
-                  <ClientLabelEditor clientId={c.id} label={c.label} />
-                  <p className="text-xs text-gray-400">{c.email} · Updated {refreshedAt}</p>
-                </div>
-                <div className="flex items-center gap-3 flex-wrap">
-                  {activity.unread_chat > 0 && (
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full font-medium">
-                      {activity.unread_chat} unread chat
-                    </span>
-                  )}
-                  <Link href={`/admin/chat/${c.id}`} className="text-sm text-blue-600 hover:underline">Chat</Link>
-                  <Link href={`/admin/messages/${c.id}`} className="text-sm text-blue-600 hover:underline">Message</Link>
-                  <Link href={`/admin/clients/${c.id}/pages`} className="text-sm text-blue-600 hover:underline">Pages</Link>
-                  <form action={startPreview.bind(null, c.id)}>
-                    <button type="submit" className="text-sm text-blue-600 hover:underline">Preview</button>
-                  </form>
-                </div>
-              </div>
-            )
-          })}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {stats.map((s) => (
+          <Link key={s.label} href={s.href} className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-2 hover:border-gray-300 transition-colors">
+            <span className="section-label">{s.label}</span>
+            <span className="text-3xl font-semibold tabular-nums text-gray-900" style={{ fontFamily: "var(--font-fraunces), serif" }}>{s.value}</span>
+          </Link>
+        ))}
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="serif text-base font-semibold text-gray-900">Recent activity</h2>
+          <span className="text-xs text-gray-400">Latest 12</span>
         </div>
-      )}
+        {activity.rows.length === 0 ? (
+          <div className="px-5 py-12 text-center text-sm text-gray-400">No recent client activity yet.</div>
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {activity.rows.map((a, i) => (
+              <li key={i} className="flex items-center gap-3 px-5 py-3">
+                <span className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0" style={{ background: "#F0E7DA" }}>
+                  {a.kind === "chat" ? "💬" : a.kind === "message" ? "✉️" : a.kind === "upload" ? "📎" : "📝"}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-gray-800 truncate">
+                    <span className="font-semibold text-gray-900">{nameFor(a.client_id)}</span>{" "}
+                    {verb[a.kind]?.(a.detail ?? "") ?? "activity"}
+                  </p>
+                </div>
+                <span className="text-xs text-gray-400 tabular-nums flex-shrink-0">{relTime(a.created_at)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   )
 }
