@@ -20,11 +20,14 @@ const EMPTY: PageContent = {
 }
 
 export async function getPageContent(clientId: string, page: string): Promise<PageContent> {
+  // "Client ID" is an Airtable linked-record field, so at runtime it can be an
+  // array; normalize to the bare id string that page_content rows are keyed on.
+  const cid = String(clientId)
   try {
     const result = await sql`
       SELECT header, announcement, embed_url, body, image_pathname, image_name FROM page_content
-      WHERE (client_id = ${clientId} OR client_id = '_global') AND page = ${page}
-      ORDER BY CASE WHEN client_id = ${clientId} THEN 0 ELSE 1 END
+      WHERE (client_id = ${cid} OR client_id = '_global') AND page = ${page}
+      ORDER BY CASE WHEN client_id = ${cid} THEN 0 ELSE 1 END
       LIMIT 1
     `
     if (result.rows.length === 0) return EMPTY
