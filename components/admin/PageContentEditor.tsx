@@ -134,15 +134,17 @@ export default function PageContentEditor({ clientId, allowRename = false }: { c
         return (
           <div key={page} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-3 px-4 py-3">
-              {!isGlobal && (
-                <input
-                  type="checkbox"
-                  checked={!hidden.has(page)}
-                  onChange={(e) => toggleVisible(page, e.target.checked)}
-                  title={hidden.has(page) ? "Hidden from this client — check to show" : "Visible to this client"}
-                  className="w-4 h-4 accent-blue-600 flex-shrink-0"
-                />
-              )}
+              <input
+                type="checkbox"
+                checked={!hidden.has(page)}
+                onChange={(e) => toggleVisible(page, e.target.checked)}
+                title={
+                  isGlobal
+                    ? hidden.has(page) ? "Hidden by default — check to show to clients" : "Shown to clients by default"
+                    : hidden.has(page) ? "Hidden from this client — check to show" : "Visible to this client"
+                }
+                className="w-4 h-4 accent-blue-600 flex-shrink-0"
+              />
               {renaming === page ? (
                 <div className="flex items-center gap-2 flex-1">
                   <input autoFocus value={renameDraft} onChange={(e) => setRenameDraft(e.target.value)}
