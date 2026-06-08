@@ -3,7 +3,6 @@ import { fetchAllClientsRaw, clientDisplayLabel } from "@/lib/airtable"
 import { getClientLabels } from "@/lib/client-labels"
 import { startPreview } from "@/app/preview-actions"
 import PageContentEditor from "@/components/admin/PageContentEditor"
-import ClientPageToggles from "@/components/admin/ClientPageToggles"
 
 async function resolveLabel(clientId: string): Promise<string> {
   try {
@@ -35,7 +34,7 @@ export default async function ClientPagesEditor({ params }: { params: Promise<{ 
           </button>
         </form>
       </div>
-      <ClientPageToggles clientId={clientId} />
+      <p className="text-xs text-gray-500">Use the checkbox on each page to show or hide it for this client.</p>
       <PageContentEditor clientId={clientId} />
     </div>
   )

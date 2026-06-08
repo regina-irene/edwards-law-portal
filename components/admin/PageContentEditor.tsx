@@ -27,6 +27,7 @@ export default function PageContentEditor({ clientId, allowRename = false }: { c
   const [uploading, setUploading] = useState<string | null>(null)
   const [renaming, setRenaming] = useState<string | null>(null)
   const [renameDraft, setRenameDraft] = useState("")
+  const [hidden, setHidden] = useState<Set<string>>(new Set())
 
   function loadContent() {
     return fetch(`/api/admin/page-content?clientId=${encodeURIComponent(clientId)}`)
@@ -37,8 +38,25 @@ export default function PageContentEditor({ clientId, allowRename = false }: { c
   function loadPages() {
     return fetch(`/api/admin/client-pages?clientId=${encodeURIComponent(clientId)}`)
       .then((r) => r.json())
-      .then((d) => setPageList((d.pages ?? []).map((p: { key: string; label: string }) => ({ key: p.key, label: p.label }))))
+      .then((d) => {
+        setPageList((d.pages ?? []).map((p: { key: string; label: string }) => ({ key: p.key, label: p.label })))
+        setHidden(new Set(d.hidden ?? []))
+      })
       .catch(() => {})
+  }
+
+  async function toggleVisible(page: string, visible: boolean) {
+    setHidden((prev) => {
+      const n = new Set(prev)
+      if (visible) n.delete(page)
+      else n.add(page)
+      return n
+    })
+    await fetch("/api/admin/client-pages", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clientId, pageKey: page, hidden: !visible }),
+    })
   }
 
   useEffect(() => {
@@ -115,7 +133,16 @@ export default function PageContentEditor({ clientId, allowRename = false }: { c
         const open = openKey === page
         return (
           <div key={page} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="flex items-center justify-between gap-3 px-4 py-3">
+            <div className="flex items-center gap-3 px-4 py-3">
+              {!isGlobal && (
+                <input
+                  type="checkbox"
+                  checked={!hidden.has(page)}
+                  onChange={(e) => toggleVisible(page, e.target.checked)}
+                  title={hidden.has(page) ? "Hidden from this client — check to show" : "Visible to this client"}
+                  className="w-4 h-4 accent-blue-600 flex-shrink-0"
+                />
+              )}
               {renaming === page ? (
                 <div className="flex items-center gap-2 flex-1">
                   <input autoFocus value={renameDraft} onChange={(e) => setRenameDraft(e.target.value)}
@@ -139,7 +166,13 @@ export default function PageContentEditor({ clientId, allowRename = false }: { c
             </div>
 
             {open && (
-              <div className="px-4 pb-5 pt-1 space-y-4 border-t border-gray-100">
+              <div className="px-4 pb-5 pt-3 space-y-4 border-t border-gray-100">
+                {!isGlobal && (
+                  <div className="flex items-center justify-between gap-3 pb-2">
+                    <p className="text-[11px] text-gray-400">Blank fields use the global default.</p>
+                    <button onClick={() => copyFromGlobal(page)} className="text-xs font-medium text-blue-600 hover:underline">Copy from global ↧</button>
+                  </div>
+                )}
                 <div>
                   <label className={labelCls}>Page title (shown at top of the page)</label>
                   <input value={c.header} onChange={(e) => update(page, "header", e.target.value)} placeholder="Leave blank to use the page name" className={inputCls} />
@@ -176,16 +209,10 @@ export default function PageContentEditor({ clientId, allowRename = false }: { c
                       onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(page, f); e.target.value = "" }} />
                   </label>
                 </div>
-                {!isGlobal && (
-                  <p className="text-[11px] text-gray-400">Blank fields automatically use the global default. Use &quot;Copy from global&quot; to start from the global content and edit.</p>
-                )}
                 <div className="flex items-center gap-3 pt-1 border-t border-gray-100">
                   <button onClick={() => save(page)} disabled={saving === page} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50">
                     {saving === page ? "Saving…" : "Save"}
                   </button>
-                  {!isGlobal && (
-                    <button onClick={() => copyFromGlobal(page)} className="text-sm text-blue-600 hover:underline">Copy from global</button>
-                  )}
                   {saved === page && <span className="text-xs text-green-600 font-medium">Saved</span>}
                 </div>
               </div>
