@@ -10,8 +10,8 @@ function toEmbedUrl(url: string): string {
   try {
     const u = new URL(url)
     if (/(^|\.)airtable\.com$/i.test(u.hostname) && !u.pathname.startsWith("/embed/")) {
-      const m = url.match(/shr[A-Za-z0-9]+/)
-      if (m) return `https://airtable.com/embed/${m[0]}${u.search}`
+      // Keep the full path (base + shared-view ids): /app.../shr... -> /embed/app.../shr...
+      return `https://airtable.com/embed${u.pathname}${u.search}`
     }
   } catch {}
   return url
