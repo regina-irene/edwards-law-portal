@@ -1,18 +1,19 @@
 // components/nav/Sidebar.tsx
 import NavItem from "./NavItem"
 import SignOutButton from "./SignOutButton"
+import type { NavPage } from "@/lib/portal-pages"
 
 interface SidebarProps {
-  pages: string[]
+  pages: NavPage[]
   clientName: string
   unreadMessages: number
   unreadChat: number
 }
 
 export default function Sidebar({ pages, clientName, unreadMessages, unreadChat }: SidebarProps) {
-  const getUnread = (page: string) => {
-    if (page === "messages") return unreadMessages
-    if (page === "chat") return unreadChat
+  const getUnread = (key: string) => {
+    if (key === "messages") return unreadMessages
+    if (key === "chat") return unreadChat
     return 0
   }
 
@@ -23,8 +24,8 @@ export default function Sidebar({ pages, clientName, unreadMessages, unreadChat 
         <p className="mt-1 text-sm font-medium text-gray-900 truncate">{clientName}</p>
       </div>
       <nav className="flex-1 p-3 space-y-1">
-        {pages.map((page) => (
-          <NavItem key={page} page={page} unreadCount={getUnread(page)} />
+        {pages.map((p) => (
+          <NavItem key={p.key} href={p.href} label={p.label} unreadCount={getUnread(p.key)} />
         ))}
       </nav>
       <div className="p-4 border-t border-gray-100">

@@ -17,6 +17,9 @@ const EMPTY: PC = { header: "", announcement: "", embed_url: "", body: "", image
 
 export default function PageContentEditor({ clientId }: { clientId: string }) {
   const [content, setContent] = useState<ContentMap>({})
+  const [pageList, setPageList] = useState<{ key: string; label: string }[]>(
+    PORTAL_PAGES.map((p) => ({ key: p, label: p.replace(/-/g, " ") }))
+  )
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [saved, setSaved] = useState<string | null>(null)
@@ -31,6 +34,13 @@ export default function PageContentEditor({ clientId }: { clientId: string }) {
 
   useEffect(() => {
     setLoading(true)
+    fetch("/api/admin/custom-pages")
+      .then((r) => r.json())
+      .then((d) => {
+        const custom = (d.pages ?? []).map((c: { slug: string; title: string }) => ({ key: c.slug, label: c.title }))
+        setPageList([...PORTAL_PAGES.map((p) => ({ key: p, label: p.replace(/-/g, " ") })), ...custom])
+      })
+      .catch(() => {})
     load().finally(() => setLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId])
@@ -79,11 +89,11 @@ export default function PageContentEditor({ clientId }: { clientId: string }) {
 
   return (
     <div className="space-y-8">
-      {PORTAL_PAGES.map((page) => {
+      {pageList.map(({ key: page, label }) => {
         const c = get(page)
         return (
           <div key={page} className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-gray-700 capitalize">{page.replace(/-/g, " ")}</h2>
+            <h2 className="text-sm font-semibold text-gray-700 capitalize">{label}</h2>
 
             <div>
               <label className={labelCls}>Header (page title)</label>

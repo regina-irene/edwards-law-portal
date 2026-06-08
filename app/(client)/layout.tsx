@@ -5,19 +5,7 @@ import { getPortalClient, getActivePreviewEmail } from "@/lib/portal-client"
 import { stopPreview } from "@/app/preview-actions"
 import { sql } from "@/lib/db"
 import Sidebar from "@/components/nav/Sidebar"
-import { PORTAL_PAGES } from "@/lib/pages"
-
-async function getNavPages(): Promise<string[]> {
-  try {
-    const result = await sql`SELECT pages FROM nav_order LIMIT 1`
-    const saved: string[] = result.rows[0]?.pages ?? [...PORTAL_PAGES]
-    // Append any pages from PORTAL_PAGES not yet in the saved order
-    const missing = PORTAL_PAGES.filter((p) => !saved.includes(p))
-    return [...saved, ...missing]
-  } catch {
-    return [...PORTAL_PAGES]
-  }
-}
+import { getClientNav } from "@/lib/portal-pages"
 
 async function getUnreadCounts(clientId: string) {
   try {
@@ -72,7 +60,7 @@ export default async function ClientLayout({ children }: { children: React.React
   }
 
   const [pages, unread] = await Promise.all([
-    getNavPages(),
+    getClientNav(String(client.clientId)),
     getUnreadCounts(client.clientId),
   ])
 

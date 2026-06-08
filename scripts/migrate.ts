@@ -162,6 +162,21 @@ export const MIGRATION_SQL = `
     uploaded_by TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
+
+  -- Admin-created custom portal pages + per-client page visibility
+  CREATE TABLE IF NOT EXISTS custom_pages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT UNIQUE NOT NULL,
+    title TEXT NOT NULL,
+    position INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+  CREATE TABLE IF NOT EXISTS client_page_prefs (
+    client_id TEXT NOT NULL,
+    page_key TEXT NOT NULL,
+    hidden BOOLEAN NOT NULL DEFAULT false,
+    PRIMARY KEY (client_id, page_key)
+  );
 `
 
 async function migrate(): Promise<void> {

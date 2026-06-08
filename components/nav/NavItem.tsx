@@ -4,34 +4,21 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-const PAGE_LABELS: Record<string, string> = {
-  dashboard: "Dashboard",
-  "document-requests": "Document Requests",
-  pleadings: "Pleadings",
-  discovery: "Discovery",
-  calendar: "Calendar",
-  messages: "Messages",
-  chat: "Chat",
-}
-
 interface NavItemProps {
-  page: string
+  href: string
+  label: string
   unreadCount?: number
 }
 
-export default function NavItem({ page, unreadCount = 0 }: NavItemProps) {
+export default function NavItem({ href, label, unreadCount = 0 }: NavItemProps) {
   const pathname = usePathname()
-  const href = `/${page}`
   const isActive = pathname === href || pathname.startsWith(href + "/")
-  const label = PAGE_LABELS[page] ?? page
 
   return (
     <Link
       href={href}
       className={`flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-        isActive
-          ? "bg-blue-600 text-white"
-          : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+        isActive ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
       }`}
     >
       <span>{label}</span>
