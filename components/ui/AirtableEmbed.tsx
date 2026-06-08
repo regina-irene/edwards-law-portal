@@ -6,13 +6,21 @@ interface AirtableEmbedProps {
 
 // Airtable only allows its /embed/ URLs to be framed. Convert a normal shared
 // view link (airtable.com/app.../shr...) into the embeddable form.
-function toEmbedUrl(url: string): string {
+export function toEmbedUrl(url: string): string {
   try {
-    const u = new URL(url)
-    if (/(^|\.)airtable\.com$/i.test(u.hostname) && !u.pathname.startsWith("/embed/")) {
-      // Keep the full path (base + shared-view ids): /app.../shr... -> /embed/app.../shr...
-      return `https://airtable.com/embed${u.pathname}${u.search}`
+    const u = new URL(url.trim())
+    if (!/(^|\.)airtable\.com$/i.test(u.hostname)) return url
+    if (u.pathname.startsWith("/embed/")) return url // already an embed link
+    // Pull the base id (app...) and shared-view id (shr...) from anywhere in the
+    // path and build the canonical embeddable URL, preserving query params.
+    const app = u.pathname.match(/app[A-Za-z0-9]{10,}/)?.[0]
+    const shr = u.pathname.match(/shr[A-Za-z0-9]+/)?.[0]
+    if (shr) {
+      const base = app ? `https://airtable.com/embed/${app}/${shr}` : `https://airtable.com/embed/${shr}`
+      return base + (u.search || "")
     }
+    // Fallback: just insert /embed into the path
+    return `https://airtable.com/embed${u.pathname}${u.search}`
   } catch {}
   return url
 }
