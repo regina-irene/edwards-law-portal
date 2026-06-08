@@ -49,6 +49,14 @@ export default async function AdminHome() {
     return "activity"
   }
 
+  // Where clicking an activity row takes you: messages → that conversation;
+  // uploads & form updates → that client's record page.
+  const hrefFor = (a: any): string => {
+    const id = encodeURIComponent(String(a.client_id))
+    if (a.kind === "chat" || a.kind === "message") return `/admin/messages?c=${id}`
+    return `/admin/clients/${id}/pages`
+  }
+
   const stats = [
     { label: "Clients", value: clients.length, href: "/admin/clients" },
     { label: "Unread chats", value: num(unreadChat), href: "/admin/clients" },
@@ -82,16 +90,18 @@ export default async function AdminHome() {
         ) : (
           <ul className="divide-y divide-gray-100">
             {activity.rows.map((a) => (
-              <li key={a.id} className="flex items-center gap-3 px-5 py-3 group">
-                <span className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0" style={{ background: "#F0E7DA" }}>
-                  {a.kind === "chat" || a.kind === "message" ? "💬" : a.kind === "upload" ? "📎" : "📝"}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-gray-800 truncate">
-                    <span className="font-semibold text-gray-900">{nameFor(a.client_id)}</span>{" "}
-                    {describe(a)}
-                  </p>
-                </div>
+              <li key={a.id} className="flex items-center gap-3 px-5 py-3 group hover:bg-[#FBF8F3] transition-colors">
+                <Link href={hrefFor(a)} className="flex items-center gap-3 min-w-0 flex-1">
+                  <span className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0" style={{ background: "#F0E7DA" }}>
+                    {a.kind === "chat" || a.kind === "message" ? "💬" : a.kind === "upload" ? "📎" : "📝"}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-gray-800 truncate group-hover:text-gray-900">
+                      <span className="font-semibold text-gray-900">{nameFor(a.client_id)}</span>{" "}
+                      {describe(a)}
+                    </p>
+                  </div>
+                </Link>
                 <span className="text-xs text-gray-400 tabular-nums flex-shrink-0">{relTime(a.created_at)}</span>
                 <form action={dismissActivity.bind(null, a.id)} className="flex-shrink-0">
                   <button type="submit" title="Clear" className="text-gray-300 hover:text-red-600 text-sm">✕</button>
