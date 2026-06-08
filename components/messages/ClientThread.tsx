@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import UploadDocsButton from "@/components/messages/UploadDocsButton"
 
 interface Msg { id: string; sender: "client" | "firm"; body: string; created_at: string; files?: { id: string; file_name: string }[] }
 
@@ -11,9 +12,7 @@ export default function ClientThread() {
   const [messages, setMessages] = useState<Msg[]>([])
   const [body, setBody] = useState("")
   const [sending, setSending] = useState(false)
-  const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const ref = useRef<HTMLDivElement>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
     const r = await fetch("/api/chat")
@@ -29,19 +28,11 @@ export default function ClientThread() {
   useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight }, [messages])
 
   async function send() {
-    if (!body.trim() && pendingFiles.length === 0) return
+    if (!body.trim()) return
     setSending(true)
-    const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body: body.trim() || "📎 Attachment" }) })
+    const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body: body.trim() }) })
     if (res.ok) {
-      const d = await res.json()
-      for (const f of pendingFiles) {
-        const fd = new FormData()
-        fd.append("file", f)
-        fd.append("messageId", d.message.id)
-        await fetch("/api/message-files", { method: "POST", body: fd })
-      }
       setBody("")
-      setPendingFiles([])
       await load()
     }
     setSending(false)
@@ -74,18 +65,17 @@ export default function ClientThread() {
         {messages.length === 0 && <p className="text-sm text-gray-400 text-center py-10">No messages yet. Send a message to your legal team below.</p>}
       </div>
       <div className="border-t border-gray-200 p-3 bg-white">
-        {pendingFiles.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-2">
-            {pendingFiles.map((f, i) => (
-              <span key={i} className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">📎 {f.name}<button onClick={() => setPendingFiles((p) => p.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-600">✕</button></span>
-            ))}
-          </div>
-        )}
         <div className="flex items-end gap-2">
-          <button type="button" onClick={() => fileRef.current?.click()} title="Attach files" className="px-2 py-2 text-gray-500 hover:text-gray-800 text-lg">📎</button>
-          <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length) setPendingFiles((p) => [...p, ...fs]); e.target.value = "" }} />
+          <UploadDocsButton
+            endpoint="/api/file-dropzone"
+            label="📎 Send files"
+            heading="Send documents to your legal team"
+            blurb="Drag and drop files here, or browse. They go straight to your legal team."
+            actionLabel="Send to firm"
+            buttonClassName="px-3 py-2 text-sm rounded-xl border border-gray-300 text-gray-600 font-medium hover:bg-gray-50 whitespace-nowrap"
+          />
           <textarea value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() } }} rows={1} placeholder="Send a message to your legal team…" className="flex-1 resize-none px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32" />
-          <button onClick={send} disabled={(!body.trim() && pendingFiles.length === 0) || sending} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 disabled:opacity-50">{sending ? "…" : "Send"}</button>
+          <button onClick={send} disabled={!body.trim() || sending} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 disabled:opacity-50">{sending ? "…" : "Send"}</button>
         </div>
       </div>
     </div>

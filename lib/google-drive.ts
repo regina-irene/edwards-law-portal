@@ -5,7 +5,7 @@ import { Readable } from "node:stream"
 export function getDriveClient() {
   const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
   if (!keyJson) throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON is not set")
-  const credentials = JSON.parse(keyJson)
+  const credentials = JSON.parse(keyJson.trim())
   const auth = new google.auth.GoogleAuth({
     credentials,
     scopes: ["https://www.googleapis.com/auth/drive.file"],

@@ -83,10 +83,17 @@ export function RichTextEditor({
     emit()
   }
 
+  function normalizeUrl(u: string) {
+    const t = u.trim()
+    if (!t) return t
+    if (/^(https?:\/\/|mailto:|tel:)/i.test(t)) return t
+    return `https://${t}`
+  }
+
   function addLink() {
     saveSelection()
-    const url = window.prompt("Link URL (https://...)")
-    if (url) { restoreSelection(); exec("createLink", url.trim()) }
+    const url = window.prompt("Link URL (e.g. tinyurl.com/eflupload)")
+    if (url && url.trim()) { restoreSelection(); exec("createLink", normalizeUrl(url)) }
   }
 
   async function onImagePicked(file: File) {
@@ -168,7 +175,7 @@ export function RichTextEditor({
         <button type="button" title="Insert image by link/URL" onMouseDown={hold(() => {
           saveSelection()
           const url = window.prompt("Image link (https://...)")
-          if (url && url.trim()) { restoreSelection(); exec("insertImage", url.trim()) }
+          if (url && url.trim()) { restoreSelection(); exec("insertImage", normalizeUrl(url)) }
         })} className={btn}>🔗 Image</button>
         <button type="button" title="Clear formatting" onMouseDown={hold(() => exec("removeFormat"))} className={`${btn} text-gray-400`}>Clear</button>
 
