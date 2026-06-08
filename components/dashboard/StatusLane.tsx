@@ -19,10 +19,10 @@ export default function StatusLane({ section, color }: StatusLaneProps) {
   return (
     <div className="flex flex-col min-w-0">
       <div className={`flex items-center gap-2 px-4 py-3 rounded-t-lg border-b ${c.header}`}>
-        <span className={`w-2.5 h-2.5 rounded-full ${c.dot}`} />
-        <h3 className={`text-sm font-semibold ${c.title}`}>
+        <span className={`w-2 h-2 rounded-full ${c.dot}`} />
+        <h3 className={`text-[10px] uppercase tracking-[0.18em] font-semibold ${c.title}`}>
           {section.title}
-          <span className="ml-2 text-xs font-normal opacity-70">({section.items.length})</span>
+          <span className="ml-2 tabular-nums opacity-70">({section.items.length})</span>
         </h3>
       </div>
       <div className="flex-1 space-y-3 p-4 bg-gray-50 rounded-b-lg min-h-32">

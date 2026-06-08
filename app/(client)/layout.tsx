@@ -64,28 +64,26 @@ export default async function ClientLayout({ children }: { children: React.React
     getUnreadCounts(client.clientId),
   ])
 
+  const today = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
+
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      {previewEmail && (
-        <div className="bg-amber-100 border-b border-amber-300 text-amber-900 text-sm px-4 py-2 flex items-center justify-center gap-3">
-          <span>
-            Admin preview — viewing the portal as <strong>{client.name}</strong>
-          </span>
-          <form action={stopPreview}>
-            <button type="submit" className="underline font-medium hover:text-amber-950">
-              Exit preview
-            </button>
-          </form>
+    <div className="flex min-h-screen" style={{ background: "#FFFFFF" }}>
+      <Sidebar pages={pages} unreadMessages={unread.messages} unreadChat={unread.chat} />
+      <div className="flex-1 flex flex-col min-h-0">
+        {previewEmail && (
+          <div className="bg-amber-100 border-b border-amber-300 text-amber-900 text-sm px-4 py-2 flex items-center justify-center gap-3">
+            <span>Admin preview — viewing the portal as <strong>{client.name}</strong></span>
+            <form action={stopPreview}>
+              <button type="submit" className="underline font-medium hover:text-amber-950">Exit preview</button>
+            </form>
+          </div>
+        )}
+        {/* Meta strip */}
+        <div className="flex items-center justify-between px-6 py-2 border-b" style={{ borderColor: "#E2E8F0" }}>
+          <span className="section-label">{today}</span>
+          <span className="text-[12px]" style={{ color: "#334155" }}>{client.name}</span>
         </div>
-      )}
-      <div className="flex flex-1 min-h-0">
-        <Sidebar
-          pages={pages}
-          clientName={client.name}
-          unreadMessages={unread.messages}
-          unreadChat={unread.chat}
-        />
-        <main className="flex-1 p-8 overflow-auto">{children}</main>
+        <main className="flex-1 px-6 py-6 overflow-auto">{children}</main>
       </div>
     </div>
   )

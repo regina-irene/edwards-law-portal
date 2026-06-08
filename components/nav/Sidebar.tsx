@@ -3,32 +3,45 @@ import NavItem from "./NavItem"
 import SignOutButton from "./SignOutButton"
 import type { NavPage } from "@/lib/portal-pages"
 
+const ICONS: Record<string, string> = {
+  dashboard: "🏠",
+  "document-requests": "📄",
+  pleadings: "⚖️",
+  discovery: "🔎",
+  status: "📊",
+  tasks: "✅",
+  calendar: "📅",
+  messages: "✉️",
+  chat: "💬",
+}
+
 interface SidebarProps {
   pages: NavPage[]
-  clientName: string
   unreadMessages: number
   unreadChat: number
 }
 
-export default function Sidebar({ pages, clientName, unreadMessages, unreadChat }: SidebarProps) {
-  const getUnread = (key: string) => {
-    if (key === "messages") return unreadMessages
-    if (key === "chat") return unreadChat
-    return 0
-  }
+export default function Sidebar({ pages, unreadMessages, unreadChat }: SidebarProps) {
+  const getUnread = (key: string) => (key === "messages" ? unreadMessages : key === "chat" ? unreadChat : 0)
 
   return (
-    <aside className="w-64 min-h-screen bg-white border-r border-gray-200 flex flex-col">
-      <div className="p-6 border-b border-gray-100">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Edwards Family Law</p>
-        <p className="mt-1 text-sm font-medium text-gray-900 truncate">{clientName}</p>
+    <aside
+      className="w-20 shrink-0 flex flex-col items-center py-3 gap-1 border-r"
+      style={{ borderColor: "#E2E8F0", background: "#F5F5F4" }}
+    >
+      <div
+        className="mb-2 w-9 h-9 rounded-lg flex items-center justify-center text-white font-serif font-bold"
+        style={{ background: "#1A2A4A" }}
+        title="Edwards Family Law"
+      >
+        E
       </div>
-      <nav className="flex-1 p-3 space-y-1">
+      <nav className="flex-1 flex flex-col items-center gap-1">
         {pages.map((p) => (
-          <NavItem key={p.key} href={p.href} label={p.label} unreadCount={getUnread(p.key)} />
+          <NavItem key={p.key} href={p.href} label={p.label} icon={ICONS[p.key] ?? "📄"} unreadCount={getUnread(p.key)} />
         ))}
       </nav>
-      <div className="p-4 border-t border-gray-100">
+      <div className="pt-2">
         <SignOutButton />
       </div>
     </aside>
