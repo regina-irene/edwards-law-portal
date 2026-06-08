@@ -15,7 +15,9 @@ type ContentMap = Record<string, PC>
 const EMPTY: PC = { header: "", announcement: "", embed_url: "", body: "", image_name: "" }
 
 export default function PageContentEditor({ clientId, allowRename = false }: { clientId: string; allowRename?: boolean }) {
+  const isGlobal = clientId === "_global"
   const [content, setContent] = useState<ContentMap>({})
+  const [globalContent, setGlobalContent] = useState<ContentMap>({})
   const [pageList, setPageList] = useState<{ key: string; label: string }[]>([])
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -40,9 +42,23 @@ export default function PageContentEditor({ clientId, allowRename = false }: { c
 
   useEffect(() => {
     setLoading(true)
-    Promise.all([loadContent(), loadPages()]).finally(() => setLoading(false))
+    const jobs: Promise<unknown>[] = [loadContent(), loadPages()]
+    if (!isGlobal) {
+      jobs.push(
+        fetch(`/api/admin/page-content?clientId=_global`).then((r) => r.json()).then((d) => setGlobalContent(d.content ?? {})).catch(() => {})
+      )
+    }
+    Promise.all(jobs).finally(() => setLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId])
+
+  function copyFromGlobal(page: string) {
+    const g = globalContent[page] ?? EMPTY
+    setContent((p) => ({
+      ...p,
+      [page]: { ...get(page), header: g.header, announcement: g.announcement, embed_url: g.embed_url, body: g.body },
+    }))
+  }
 
   const get = (page: string): PC => content[page] ?? EMPTY
   const update = (page: string, field: keyof PC, value: string) =>
@@ -154,10 +170,16 @@ export default function PageContentEditor({ clientId, allowRename = false }: { c
                       onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(page, f); e.target.value = "" }} />
                   </label>
                 </div>
+                {!isGlobal && (
+                  <p className="text-[11px] text-gray-400">Blank fields automatically use the global default. Use &quot;Copy from global&quot; to start from the global content and edit.</p>
+                )}
                 <div className="flex items-center gap-3 pt-1 border-t border-gray-100">
                   <button onClick={() => save(page)} disabled={saving === page} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50">
                     {saving === page ? "Saving…" : "Save"}
                   </button>
+                  {!isGlobal && (
+                    <button onClick={() => copyFromGlobal(page)} className="text-sm text-blue-600 hover:underline">Copy from global</button>
+                  )}
                   {saved === page && <span className="text-xs text-green-600 font-medium">Saved</span>}
                 </div>
               </div>
