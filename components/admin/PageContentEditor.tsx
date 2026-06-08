@@ -132,8 +132,9 @@ export default function PageContentEditor({ clientId, allowRename = false }: { c
                   <RichTextEditor key={`${page}-ann`} value={c.announcement} onChange={(v) => update(page, "announcement", v)} />
                 </div>
                 <div>
-                  <label className={labelCls}>Embedded table URL (Airtable embed link)</label>
-                  <input value={c.embed_url} onChange={(e) => update(page, "embed_url", e.target.value)} placeholder="https://airtable.com/embed/…" className={inputCls} />
+                  <label className={labelCls}>Embed a link (web page, another project, or Airtable table)</label>
+                  <input value={c.embed_url} onChange={(e) => update(page, "embed_url", e.target.value)} placeholder="https://… — shows inside this page" className={inputCls} />
+                  <p className="text-[11px] text-gray-400 mt-1">Paste any link to display it embedded in the page. (Some sites block embedding; if it appears blank, a link to open it is shown instead.)</p>
                 </div>
                 <div>
                   <label className={labelCls}>Content section</label>
