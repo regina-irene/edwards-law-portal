@@ -13,6 +13,39 @@ export function getDriveClient() {
   return google.drive({ version: "v3", auth })
 }
 
+// Find a subfolder by name under a parent, or create it. Returns the folder id.
+async function findOrCreateFolder(drive: ReturnType<typeof getDriveClient>, parentId: string, name: string): Promise<string> {
+  const escaped = name.replace(/\\/g, "\\\\").replace(/'/g, "\\'")
+  const q = `name = '${escaped}' and mimeType = 'application/vnd.google-apps.folder' and '${parentId}' in parents and trashed = false`
+  const list = await drive.files.list({
+    q,
+    fields: "files(id, name)",
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+    spaces: "drive",
+  })
+  const existing = list.data.files?.[0]
+  if (existing?.id) return existing.id
+  const created = await drive.files.create({
+    requestBody: { name, mimeType: "application/vnd.google-apps.folder", parents: [parentId] },
+    fields: "id",
+    supportsAllDrives: true,
+  })
+  return created.data.id as string
+}
+
+// Ensure a nested folder path (e.g. ["Bank Statements", "2024"]) exists under parentId.
+// Returns the id of the deepest folder so files can be placed inside it.
+export async function ensureFolderPath(parentId: string, segments: string[]): Promise<string> {
+  const drive = getDriveClient()
+  let current = parentId
+  for (const seg of segments) {
+    if (!seg) continue
+    current = await findOrCreateFolder(drive, current, seg)
+  }
+  return current
+}
+
 export async function uploadToDrive(
   buffer: Buffer,
   name: string,
