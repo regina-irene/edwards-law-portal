@@ -16,6 +16,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import ClientPageToggles from "@/components/admin/ClientPageToggles"
 
 const BUILTIN_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
@@ -134,6 +135,12 @@ export default function AdminSettingsPage() {
         <button onClick={handleSave} disabled={saveStatus === "saving"} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
           {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved!" : "Save Order"}
         </button>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-gray-800">Default pages for all clients</h2>
+        <p className="text-xs text-gray-500">Turn pages on or off by default. A client&apos;s own Pages editor can override this for that client.</p>
+        <ClientPageToggles clientId="_global" />
       </section>
     </div>
   )

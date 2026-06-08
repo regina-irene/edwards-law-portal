@@ -1,7 +1,7 @@
 // Admin: per-client page visibility (which pages a client can see).
 import { requireAdmin } from "@/lib/admin"
 import { sql } from "@/lib/db"
-import { getAllPages } from "@/lib/portal-pages"
+import { getAllPages, getEffectiveHiddenKeys } from "@/lib/portal-pages"
 import { NextResponse } from "next/server"
 
 export async function GET(req: Request) {
@@ -10,12 +10,8 @@ export async function GET(req: Request) {
   const clientId = new URL(req.url).searchParams.get("clientId")
   if (!clientId) return NextResponse.json({ error: "clientId required" }, { status: 400 })
 
-  const [pages, prefs] = await Promise.all([
-    getAllPages(),
-    sql`SELECT page_key FROM client_page_prefs WHERE client_id = ${clientId} AND hidden = true`.catch(() => ({ rows: [] as any[] })),
-  ])
-  const hidden = prefs.rows.map((r) => r.page_key)
-  return NextResponse.json({ pages, hidden })
+  const [pages, hiddenSet] = await Promise.all([getAllPages(), getEffectiveHiddenKeys(clientId)])
+  return NextResponse.json({ pages, hidden: [...hiddenSet] })
 }
 
 export async function PUT(req: Request) {

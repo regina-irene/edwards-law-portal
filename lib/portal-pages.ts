@@ -57,18 +57,33 @@ async function getNavOrder(): Promise<string[] | null> {
   }
 }
 
-async function getHiddenKeys(clientId: string): Promise<Set<string>> {
+async function loadPrefs(clientId: string): Promise<Map<string, boolean>> {
   try {
-    const r = await sql`SELECT page_key FROM client_page_prefs WHERE client_id = ${clientId} AND hidden = true`
-    return new Set(r.rows.map((x) => x.page_key as string))
+    const r = await sql`SELECT page_key, hidden FROM client_page_prefs WHERE client_id = ${clientId}`
+    return new Map(r.rows.map((x) => [x.page_key as string, x.hidden as boolean]))
   } catch {
-    return new Set()
+    return new Map()
   }
+}
+
+// Effective hidden pages: per-client overrides win over the '_global' default.
+export async function getEffectiveHiddenKeys(clientId: string): Promise<Set<string>> {
+  if (clientId === "_global") {
+    const g = await loadPrefs("_global")
+    return new Set([...g].filter(([, h]) => h).map(([k]) => k))
+  }
+  const [g, c] = await Promise.all([loadPrefs("_global"), loadPrefs(clientId)])
+  const hidden = new Set<string>()
+  for (const k of new Set([...g.keys(), ...c.keys()])) {
+    const h = c.has(k) ? c.get(k)! : g.get(k) ?? false
+    if (h) hidden.add(k)
+  }
+  return hidden
 }
 
 // Ordered nav for a specific client, with that client's hidden pages removed.
 export async function getClientNav(clientId: string): Promise<NavPage[]> {
-  const [all, order, hidden] = await Promise.all([getAllPages(), getNavOrder(), getHiddenKeys(clientId)])
+  const [all, order, hidden] = await Promise.all([getAllPages(), getNavOrder(), getEffectiveHiddenKeys(clientId)])
   const byKey = new Map(all.map((p) => [p.key, p]))
   const ordered: NavPage[] = []
   const seen = new Set<string>()
