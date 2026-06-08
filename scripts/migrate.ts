@@ -177,6 +177,12 @@ export const MIGRATION_SQL = `
     hidden BOOLEAN NOT NULL DEFAULT false,
     PRIMARY KEY (client_id, page_key)
   );
+
+  -- Nav label overrides (rename built-in pages)
+  CREATE TABLE IF NOT EXISTS page_labels (
+    page_key TEXT PRIMARY KEY,
+    label TEXT NOT NULL
+  );
 `
 
 async function migrate(): Promise<void> {

@@ -40,10 +40,21 @@ export async function getCustomPages(): Promise<CustomPage[]> {
   }
 }
 
+async function getLabelOverrides(): Promise<Record<string, string>> {
+  try {
+    const r = await sql`SELECT page_key, label FROM page_labels`
+    const m: Record<string, string> = {}
+    for (const row of r.rows) m[row.page_key] = row.label
+    return m
+  } catch {
+    return {}
+  }
+}
+
 // All pages (built-in + custom), unfiltered — used by admin editors.
 export async function getAllPages(): Promise<NavPage[]> {
-  const custom = await getCustomPages()
-  const builtins: NavPage[] = BUILTIN_PAGE_KEYS.map((k) => ({ key: k, label: BUILTIN_LABELS[k], href: `/${k}`, custom: false }))
+  const [custom, overrides] = await Promise.all([getCustomPages(), getLabelOverrides()])
+  const builtins: NavPage[] = BUILTIN_PAGE_KEYS.map((k) => ({ key: k, label: overrides[k] || BUILTIN_LABELS[k], href: `/${k}`, custom: false }))
   const customNav: NavPage[] = custom.map((c) => ({ key: c.slug, label: c.title, href: `/p/${c.slug}`, custom: true }))
   return [...builtins, ...customNav]
 }

@@ -10,7 +10,7 @@ export default function GlobalPagesEditor() {
           These apply to <strong>all clients</strong> unless overridden for a specific client via that client&apos;s Pages editor.
         </p>
       </div>
-      <PageContentEditor clientId="_global" />
+      <PageContentEditor clientId="_global" allowRename />
     </div>
   )
 }
