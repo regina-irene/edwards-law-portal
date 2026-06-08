@@ -72,11 +72,12 @@ export async function PUT(req: Request) {
   // Announcement and body are rich text (HTML) — sanitize.
   const announcementVal = typeof announcement === "string" ? sanitizeNotesHtml(announcement) || null : null
   const bodyVal = typeof body === "string" ? sanitizeNotesHtml(body) || null : null
-  // Embed URL: only allow http(s).
+  // Embed URL: accept with or without scheme (default to https://).
   let embedVal: string | null = null
   if (typeof embedUrl === "string" && embedUrl.trim()) {
-    const u = embedUrl.trim()
-    embedVal = /^https?:\/\//i.test(u) ? u : null
+    let u = embedUrl.trim()
+    if (!/^https?:\/\//i.test(u)) u = `https://${u}`
+    embedVal = /^https?:\/\/.+\..+/.test(u) ? u : null
   }
 
   try {
