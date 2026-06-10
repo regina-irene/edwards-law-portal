@@ -73,7 +73,7 @@ export async function getPleadings(clientBaseId: string): Promise<PleadingDoc[] 
           title,
           filedOn,
           created: text(f["Created"]) || null,
-          filedBy: text(f["Filed by:"]),
+          filedBy: text(f["Filed by:"]) || text(f["Filed by"]) || text(f["Filed By"]),
           fileType: text(typeof f["File Type"] === "string" ? f["File Type"] : "") ||
             (rawName.match(/\.(\w{2,4})$/)?.[1] ?? ""),
           link: text(f["Link"]),

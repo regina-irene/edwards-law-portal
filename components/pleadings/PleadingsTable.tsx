@@ -11,23 +11,13 @@ function shortDate(d: string): string {
   return new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 }
 
-const TYPE_STYLE: Record<string, { bg: string; text: string }> = {
-  pdf: { bg: "#FFDCE5", text: "#BA1E45" },
-  doc: { bg: "#CFDFFF", text: "#2750AE" },
-  docx: { bg: "#CFDFFF", text: "#2750AE" },
-  jpg: { bg: "#D1F7C4", text: "#338A17" },
-  jpeg: { bg: "#D1F7C4", text: "#338A17" },
-  png: { bg: "#D1F7C4", text: "#338A17" },
-}
-
-type SortKey = "filedOn" | "title" | "filedBy" | "notes" | "fileType"
+type SortKey = "filedOn" | "title" | "filedBy" | "notes"
 
 const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "filedOn", label: "Date" },
   { key: "title", label: "Document" },
   { key: "filedBy", label: "Filed By" },
   { key: "notes", label: "Notes" },
-  { key: "fileType", label: "Type" },
 ]
 
 function sortValue(d: PleadingDoc, key: SortKey): string {
@@ -92,8 +82,6 @@ export default function PleadingsTable({ docs }: { docs: PleadingDoc[] }) {
         </thead>
         <tbody className="divide-y divide-gray-100">
           {sorted.map((d) => {
-            const type = d.fileType.toLowerCase()
-            const typeStyle = TYPE_STYLE[type] ?? { bg: "#EEEEEE", text: "#333333" }
             const dateLabel = d.filedOn
               ? shortDate(d.filedOn)
               : d.created
@@ -116,16 +104,6 @@ export default function PleadingsTable({ docs }: { docs: PleadingDoc[] }) {
                   )}
                 </td>
                 <td className="px-4 py-3 text-gray-600 max-w-[16rem] break-words whitespace-pre-wrap">{d.notes || ""}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  {type && (
-                    <span
-                      className="text-[10px] font-bold uppercase px-2 py-0.5 rounded"
-                      style={{ background: typeStyle.bg, color: typeStyle.text }}
-                    >
-                      {type}
-                    </span>
-                  )}
-                </td>
                 <td className="px-4 py-3 whitespace-nowrap text-right">
                   {d.link && (
                     <a
@@ -135,7 +113,7 @@ export default function PleadingsTable({ docs }: { docs: PleadingDoc[] }) {
                       className="text-sm font-semibold px-3.5 py-1.5 rounded-lg text-white hover:opacity-90 transition-opacity inline-block"
                       style={{ background: "#1b2d45" }}
                     >
-                      View
+                      View file
                     </a>
                   )}
                 </td>
