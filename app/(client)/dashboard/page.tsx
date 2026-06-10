@@ -1,10 +1,13 @@
-// app/(client)/dashboard/page.tsx
+// app/(client)/dashboard/page.tsx — video first, then straight to the page's
+// content section (no title/announcement/image block above it, per Regina).
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { getPortalClient } from "@/lib/portal-client"
-import PageHeader from "@/components/ui/PageHeader"
 import { getPageContent } from "@/lib/page-content"
 import { getSetting } from "@/lib/app-settings"
+import { RichTextView } from "@/components/ui/RichTextEditor"
+import AirtableEmbed from "@/components/ui/AirtableEmbed"
+import DemoVideo from "@/components/dashboard/DemoVideo"
 
 // "https://www.youtube.com/watch?v=abc" / "https://youtu.be/abc" → embeddable player URL
 function youtubeEmbedUrl(url: string): string | null {
@@ -29,30 +32,21 @@ export default async function DashboardPage() {
     getPageContent(client.clientId, "dashboard"),
     getSetting("demo_video_url"),
   ])
+  const embedVideo = demoVideoUrl ? youtubeEmbedUrl(demoVideoUrl) : null
 
   return (
     <div className="space-y-6">
-      {/* Demo video first — the welcome mat of the portal */}
-      {demoVideoUrl && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-base font-semibold text-gray-900">▶ New here? Watch a quick demo of your portal</p>
-          {youtubeEmbedUrl(demoVideoUrl) ? (
-            <div className="mt-3 rounded-lg overflow-hidden aspect-video max-w-2xl">
-              <iframe
-                src={youtubeEmbedUrl(demoVideoUrl)!}
-                title="Portal demo video"
-                className="w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
-            </div>
-          ) : (
-            <a href={demoVideoUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 underline mt-2 inline-block">Watch the demo video</a>
-          )}
+      {embedVideo && <DemoVideo embedUrl={embedVideo} />}
+
+      {pageContent.body && (
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <RichTextView html={pageContent.body} />
         </div>
       )}
 
-      <PageHeader defaultTitle="Dashboard" page="dashboard" content={pageContent} />
+      {pageContent.embed_url && (
+        <AirtableEmbed url={pageContent.embed_url} title="Dashboard" height={pageContent.embed_height ?? undefined} />
+      )}
     </div>
   )
 }
