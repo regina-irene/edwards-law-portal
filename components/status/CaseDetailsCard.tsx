@@ -35,8 +35,18 @@ function Chip({ value, color }: { value: string; color: ChipColor }) {
 }
 
 function ColumnTitle({ children }: { children: React.ReactNode }) {
-  return <h3 className="text-xs uppercase tracking-wide mb-2 font-semibold" style={{ color: "#8a7240" }}>{children}</h3>
+  return (
+    <h3
+      className="text-[13px] uppercase tracking-wider font-bold mb-3 pb-1.5 border-b-2"
+      style={{ color: "#5b451c", borderColor: "#E0CD9E" }}
+    >
+      {children}
+    </h3>
+  )
 }
+
+// soft divider between sections: vertical on big screens, horizontal when stacked
+const COL_DIVIDER = "border-[#E8D9B5] border-t pt-4 lg:border-t-0 lg:pt-0 lg:border-l lg:pl-5"
 
 export interface RecentFiling {
   title: string
@@ -84,7 +94,7 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
         style={{ background: "#FAF0D7", borderColor: "#E0CD9E" }}
       >
       {/* Equal-width columns: 1 per row on phones, 2 on tablets, all side-by-side on desktop */}
-      <div className={`grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2 ${nextCourt ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
+      <div className={`grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2 ${nextCourt ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
 
         {/* Left: stage */}
         <div>
@@ -99,7 +109,7 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
         </div>
 
         {/* Middle: key dates in fixed order */}
-        <div>
+        <div className={`${COL_DIVIDER} sm:border-t-0 sm:pt-0 sm:border-l sm:pl-5`}>
           <ColumnTitle>Key Dates</ColumnTitle>
           <ul>
             {rows.map((r) => (
@@ -113,7 +123,7 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
         </div>
 
         {/* Right: court + case facts */}
-        <div>
+        <div className={COL_DIVIDER}>
           <ColumnTitle>Case Info</ColumnTitle>
           <div className="space-y-2">
             {info.county && (
@@ -182,7 +192,7 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
 
         {/* 4th column: next court date — full title, never cut off */}
         {nextCourt && (
-          <div>
+          <div className={`${COL_DIVIDER} sm:border-t-0 sm:pt-0 sm:border-l sm:pl-5`}>
             <ColumnTitle>Next Court Date</ColumnTitle>
             <p className="text-lg font-bold" style={{ color: "#1b2d45" }}>
               {new Date(nextCourt.start).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
