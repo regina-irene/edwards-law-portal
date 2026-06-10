@@ -79,6 +79,38 @@ export async function getClientTasks(clientBaseId: string): Promise<AirtableTask
   }))
 }
 
+export interface CaseStatusInfo {
+  stages: string[]
+  lastModified: string | null
+}
+
+// The portal's clientId is the client's linked record id in the Status table
+// ("Client ID" on Clients is a record link, so String() of it yields "rec...").
+// Pulls that Status record's Case Stage pills + when the row last changed.
+// Fails soft — the page just skips the pills.
+export async function getCaseStatus(clientId: string): Promise<CaseStatusInfo | null> {
+  const recordId = String(clientId).split(",")[0].trim()
+  if (!recordId.startsWith("rec")) return null
+  try {
+    // tbl3gCA0CQ0S6ewW6 = the Status table (by id, so renaming it is safe).
+    // Always fresh (no-store) so the status page's Refresh button pulls live data.
+    const res = await fetch(
+      `https://api.airtable.com/v0/${MAIN_BASE_ID}/tbl3gCA0CQ0S6ewW6/${recordId}`,
+      { headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` }, cache: "no-store" }
+    )
+    if (!res.ok) throw new Error(`Airtable error: ${res.status}`)
+    const data = await res.json()
+    const rawStages = data.fields?.["Case Stage"]
+    const stages = (Array.isArray(rawStages) ? rawStages : [])
+      .map((s: unknown) => String(s).replace(/^\d+\s*-\s*/, "").trim())
+      .filter(Boolean)
+    const lastModified = typeof data.fields?.["Last Modified"] === "string" ? data.fields["Last Modified"] : null
+    return { stages, lastModified }
+  } catch {
+    return null
+  }
+}
+
 export async function getAllClients(): Promise<AirtableClient[]> {
   const data = await airtableFetch(
     `https://api.airtable.com/v0/${MAIN_BASE_ID}/Clients`

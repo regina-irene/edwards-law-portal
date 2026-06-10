@@ -47,8 +47,8 @@ interface AirtableRecord {
   fields: Record<string, unknown>
 }
 
-// Fetches every record in the table (follows Airtable pagination). Cached 60s
-// like the rest of the portal's Airtable reads.
+// Fetches every record in the table (follows Airtable pagination). Always
+// fresh (no-store) so the page's Refresh button pulls live data.
 async function fetchAllRecords(tableName: string): Promise<AirtableRecord[]> {
   const records: AirtableRecord[] = []
   let offset: string | undefined
@@ -58,7 +58,7 @@ async function fetchAllRecords(tableName: string): Promise<AirtableRecord[]> {
       (offset ? `?offset=${encodeURIComponent(offset)}` : "")
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
-      next: { revalidate: 60 },
+      cache: "no-store",
     })
     if (!res.ok) throw new Error(`Airtable error: ${res.status}`)
     const data = await res.json()
@@ -73,7 +73,8 @@ async function fetchAllRecords(tableName: string): Promise<AirtableRecord[]> {
 // breaking the page.
 export async function getClientBilling(clientRecordId: string): Promise<BillingSummary | null> {
   try {
-    const records = await fetchAllRecords("Client Payments")
+    // tblJF6czEn0LovTGq = the "Client Payments" table (by id, so renaming it is safe)
+    const records = await fetchAllRecords("tblJF6czEn0LovTGq")
 
     const fees: FeeRow[] = records
       .filter((r) => {

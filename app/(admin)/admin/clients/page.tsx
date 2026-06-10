@@ -5,7 +5,7 @@ import { getClientLabels } from "@/lib/client-labels"
 import { refreshClients } from "../actions"
 import { startPreview } from "@/app/preview-actions"
 import ClientLabelEditor from "../ClientLabelEditor"
-import RefreshButton from "../RefreshButton"
+import RefreshButton from "@/components/ui/RefreshButton"
 import Link from "next/link"
 
 function formatRefreshed(ms: number): string {

@@ -2,7 +2,7 @@
 
 import { useFormStatus } from "react-dom"
 
-export default function RefreshButton() {
+export default function RefreshButton({ label = "Refresh from Airtable" }: { label?: string }) {
   const { pending } = useFormStatus()
   return (
     <div className="flex flex-col items-end gap-1 w-44">
@@ -17,7 +17,7 @@ export default function RefreshButton() {
             aria-hidden
           />
         )}
-        {pending ? "Refreshing…" : "Refresh from Airtable"}
+        {pending ? "Refreshing…" : label}
       </button>
       {pending && (
         <div className="w-full h-1 overflow-hidden rounded-full bg-blue-100">
