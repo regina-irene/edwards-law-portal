@@ -1,7 +1,7 @@
 // app/(client)/status/page.tsx
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
-import { getPortalClient } from "@/lib/portal-client"
+import { getPortalClient, getActivePreviewEmail } from "@/lib/portal-client"
 import { getCaseStatus } from "@/lib/airtable"
 import RefreshButton from "@/components/ui/RefreshButton"
 import { refreshStatusPage } from "./actions"
@@ -34,6 +34,9 @@ export default async function StatusPage() {
     getCaseStatus(String(client.clientId)),
   ])
   const refreshedAt = formatRefreshed(Date.now())
+  // Refresh button is admin-only (shown during preview-as-client); clients get
+  // fresh Airtable data on every page load anyway.
+  const isAdminPreview = Boolean(await getActivePreviewEmail())
   // The Status board's "Case Status - Dashboard" field is the case status for
   // all cases; the old "Status of Case" field on Clients is just a fallback.
   const statusText = caseStatus?.statusText || client.statusOfCase
@@ -53,12 +56,14 @@ export default async function StatusPage() {
       className="-m-6 min-h-[calc(100%+3rem)] px-6 py-6 space-y-6"
       style={{ background: "linear-gradient(170deg, #eaf7fa 0%, #c8e8f0 35%, #9fd3e3 70%, #76b9d3 100%)" }}
     >
-      <div className="flex justify-end">
-        <form action={refreshStatusPage}>
-          <RefreshButton label="Refresh" />
-          <span className="block text-right text-xs text-gray-500 mt-1">Last refreshed {refreshedAt}</span>
-        </form>
-      </div>
+      {isAdminPreview && (
+        <div className="flex justify-end">
+          <form action={refreshStatusPage}>
+            <RefreshButton label="Refresh" />
+            <span className="block text-right text-xs text-gray-500 mt-1">Last refreshed {refreshedAt}</span>
+          </form>
+        </div>
+      )}
 
       {/* Embed removed per Regina (2026-06-09) — the pulled-out info below replaces the Airtable embed view */}
       <PageHeader defaultTitle="Case Status" page="status" content={{ ...pageContent, embed_url: null }} />
