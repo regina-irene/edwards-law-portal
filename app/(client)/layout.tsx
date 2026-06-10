@@ -71,7 +71,7 @@ export default async function ClientLayout({ children }: { children: React.React
       <Sidebar pages={pages} unreadMessages={unread.messages} unreadChat={unread.chat} />
       <div className="flex-1 flex flex-col min-h-0">
         {previewEmail && (
-          <div className="bg-amber-100 border-b border-amber-300 text-amber-900 text-sm px-4 py-2 flex items-center justify-center gap-3">
+          <div className="bg-amber-100 border-b border-amber-300 text-amber-900 text-sm px-4 py-2 flex items-center justify-center gap-3 print:hidden">
             <span>Admin preview — viewing the portal as <strong>{client.name}</strong></span>
             <form action={stopPreview}>
               <button type="submit" className="underline font-medium hover:text-amber-950">Exit preview</button>
@@ -79,7 +79,7 @@ export default async function ClientLayout({ children }: { children: React.React
           </div>
         )}
         {/* Meta strip */}
-        <div className="flex items-center justify-between px-6 py-2 border-b" style={{ borderColor: "#E8DFD2" }}>
+        <div className="flex items-center justify-between px-6 py-2 border-b print:hidden" style={{ borderColor: "#E8DFD2" }}>
           <span className="section-label">{today}</span>
           <span className="text-[12px]" style={{ color: "#334155" }}>{client.name}</span>
         </div>

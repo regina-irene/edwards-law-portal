@@ -18,7 +18,7 @@ export default function AdminNav({ initials }: { initials: string }) {
   return (
     <nav
       className="shrink-0 flex flex-col items-center py-4 gap-1.5 border-r"
-      style={{ width: 96, background: "#F5EEE3", borderColor: "#E8DFD2" }}
+      style={{ width: 96, background: "#FFFFFF", borderColor: "#E8DFD2" }}
       aria-label="Admin navigation"
     >
       <Link href="/admin" className="mb-3" aria-label="Home">

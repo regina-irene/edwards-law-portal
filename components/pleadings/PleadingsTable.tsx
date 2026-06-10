@@ -110,7 +110,7 @@ export default function PleadingsTable({ docs }: { docs: PleadingDoc[] }) {
                       href={d.link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm font-semibold px-3.5 py-1.5 rounded-lg text-white hover:opacity-90 transition-opacity inline-block"
+                      className="text-sm font-semibold px-3.5 py-1.5 rounded-lg text-white hover:opacity-90 transition-opacity inline-block print:hidden"
                       style={{ background: "#1b2d45" }}
                     >
                       View file

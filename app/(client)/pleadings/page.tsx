@@ -5,6 +5,7 @@ import { getPortalClient, getActivePreviewEmail } from "@/lib/portal-client"
 import AirtableEmbed from "@/components/ui/AirtableEmbed"
 import PageHeader from "@/components/ui/PageHeader"
 import RefreshButton from "@/components/ui/RefreshButton"
+import PrintButton from "@/components/ui/PrintButton"
 import { getPageContent } from "@/lib/page-content"
 import { getPleadings } from "@/lib/pleadings"
 import PleadingsTable from "@/components/pleadings/PleadingsTable"
@@ -42,14 +43,17 @@ export default async function PleadingsPage() {
         <>
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <p className="text-xs text-gray-500">
-              <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1.5 align-middle" />
-              Pulled live from Airtable · Last refreshed {refreshedAt}
+              <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1.5 align-middle print:hidden" />
+              Synced with EFL · Current data as of {refreshedAt}
             </p>
-            {previewEmail && (
-              <form action={refreshPleadingsPage}>
-                <RefreshButton label="Refresh" />
-              </form>
-            )}
+            <div className="flex items-center gap-2 print:hidden">
+              <PrintButton />
+              {previewEmail && (
+                <form action={refreshPleadingsPage}>
+                  <RefreshButton label="Refresh" />
+                </form>
+              )}
+            </div>
           </div>
           <PleadingsTable docs={docs} />
         </>

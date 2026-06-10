@@ -38,9 +38,24 @@ export default function ClientThread() {
     setSending(false)
   }
 
+  const sendFilesButton = (
+    <UploadDocsButton
+      endpoint="/api/file-dropzone"
+      label="📎 Send files"
+      heading="Send documents to your legal team"
+      blurb="Drag and drop files here, or browse. They go straight to your legal team."
+      actionLabel="Send to firm"
+      buttonClassName="px-5 py-2 text-sm rounded-xl bg-[#EA580C] hover:bg-[#C2410C] text-white font-semibold whitespace-nowrap shadow-sm transition-colors"
+    />
+  )
+
   let lastDay = ""
   return (
     <div className="flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden" style={{ height: "calc(100vh - 16rem)" }}>
+      <div className="border-b border-gray-200 bg-white px-4 py-2.5 flex items-center justify-between gap-3">
+        <span className="text-sm text-gray-500">Have documents for your legal team?</span>
+        {sendFilesButton}
+      </div>
       <div ref={ref} className="flex-1 overflow-auto px-4 py-4 space-y-3" style={{ background: "#FBF8F3" }}>
         {messages.map((m) => {
           const day = dayLabel(m.created_at)
@@ -66,14 +81,7 @@ export default function ClientThread() {
       </div>
       <div className="border-t border-gray-200 p-3 bg-white">
         <div className="flex items-end gap-2">
-          <UploadDocsButton
-            endpoint="/api/file-dropzone"
-            label="📎 Send files"
-            heading="Send documents to your legal team"
-            blurb="Drag and drop files here, or browse. They go straight to your legal team."
-            actionLabel="Send to firm"
-            buttonClassName="px-3 py-2 text-sm rounded-xl border border-gray-300 text-gray-600 font-medium hover:bg-gray-50 whitespace-nowrap"
-          />
+          {sendFilesButton}
           <textarea value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() } }} rows={1} placeholder="Send a message to your legal team…" className="flex-1 resize-none px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32" />
           <button onClick={send} disabled={!body.trim() || sending} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 disabled:opacity-50">{sending ? "…" : "Send"}</button>
         </div>

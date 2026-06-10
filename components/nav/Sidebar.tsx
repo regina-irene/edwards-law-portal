@@ -26,7 +26,7 @@ export default function Sidebar({ pages, unreadMessages, unreadChat }: SidebarPr
 
   return (
     <aside
-      className="w-24 shrink-0 flex flex-col items-center py-4 gap-1.5 border-r"
+      className="w-24 shrink-0 flex flex-col items-center py-4 gap-1.5 border-r print:hidden"
       style={{ borderColor: "#E8DFD2", background: "#F5EEE3" }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
