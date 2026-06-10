@@ -16,9 +16,12 @@ export default function PageHeader({ defaultTitle, page, content }: PageHeaderPr
       <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
 
       {content.announcement && (
-        /* per-page announcement: full width, centered (the firm-wide megaphone
-           banner lives in the layout — components/announcement) */
-        <div className="w-full px-5 py-3 rounded-lg text-sm keep-ink text-center" style={{ background: "#efe2d2", border: "1px solid #e8dfd2", color: "#1b2d45" }}>
+        /* per-page announcement: full width, centered, translucent so it
+           blends with the page background (firm-wide banner is in the layout) */
+        <div
+          className="w-full px-5 py-3 rounded-lg text-sm keep-ink text-center"
+          style={{ background: "rgba(255,255,255,0.45)", border: "1px solid rgba(0,0,0,0.06)", color: "#1b2d45" }}
+        >
           <RichTextView html={content.announcement} className="!text-[#1b2d45]" />
         </div>
       )}

@@ -119,13 +119,13 @@ export function FirmAnnouncementView({ html, dark = false }: { html: string; dar
         borderColor: dark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.06)",
       }}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-center gap-3 text-center">
         <div className="flex items-center gap-1.5 shrink-0">
           <span className="text-base">📢</span>
           <span className={`text-xs font-bold uppercase tracking-wide ${dark ? "text-amber-200" : "text-amber-700"}`}>Firm Announcements</span>
         </div>
         <span className={`shrink-0 ${dark ? "text-white/30" : "text-amber-300"}`}>|</span>
-        <div className="flex-1 min-w-0 text-sm">
+        <div className="min-w-0 text-sm">
           <RichTextView html={html} className={dark ? "!text-white/90" : "!text-[#3d3426]"} />
         </div>
       </div>
