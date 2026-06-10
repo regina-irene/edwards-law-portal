@@ -2,7 +2,6 @@
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { getPortalClient, getActivePreviewEmail } from "@/lib/portal-client"
-import AirtableEmbed from "@/components/ui/AirtableEmbed"
 import PageHeader from "@/components/ui/PageHeader"
 import RefreshButton from "@/components/ui/RefreshButton"
 import PrintButton from "@/components/ui/PrintButton"
@@ -60,7 +59,7 @@ export default async function PleadingsPage() {
           <PleadingsTable docs={docs} />
         </>
       ) : (
-        <AirtableEmbed url={client.pleadingsViewLink} title="Pleadings" />
+        <div className="bg-white rounded-lg border border-gray-200 p-6"><p className="text-sm text-gray-500">We couldn&apos;t load this information right now. Please check back shortly or contact our office.</p></div>
       )}
     </div>
   )

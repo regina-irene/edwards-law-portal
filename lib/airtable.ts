@@ -8,11 +8,6 @@ export interface AirtableClient {
   email: string
   phone: string
   clientBaseId: string
-  fileflowLink: string
-  pleadingsViewLink: string
-  discoveryViewLink: string
-  calendarViewLink: string
-  statusViewLink: string
   statusOfCase: string
   smsReminders: boolean
 }
@@ -34,11 +29,6 @@ function mapClientRecord(r: any): AirtableClient {
     email: r.fields["Email"] ?? "",
     phone: r.fields["Phone"] ?? "",
     clientBaseId: r.fields["Client Base ID"] ?? "",
-    fileflowLink: r.fields["FileFlow Link"] ?? "",
-    pleadingsViewLink: r.fields["Pleadings View Link"] ?? "",
-    discoveryViewLink: r.fields["Discovery View Link"] ?? "",
-    calendarViewLink: r.fields["Calendar View Link"] ?? "",
-    statusViewLink: r.fields["Status View Link"] ?? "",
     statusOfCase: r.fields["Status of Case"] ?? "",
     smsReminders: r.fields["SMS Reminders"] === true,
   }
