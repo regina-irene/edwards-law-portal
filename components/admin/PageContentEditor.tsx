@@ -124,9 +124,14 @@ export default function PageContentEditor({ clientId, allowRename = false, layou
   const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
   const labelCls = "block text-xs font-medium text-gray-500 mb-1"
 
+  // pages that render their own live content (e.g. the pleadings table) don't
+  // use the embed or content-section fields — hide them in the editor
+  const NO_EMBED_OR_BODY = new Set(["pleadings"])
+
   // the editor fields for one page — shared by the accordion and tab layouts
   function editorBody(page: string) {
     const c = get(page)
+    const showEmbedAndBody = !NO_EMBED_OR_BODY.has(page)
     return (
       <div className="px-4 pb-5 pt-3 space-y-4 border-t border-gray-100">
         {!isGlobal && (
@@ -143,20 +148,24 @@ export default function PageContentEditor({ clientId, allowRename = false, layou
           <label className={labelCls}>Announcement (highlighted banner)</label>
           <RichTextEditor key={`${page}-ann`} value={c.announcement} onChange={(v) => update(page, "announcement", v)} />
         </div>
-        <div>
-          <label className={labelCls}>Embed a link (web page, another project, or Airtable table)</label>
-          <input value={c.embed_url} onChange={(e) => update(page, "embed_url", e.target.value)} placeholder="https://… — shows inside this page" className={inputCls} />
-          <p className="text-[11px] text-gray-400 mt-1">Paste any link to display it embedded in the page. (Some sites block embedding; if it appears blank, a link to open it is shown instead.)</p>
-          <div className="mt-2 flex items-center gap-2">
-            <label className="text-xs text-gray-500">Embed height (px)</label>
-            <input type="number" min={150} max={2000} value={c.embed_height ?? ""} onChange={(e) => update(page, "embed_height", e.target.value)} placeholder="600" className="w-28 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <span className="text-[11px] text-gray-400">Lower = shorter box. Blank = default (600).</span>
+        {showEmbedAndBody && (
+          <div>
+            <label className={labelCls}>Embed a link (web page, another project, or Airtable table)</label>
+            <input value={c.embed_url} onChange={(e) => update(page, "embed_url", e.target.value)} placeholder="https://… — shows inside this page" className={inputCls} />
+            <p className="text-[11px] text-gray-400 mt-1">Paste any link to display it embedded in the page. (Some sites block embedding; if it appears blank, a link to open it is shown instead.)</p>
+            <div className="mt-2 flex items-center gap-2">
+              <label className="text-xs text-gray-500">Embed height (px)</label>
+              <input type="number" min={150} max={2000} value={c.embed_height ?? ""} onChange={(e) => update(page, "embed_height", e.target.value)} placeholder="600" className="w-28 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <span className="text-[11px] text-gray-400">Lower = shorter box. Blank = default (600).</span>
+            </div>
           </div>
-        </div>
-        <div>
-          <label className={labelCls}>Content section</label>
-          <RichTextEditor key={`${page}-body`} value={c.body} onChange={(v) => update(page, "body", v)} />
-        </div>
+        )}
+        {showEmbedAndBody && (
+          <div>
+            <label className={labelCls}>Content section</label>
+            <RichTextEditor key={`${page}-body`} value={c.body} onChange={(v) => update(page, "body", v)} />
+          </div>
+        )}
         <div>
           <label className={labelCls}>Banner image (saves immediately)</label>
           {c.image_name ? (
