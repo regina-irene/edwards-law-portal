@@ -16,6 +16,7 @@ interface Msg {
   sender: "client" | "firm"
   body: string
   created_at: string
+  sms_status?: "notification" | "full" | null
   files?: { id: string; file_name: string }[]
 }
 
@@ -227,7 +228,14 @@ export default function MessageCenter() {
                         {m.files?.map((f) => (
                           <a key={f.id} href={`/api/message-files/${f.id}`} target="_blank" rel="noreferrer" className={`block text-xs mt-1 underline ${firm ? "text-white/90" : "text-blue-600"}`}>📎 {f.file_name}</a>
                         ))}
-                        <p className={`text-[10px] mt-1 ${firm ? "text-white/60" : "text-gray-400"}`}>{timeOf(m.created_at)}</p>
+                        <p className={`text-[10px] mt-1 ${firm ? "text-white/60" : "text-gray-400"}`}>
+                          {timeOf(m.created_at)}
+                          {firm && (
+                            <span className="ml-1.5">
+                              {m.sms_status === "full" ? "· 💬 portal + 📱 texted" : m.sms_status === "notification" ? "· 💬 portal + 📱 text alert" : "· 💬 portal"}
+                            </span>
+                          )}
+                        </p>
                       </div>
                     </div>
                   </div>

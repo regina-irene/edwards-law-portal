@@ -244,6 +244,9 @@ export const MIGRATION_SQL = `
     value TEXT NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
+
+  -- how a firm message was delivered: null=portal only, notification=text alert sent, full=message texted
+  ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS sms_status TEXT;
 `
 
 async function migrate(): Promise<void> {

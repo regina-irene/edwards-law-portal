@@ -18,7 +18,7 @@ export async function GET(req: Request) {
 
   try {
     const result = await sql`
-      SELECT id, sender, body, created_at, read
+      SELECT id, sender, body, created_at, read, sms_status
       FROM chat_messages
       WHERE client_id = ${clientId}
       ORDER BY created_at ASC
@@ -85,6 +85,11 @@ export async function POST(req: Request) {
           ? `Message from Edwards Family Law:\n\n${body.trim()}\n\nReply in your portal: ${PORTAL_URL}`
           : `You have a new message from Edwards Family Law. Read and reply in your portal: ${PORTAL_URL}`
         sms = await sendSms(client.phone, text)
+        if (sms.sent) {
+          const status = smsRequested ? "full" : "notification"
+          await sql`UPDATE chat_messages SET sms_status = ${status} WHERE id = ${result.rows[0].id}`.catch(() => {})
+          ;(result.rows[0] as Record<string, unknown>).sms_status = status
+        }
       }
     } catch {
       sms = { sent: false, reason: "Could not look up the client's SMS settings" }
