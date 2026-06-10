@@ -5,7 +5,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { BASE_THEMES, NFL_THEMES, MLB_THEMES, getTheme, type PortalTheme } from "@/lib/themes"
+import { BASE_THEMES, GRADIENT_THEMES, NFL_THEMES, MLB_THEMES, getTheme, type PortalTheme } from "@/lib/themes"
 
 function Swatch({ t, selected, onSelect }: { t: PortalTheme; selected: boolean; onSelect: () => void }) {
   return (
@@ -35,10 +35,17 @@ function Section({ title, blurb, children }: { title: string; blurb: string; chi
   )
 }
 
-export default function SettingsClient({ initialTheme, initialShowJoke }: { initialTheme: string; initialShowJoke: boolean }) {
+interface SettingsClientProps {
+  initialTheme: string
+  initialShowJoke: boolean
+  initialLightText: boolean
+}
+
+export default function SettingsClient({ initialTheme, initialShowJoke, initialLightText }: SettingsClientProps) {
   const router = useRouter()
   const [theme, setTheme] = useState(initialTheme)
   const [showJoke, setShowJoke] = useState(initialShowJoke)
+  const [lightText, setLightText] = useState(initialLightText)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -52,7 +59,7 @@ export default function SettingsClient({ initialTheme, initialShowJoke }: { init
     const res = await fetch("/api/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ theme, showJoke }),
+      body: JSON.stringify({ theme, showJoke, lightText }),
     })
     setSaving(false)
     if (res.ok) {
@@ -69,6 +76,24 @@ export default function SettingsClient({ initialTheme, initialShowJoke }: { init
         </div>
       </Section>
 
+      <Section title="Bold Gradients" blurb="Stronger color-to-color blends for a more vivid portal.">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          {GRADIENT_THEMES.map((t) => <Swatch key={t.key} t={t} selected={theme === t.key} onSelect={() => setTheme(t.key)} />)}
+        </div>
+      </Section>
+
+      <Section title="Text" blurb="Dark backgrounds switch to light text automatically — turn this on to always use light text.">
+        <label className="flex items-center gap-3 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={lightText}
+            onChange={(e) => setLightText(e.target.checked)}
+            className="h-5 w-5 rounded border-gray-300"
+          />
+          <span className="text-sm text-gray-800 font-medium">Always use light text</span>
+        </label>
+      </Section>
+
       <Section title="Sports" blurb="Pick your favorite NFL or MLB team for a team-logo wallpaper in team colors.">
         <div className="grid sm:grid-cols-2 gap-4">
           <label className="block">
@@ -76,7 +101,7 @@ export default function SettingsClient({ initialTheme, initialShowJoke }: { init
             <select
               value={nflPick}
               onChange={(e) => e.target.value && setTheme(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white text-gray-900"
             >
               <option value="">Choose a team…</option>
               {NFL_THEMES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
@@ -87,7 +112,7 @@ export default function SettingsClient({ initialTheme, initialShowJoke }: { init
             <select
               value={mlbPick}
               onChange={(e) => e.target.value && setTheme(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white text-gray-900"
             >
               <option value="">Choose a team…</option>
               {MLB_THEMES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}

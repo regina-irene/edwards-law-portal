@@ -22,7 +22,7 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader defaultTitle="Settings" page="settings" content={pageContent} />
-      <SettingsClient initialTheme={prefs.theme} initialShowJoke={prefs.showJoke} />
+      <SettingsClient initialTheme={prefs.theme} initialShowJoke={prefs.showJoke} initialLightText={prefs.lightText} />
     </div>
   )
 }

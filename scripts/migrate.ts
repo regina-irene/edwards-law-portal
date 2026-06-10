@@ -219,6 +219,7 @@ export const MIGRATION_SQL = `
     client_id TEXT PRIMARY KEY,
     theme TEXT NOT NULL DEFAULT 'classic',
     show_joke BOOLEAN NOT NULL DEFAULT false,
+    light_text BOOLEAN NOT NULL DEFAULT false,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
 `

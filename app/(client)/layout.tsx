@@ -68,12 +68,14 @@ export default async function ClientLayout({ children }: { children: React.React
     getClientPrefs(String(client.clientId)),
   ])
   const theme = getTheme(prefs.theme)
+  // "light text" can come from a dark theme or the explicit Settings toggle
+  const darkText = theme.dark || prefs.lightText
   const joke = prefs.showJoke ? await getJokeOfTheDay() : null
 
   const today = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" })
 
   return (
-    <div className="flex min-h-screen" style={{ background: theme.bg, color: theme.ink }}>
+    <div className={`flex min-h-screen ${darkText ? "theme-dark" : ""}`} style={{ background: theme.bg, color: darkText && !theme.dark ? "#f4f6fa" : theme.ink }}>
       <Sidebar pages={pages} unreadMessages={unread.messages} unreadChat={unread.chat} />
       <div className="flex-1 flex flex-col min-h-0">
         {previewEmail && (
@@ -87,18 +89,18 @@ export default async function ClientLayout({ children }: { children: React.React
         {/* Meta strip */}
         <div
           className="flex items-center justify-between px-6 py-2 border-b print:hidden"
-          style={{ borderColor: theme.dark ? "rgba(255,255,255,0.15)" : "#E8DFD2" }}
+          style={{ borderColor: darkText ? "rgba(255,255,255,0.15)" : "#E8DFD2" }}
         >
-          <span className="section-label" style={theme.dark ? { color: "rgba(255,255,255,0.75)" } : undefined}>{today}</span>
-          <span className="text-[12px]" style={{ color: theme.dark ? "rgba(255,255,255,0.75)" : "#334155" }}>{client.name}</span>
+          <span className="section-label" style={darkText ? { color: "rgba(255,255,255,0.75)" } : undefined}>{today}</span>
+          <span className="text-[12px]" style={{ color: darkText ? "rgba(255,255,255,0.75)" : "#334155" }}>{client.name}</span>
         </div>
         {joke && (
           <div
             className="px-6 py-1.5 text-center text-sm italic border-b print:hidden"
             style={{
-              color: theme.dark ? "rgba(255,255,255,0.85)" : "#4b443b",
-              background: theme.dark ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.55)",
-              borderColor: theme.dark ? "rgba(255,255,255,0.15)" : "#E8DFD2",
+              color: darkText ? "rgba(255,255,255,0.85)" : "#4b443b",
+              background: darkText ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.55)",
+              borderColor: darkText ? "rgba(255,255,255,0.15)" : "#E8DFD2",
             }}
           >
             😄 {joke}

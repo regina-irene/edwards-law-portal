@@ -86,7 +86,7 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
         📁 Case File
       </div>
       <div
-        className="rounded-b-lg rounded-tr-lg border p-6 shadow-sm"
+        className="rounded-b-lg rounded-tr-lg border p-6 shadow-sm keep-ink"
         style={{ background: "#FAF0D7", borderColor: "#E0CD9E" }}
       >
       {/* Stage column hugs its content so Key Dates sits close beside it */}

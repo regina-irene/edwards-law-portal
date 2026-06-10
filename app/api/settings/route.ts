@@ -10,10 +10,11 @@ export async function PUT(req: Request) {
   const body = await req.json().catch(() => null)
   const theme = String(body?.theme ?? "classic")
   const showJoke = Boolean(body?.showJoke)
+  const lightText = Boolean(body?.lightText)
   if (!THEMES.some((t) => t.key === theme)) {
     return NextResponse.json({ error: "Unknown theme" }, { status: 400 })
   }
 
-  await saveClientPrefs(String(client.clientId), { theme, showJoke })
+  await saveClientPrefs(String(client.clientId), { theme, showJoke, lightText })
   return NextResponse.json({ ok: true })
 }

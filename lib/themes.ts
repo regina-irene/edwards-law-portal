@@ -23,6 +23,20 @@ export const BASE_THEMES: PortalTheme[] = [
   { key: "royal", label: "Royal Purple", bg: "linear-gradient(170deg, #1e1b4b 0%, #312e81 55%, #4c1d95 100%)", ink: "#ece9fe", dark: true },
 ]
 
+// Bold color-to-color gradients — much more pronounced than the base looks.
+export const GRADIENT_THEMES: PortalTheme[] = [
+  { key: "sunset-pop", label: "Sunset Pop", bg: "linear-gradient(160deg, #f97316 0%, #db2777 100%)", ink: "#fff7f4", dark: true },
+  { key: "berry-fusion", label: "Berry Fusion", bg: "linear-gradient(160deg, #7c3aed 0%, #ec4899 100%)", ink: "#fdf3fb", dark: true },
+  { key: "tropical", label: "Tropical", bg: "linear-gradient(160deg, #06b6d4 0%, #22c55e 100%)", ink: "#06281e", dark: false },
+  { key: "fire-ice", label: "Fire & Ice", bg: "linear-gradient(160deg, #ef4444 0%, #f8fafc 50%, #3b82f6 100%)", ink: "#1e293b", dark: false },
+  { key: "deep-sea", label: "Deep Sea", bg: "linear-gradient(160deg, #0ea5e9 0%, #1e3a8a 100%)", ink: "#eaf5ff", dark: true },
+  { key: "aurora", label: "Aurora", bg: "linear-gradient(160deg, #22d3ee 0%, #a855f7 100%)", ink: "#ffffff", dark: true },
+  { key: "lemon-lime", label: "Lemon Lime", bg: "linear-gradient(160deg, #fde047 0%, #4ade80 100%)", ink: "#1d2a06", dark: false },
+  { key: "cotton-candy", label: "Cotton Candy", bg: "linear-gradient(160deg, #93c5fd 0%, #f9a8d4 100%)", ink: "#312e51", dark: false },
+  { key: "ember", label: "Ember", bg: "linear-gradient(160deg, #facc15 0%, #ea580c 55%, #7f1d1d 100%)", ink: "#fff8e7", dark: true },
+  { key: "twilight", label: "Twilight", bg: "linear-gradient(160deg, #fbbf24 0%, #db2777 50%, #4c1d95 100%)", ink: "#fdf4ff", dark: true },
+]
+
 function hexToRgba(hex: string, alpha: number): string {
   const h = hex.replace("#", "")
   const r = parseInt(h.slice(0, 2), 16)
@@ -116,6 +130,7 @@ export const MLB_THEMES: PortalTheme[] = [
 
 export const THEMES: PortalTheme[] = [
   ...BASE_THEMES,
+  ...GRADIENT_THEMES,
   ...NFL_THEMES,
   ...MLB_THEMES,
 ]
