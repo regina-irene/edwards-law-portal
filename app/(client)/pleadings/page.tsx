@@ -43,19 +43,19 @@ export default async function PleadingsPage() {
           read (docs === null) fall back to the old embed so nothing breaks. */}
       {docs ? (
         <>
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <p className="text-xs text-gray-500">
-              <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1.5 align-middle print:hidden" />
-              Synced with EFL · Current data as of {refreshedAt}
-            </p>
-            <div className="flex items-center gap-2 print:hidden">
-              <PrintButton />
+          <div className="flex items-end justify-between gap-3 flex-wrap">
+            <div className="space-y-1.5">
               {previewEmail && (
-                <form action={refreshPleadingsPage}>
+                <form action={refreshPleadingsPage} className="print:hidden">
                   <RefreshButton label="Refresh" />
                 </form>
               )}
+              <p className="text-xs text-gray-500">
+                <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1.5 align-middle print:hidden" />
+                Synced with EFL · Current data as of {refreshedAt}
+              </p>
             </div>
+            <PrintButton />
           </div>
           <PleadingsTable docs={docs} />
         </>

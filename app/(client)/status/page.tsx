@@ -57,10 +57,10 @@ export default async function StatusPage() {
       style={{ background: "linear-gradient(170deg, #eaf7fa 0%, #c8e8f0 35%, #9fd3e3 70%, #76b9d3 100%)" }}
     >
       {isAdminPreview && (
-        <div className="flex justify-end">
+        <div className="flex justify-start">
           <form action={refreshStatusPage}>
             <RefreshButton label="Refresh" />
-            <span className="block text-right text-xs text-gray-500 mt-1">Last refreshed {refreshedAt}</span>
+            <span className="block text-left text-xs text-gray-500 mt-1">Synced with EFL · Current data as of {refreshedAt}</span>
           </form>
         </div>
       )}
@@ -74,7 +74,7 @@ export default async function StatusPage() {
             <h2 className="text-xs uppercase tracking-wide font-semibold" style={{ color: "#1b2d45" }}>Status of Your Case</h2>
             {statusUpdated && (
               <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: "#efe2d2", color: "#1b2d45" }}>
-                Updated {statusUpdated}
+                Updated by EFL · {statusUpdated}
               </span>
             )}
           </div>
