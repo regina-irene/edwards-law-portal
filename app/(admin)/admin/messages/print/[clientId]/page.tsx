@@ -2,7 +2,14 @@
 
 import { useEffect, useState, use } from "react"
 
-interface Msg { id: string; sender: "client" | "firm"; body: string; created_at: string }
+interface Msg { id: string; sender: "client" | "firm"; body: string; created_at: string; sms_status?: "notification" | "full" | "inbound" | null }
+
+function channelOf(m: Msg): string {
+  if (m.sender === "firm") {
+    return m.sms_status === "full" ? "portal + texted" : m.sms_status === "notification" ? "portal + text alert" : "portal"
+  }
+  return m.sms_status === "inbound" ? "text message" : "portal"
+}
 
 export default function PrintThread({ params }: { params: Promise<{ clientId: string }> }) {
   const { clientId } = use(params)
@@ -27,7 +34,7 @@ export default function PrintThread({ params }: { params: Promise<{ clientId: st
       {messages.map((m) => (
         <div key={m.id} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid #eee" }}>
           <p style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
-            <strong>{m.sender === "firm" ? "Edwards Family Law" : "Client"}</strong> · {new Date(m.created_at).toLocaleString("en-US")}
+            <strong>{m.sender === "firm" ? "Edwards Family Law" : "Client"}</strong> · {new Date(m.created_at).toLocaleString("en-US")} · via {channelOf(m)}
           </p>
           <p style={{ fontSize: 14, whiteSpace: "pre-wrap", margin: 0 }}>{m.body}</p>
         </div>

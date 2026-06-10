@@ -143,9 +143,16 @@ export default function MessageCenter() {
     setSending(false)
   }
 
+  function channelOf(m: Msg): string {
+    if (m.sender === "firm") {
+      return m.sms_status === "full" ? "portal + texted" : m.sms_status === "notification" ? "portal + text alert" : "portal"
+    }
+    return m.sms_status === "inbound" ? "text message" : "portal"
+  }
+
   function exportTxt() {
     const conv = convos.find((c) => c.id === selected)
-    const lines = messages.map((m) => `[${new Date(m.created_at).toLocaleString("en-US")}] ${m.sender === "firm" ? "Firm" : conv?.name ?? "Client"}: ${m.body}`)
+    const lines = messages.map((m) => `[${new Date(m.created_at).toLocaleString("en-US")}] ${m.sender === "firm" ? "Firm" : conv?.name ?? "Client"} (via ${channelOf(m)}): ${m.body}`)
     const blob = new Blob([`Conversation with ${conv?.name ?? ""}\n\n${lines.join("\n")}`], { type: "text/plain" })
     const a = document.createElement("a")
     a.href = URL.createObjectURL(blob)

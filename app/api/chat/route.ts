@@ -14,7 +14,7 @@ export async function GET() {
   await sql`UPDATE chat_messages SET read = true WHERE client_id = ${cid} AND sender = 'firm' AND read = false`.catch(() => {})
 
   const result = await sql`
-    SELECT id, sender, body, created_at
+    SELECT id, sender, body, created_at, sms_status
     FROM chat_messages
     WHERE client_id = ${cid}
     ORDER BY created_at ASC

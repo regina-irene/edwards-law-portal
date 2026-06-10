@@ -3,7 +3,14 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import UploadDocsButton from "@/components/messages/UploadDocsButton"
 
-interface Msg { id: string; sender: "client" | "firm"; body: string; created_at: string; files?: { id: string; file_name: string }[] }
+interface Msg { id: string; sender: "client" | "firm"; body: string; created_at: string; sms_status?: "notification" | "full" | "inbound" | null; files?: { id: string; file_name: string }[] }
+
+function channelOf(m: Msg): string {
+  if (m.sender === "firm") {
+    return m.sms_status === "full" ? "portal + texted" : m.sms_status === "notification" ? "portal + text alert" : "portal"
+  }
+  return m.sms_status === "inbound" ? "text message" : "portal"
+}
 
 function timeOf(d: string) { return new Date(d).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) }
 function dayLabel(d: string) { return new Date(d).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }) }
@@ -19,7 +26,7 @@ function transcriptHtml(messages: Msg[]): string {
   const rows = messages.map((m) => `
     <div style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #eee">
       <p style="font-size:12px;color:#666;margin:0 0 4px 0">
-        <strong>${m.sender === "firm" ? "Edwards Family Law" : "Client"}</strong> · ${esc(stamp(m.created_at))}
+        <strong>${m.sender === "firm" ? "Edwards Family Law" : "Client"}</strong> · ${esc(stamp(m.created_at))} · via ${esc(channelOf(m))}
       </p>
       <p style="font-size:14px;white-space:pre-wrap;margin:0">${esc(m.body)}</p>
       ${(m.files ?? []).map((f) => `<p style="font-size:12px;color:#444;margin:4px 0 0 0">📎 ${esc(f.file_name)}</p>`).join("")}
@@ -63,11 +70,12 @@ function exportExcel(messages: Msg[]) {
     <tr>
       <td>${esc(stamp(m.created_at))}</td>
       <td>${m.sender === "firm" ? "Edwards Family Law" : "Client"}</td>
+      <td>${esc(channelOf(m))}</td>
       <td>${esc(m.body)}</td>
       <td>${esc((m.files ?? []).map((f) => f.file_name).join(", "))}</td>
     </tr>`)
   const table = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body>
-    <table border="1"><tr><th>Date</th><th>From</th><th>Message</th><th>Attachments</th></tr>${rows.join("")}</table>
+    <table border="1"><tr><th>Date</th><th>From</th><th>Sent Via</th><th>Message</th><th>Attachments</th></tr>${rows.join("")}</table>
   </body></html>`
   downloadBlob(table, "application/vnd.ms-excel", "messages.xls")
 }
