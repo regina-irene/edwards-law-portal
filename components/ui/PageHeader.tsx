@@ -16,8 +16,12 @@ export default function PageHeader({ defaultTitle, page, content }: PageHeaderPr
       <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
 
       {content.announcement && (
-        <div className="px-4 py-3 rounded-lg text-sm max-w-3xl" style={{ background: "#efe2d2", border: "1px solid #e8dfd2", color: "#1b2d45" }}>
-          <RichTextView html={content.announcement} className="!text-[#1b2d45]" />
+        /* FileFlow-style firm announcement: megaphone + full-width banner, centered */
+        <div className="w-full px-5 py-3.5 rounded-lg text-sm flex items-center gap-4 keep-ink" style={{ background: "#efe2d2", border: "1px solid #e8dfd2", color: "#1b2d45" }}>
+          <span className="text-3xl shrink-0" aria-hidden>📣</span>
+          <div className="flex-1 text-center">
+            <RichTextView html={content.announcement} className="!text-[#1b2d45]" />
+          </div>
         </div>
       )}
 
