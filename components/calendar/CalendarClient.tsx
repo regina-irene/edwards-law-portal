@@ -145,6 +145,35 @@ function AddToCalendar({ e }: { e: CaseEvent }) {
   )
 }
 
+function AgendaRow({ e, isPast = false }: { e: CaseEvent; isPast?: boolean }) {
+  return (
+    <div className="flex items-start gap-4 px-5 py-3.5">
+      <div className="w-40 shrink-0">
+        <p className="text-sm font-semibold text-gray-900">{longDay(new Date(e.start))}</p>
+        <p className="text-xs text-gray-500">{timeOf(e)}</p>
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-gray-900">{e.title}</p>
+        {e.location && <p className="text-xs text-gray-600 mt-0.5"><LocationLink location={e.location} /></p>}
+        {e.zoomLink && !isPast && (
+          <p className="text-xs mt-0.5">
+            <a href={e.zoomLink} target="_blank" rel="noopener noreferrer" className="underline break-all text-gray-500 hover:opacity-75">
+              🎥 {e.zoomLink.replace(/^https?:\/\//i, "").split("?")[0]}
+            </a>
+          </p>
+        )}
+        {e.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{e.description}</p>}
+        {!isPast && <p className="mt-1.5"><AddToCalendar e={e} /></p>}
+      </div>
+      {e.zoomLink && !isPast && (
+        <a href={e.zoomLink} target="_blank" rel="noopener noreferrer" className="shrink-0 text-sm font-semibold px-3.5 py-1.5 rounded-lg text-white hover:opacity-90" style={{ background: NAVY }}>
+          🎥 Join Zoom
+        </a>
+      )}
+    </div>
+  )
+}
+
 function EventChip({ e, detailed = false }: { e: CaseEvent; detailed?: boolean }) {
   return (
     <div
@@ -213,11 +242,14 @@ export default function CalendarClient({ events }: { events: CaseEvent[] }) {
     })
   }, [cursor, view])
 
-  // ---- agenda: upcoming events ----
-  const agenda = useMemo(() => {
+  // ---- agenda: upcoming events (+ optional past history) ----
+  const [showPast, setShowPast] = useState(false)
+  const { agenda, past } = useMemo(() => {
     const now = new Date()
     now.setHours(0, 0, 0, 0)
-    return events.filter((e) => new Date(e.start) >= now)
+    const upcoming = events.filter((e) => new Date(e.start) >= now)
+    const history = events.filter((e) => new Date(e.start) < now).reverse() // most recent first
+    return { agenda: upcoming, past: history }
   }, [events])
 
   const heading =
@@ -308,34 +340,27 @@ export default function CalendarClient({ events }: { events: CaseEvent[] }) {
 
       {/* agenda view */}
       {view === "agenda" && (
-        <div className="divide-y divide-gray-100">
-          {agenda.length === 0 && <p className="text-sm text-gray-500 p-6">No upcoming events on your calendar.</p>}
-          {agenda.map((e) => (
-            <div key={e.id} className="flex items-start gap-4 px-5 py-3.5">
-              <div className="w-40 shrink-0">
-                <p className="text-sm font-semibold text-gray-900">{longDay(new Date(e.start))}</p>
-                <p className="text-xs text-gray-500">{timeOf(e)}</p>
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-gray-900">{e.title}</p>
-                {e.location && <p className="text-xs text-gray-600 mt-0.5"><LocationLink location={e.location} /></p>}
-                {e.zoomLink && (
-                  <p className="text-xs mt-0.5">
-                    <a href={e.zoomLink} target="_blank" rel="noopener noreferrer" className="underline break-all text-gray-500 hover:opacity-75">
-                      🎥 {e.zoomLink.replace(/^https?:\/\//i, "").split("?")[0]}
-                    </a>
-                  </p>
-                )}
-                {e.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{e.description}</p>}
-                <p className="mt-1.5"><AddToCalendar e={e} /></p>
-              </div>
-              {e.zoomLink && (
-                <a href={e.zoomLink} target="_blank" rel="noopener noreferrer" className="shrink-0 text-sm font-semibold px-3.5 py-1.5 rounded-lg text-white hover:opacity-90" style={{ background: NAVY }}>
-                  🎥 Join Zoom
-                </a>
+        <div>
+          <div className="divide-y divide-gray-100">
+            {agenda.length === 0 && <p className="text-sm text-gray-500 p-6">No upcoming events on your calendar.</p>}
+            {agenda.map((e) => <AgendaRow key={e.id} e={e} />)}
+          </div>
+          {past.length > 0 && (
+            <div className="border-t border-gray-200">
+              <button
+                type="button"
+                onClick={() => setShowPast(!showPast)}
+                className="w-full py-2.5 text-sm font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-50 transition-colors"
+              >
+                {showPast ? "Hide past events ▴" : `Show ${past.length} past event${past.length === 1 ? "" : "s"} ▾`}
+              </button>
+              {showPast && (
+                <div className="divide-y divide-gray-100 border-t border-gray-100 opacity-70">
+                  {past.map((e) => <AgendaRow key={e.id} e={e} isPast />)}
+                </div>
               )}
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>
