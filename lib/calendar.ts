@@ -57,7 +57,13 @@ export function cleanDescription(raw: string): string {
   s = s.replace(/[^.\n]*is inviting you to a scheduled Zoom meeting[\s\S]*$/i, "")
   s = s.replace(/Join Zoom Meeting[\s\S]*$/i, "")
   s = s.replace(/https?:\/\/[^\s]+/g, "") // bare URLs add noise; links render separately
-  return s.replace(/\s+/g, " ").trim()
+  // collapse runs of spaces but PRESERVE line breaks (notes are often multi-line)
+  s = s
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+  return s.trim()
 }
 
 // The Zoom link might live in the Zoom Link field OR be buried in the event

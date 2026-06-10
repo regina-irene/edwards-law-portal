@@ -162,7 +162,7 @@ function AgendaRow({ e, isPast = false }: { e: CaseEvent; isPast?: boolean }) {
             </a>
           </p>
         )}
-        {e.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{e.description}</p>}
+        {e.description && <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-wrap">{e.description}</p>}
         {!isPast && <p className="mt-1.5"><AddToCalendar e={e} /></p>}
       </div>
       {e.zoomLink && !isPast && (
@@ -242,8 +242,8 @@ export default function CalendarClient({ events }: { events: CaseEvent[] }) {
     })
   }, [cursor, view])
 
-  // ---- agenda: upcoming events (+ optional past history) ----
-  const [showPast, setShowPast] = useState(false)
+  // ---- agenda: upcoming events + past history (shown by default) ----
+  const [showPast, setShowPast] = useState(true)
   const { agenda, past } = useMemo(() => {
     const now = new Date()
     now.setHours(0, 0, 0, 0)

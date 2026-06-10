@@ -24,6 +24,10 @@ describe("calendar cleanup", () => {
     expect(cleanDescription(raw)).toBe("Prep notes for hearing.")
   })
 
+  it("preserves line breaks in multi-line notes", () => {
+    expect(cleanDescription("Line one.\n\nLine   two.")).toBe("Line one.\n\nLine two.")
+  })
+
   it("returns empty when the description is only boilerplate", () => {
     const raw =
       "Regina Edwards, Attorney is inviting you to a scheduled Zoom meeting. Join Zoom Meeting https://us02web.zoom.us/j/1"
