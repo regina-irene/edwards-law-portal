@@ -19,7 +19,7 @@ import PageHeader from "@/components/ui/PageHeader"
 import { getPageContent } from "@/lib/page-content"
 import { getClientBilling } from "@/lib/billing"
 import BillingSection from "@/components/billing/BillingSection"
-import CasePills from "@/components/status/CasePills"
+import CaseDetailsCard from "@/components/status/CaseDetailsCard"
 import { paymentStatusColor } from "@/lib/airtable-colors"
 
 export default async function StatusPage() {
@@ -61,24 +61,25 @@ export default async function StatusPage() {
       {/* Embed removed per Regina (2026-06-09) — the pulled-out info below replaces the Airtable embed view */}
       <PageHeader defaultTitle="Case Status" page="status" content={{ ...pageContent, embed_url: null }} />
 
-      {/* Status of Your Case — top, highlighted, with the last-modified label */}
-      <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200 border-l-4" style={{ borderLeftColor: "#1b2d45" }}>
-        <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-          <h2 className="text-xs uppercase tracking-wide font-semibold" style={{ color: "#1b2d45" }}>Status of Your Case</h2>
-          {statusUpdated && (
-            <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: "#efe2d2", color: "#1b2d45" }}>
-              Updated {statusUpdated}
-            </span>
+      {/* Status of Your Case (highlighted, with last-modified label) + Case Details side by side */}
+      <div className="grid gap-6 md:grid-cols-3 items-start">
+        <div className="md:col-span-2 bg-white rounded-lg p-6 shadow-md border border-gray-200 border-l-4" style={{ borderLeftColor: "#1b2d45" }}>
+          <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+            <h2 className="text-xs uppercase tracking-wide font-semibold" style={{ color: "#1b2d45" }}>Status of Your Case</h2>
+            {statusUpdated && (
+              <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: "#efe2d2", color: "#1b2d45" }}>
+                Updated {statusUpdated}
+              </span>
+            )}
+          </div>
+          {statusText ? (
+            <p className="text-gray-800 whitespace-pre-wrap">{statusText}</p>
+          ) : (
+            <p className="text-sm text-gray-500">No status update available. Please contact your attorney.</p>
           )}
         </div>
-        {statusText ? (
-          <p className="text-gray-800 whitespace-pre-wrap">{statusText}</p>
-        ) : (
-          <p className="text-sm text-gray-500">No status update available. Please contact your attorney.</p>
-        )}
+        {caseStatus && <CaseDetailsCard info={caseStatus} />}
       </div>
-
-      {caseStatus && <CasePills info={caseStatus} />}
 
       {caseStatus?.paymentStatus && (
         <div className="flex items-center gap-2">
