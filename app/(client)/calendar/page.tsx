@@ -7,6 +7,7 @@ import RefreshButton from "@/components/ui/RefreshButton"
 import PrintButton from "@/components/ui/PrintButton"
 import { getPageContent } from "@/lib/page-content"
 import { getCaseEvents } from "@/lib/calendar"
+import { getFormattedNotes } from "@/lib/event-notes-ai"
 import CalendarClient from "@/components/calendar/CalendarClient"
 import { refreshCalendarPage } from "./actions"
 
@@ -33,6 +34,10 @@ export default async function CalendarPage() {
   ])
   const refreshedAt = formatRefreshed(Date.now())
 
+  // AI-reformatted notes for long messy event descriptions (cached per event)
+  const notesHtml = events ? await getFormattedNotes(events) : {}
+  const enhancedEvents = events?.map((e) => ({ ...e, descriptionHtml: notesHtml[e.id] ?? null })) ?? null
+
   return (
     <div className="space-y-6">
       {/* When the calendar renders, suppress any embed configured in the
@@ -54,7 +59,7 @@ export default async function CalendarPage() {
             </div>
             <PrintButton />
           </div>
-          <CalendarClient events={events} />
+          <CalendarClient events={enhancedEvents!} />
         </>
       ) : (
         <div className="bg-white rounded-lg border border-gray-200 p-6"><p className="text-sm text-gray-500">We couldn&apos;t load this information right now. Please check back shortly or contact our office.</p></div>

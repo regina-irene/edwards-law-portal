@@ -222,6 +222,14 @@ export const MIGRATION_SQL = `
     light_text BOOLEAN NOT NULL DEFAULT false,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
+
+  -- AI-reformatted calendar event notes (cache; keyed by Airtable event record id)
+  CREATE TABLE IF NOT EXISTS event_note_ai (
+    event_id TEXT PRIMARY KEY,
+    source_hash TEXT NOT NULL,
+    html TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
 `
 
 async function migrate(): Promise<void> {

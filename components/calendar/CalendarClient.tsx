@@ -162,7 +162,14 @@ function AgendaRow({ e, isPast = false }: { e: CaseEvent; isPast?: boolean }) {
             </a>
           </p>
         )}
-        {e.description && <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-wrap">{e.description}</p>}
+        {e.descriptionHtml ? (
+          <div
+            className="text-xs text-gray-600 mt-1.5 space-y-1 [&_h3]:text-[11px] [&_h3]:font-bold [&_h3]:uppercase [&_h3]:tracking-wide [&_h3]:text-gray-500 [&_h3]:mt-2 [&_ul]:list-disc [&_ul]:pl-4 [&_a]:text-blue-700 [&_a]:underline"
+            dangerouslySetInnerHTML={{ __html: e.descriptionHtml }}
+          />
+        ) : (
+          e.description && <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-wrap">{e.description}</p>
+        )}
         {!isPast && <p className="mt-1.5"><AddToCalendar e={e} /></p>}
       </div>
       {e.zoomLink && !isPast && (

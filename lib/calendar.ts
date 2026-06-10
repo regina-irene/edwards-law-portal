@@ -14,6 +14,8 @@ export interface CaseEvent {
   allDay: boolean
   location: string
   description: string
+  /** AI-reformatted notes (sanitized HTML) — set by lib/event-notes-ai.ts when available */
+  descriptionHtml?: string | null
   zoomLink: string
   eventLink: string
   status: string
