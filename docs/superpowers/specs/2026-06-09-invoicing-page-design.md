@@ -1,7 +1,9 @@
 # Case Status / Invoicing Page — Flat-Fee Billing Design
 
 **Date:** 2026-06-09
-**Status:** Approved by Regina (in conversation). Airtable table created.
+**Status:** Approved by Regina (in conversation). Airtable tables created. (Earlier idea of
+syncing the internal "Owed $" board / reading the firm-wide Payments board was dropped at
+Regina's request — the portal uses ONLY the two new tables below.)
 
 ## Goal
 
@@ -10,9 +12,9 @@ flat-fee billing: total fees, amount paid, balance, a payment schedule, and a Pa
 above the existing Status of Case section. Layout chosen: "Balance banner on top" (option A
 from visual mockups in `.superpowers/brainstorm/`).
 
-## Data model (all in the existing main Airtable base `appAuA3Ifddk44H5m`)
+## Data model (in the existing main Airtable base `appAuA3Ifddk44H5m`)
 
-### New: Client Fees table — `tble8ZgwrvPnA9511` (created 2026-06-09)
+### Client Fees — `tble8ZgwrvPnA9511` (created 2026-06-09)
 
 One row per fee the client owes. Flat fee = first row; payment-plan installments = one row
 each; fees added later (trial prep, 2nd mediation, GAL, etc.) = new rows anytime.
@@ -22,52 +24,56 @@ each; fees added later (trial prep, 2nd mediation, GAL, etc.) = new rows anytime
 | Description (primary) | `fldZ4w6maxdZqXE0A` | singleLineText — shown to client |
 | Amount | `fldvrAEygPNm76jUQ` | currency $ |
 | Due Date | `fldHwDRPlONkUhBHB` | date (US) |
-| Client | `fldj3F5SWOR0SABNG` | link → Clients `tblPPcVwWJ3IjBRLu` (inverse field on Clients: `fldfMiuatMda6JjcX` "Client Fees") |
+| Client | `fldj3F5SWOR0SABNG` | link → Clients `tblPPcVwWJ3IjBRLu` (inverse on Clients: `fldfMiuatMda6JjcX` "Client Fees") |
 | Notes | `fldeuu61DKYB32Mx5` | multilineText — internal only |
 
-### Existing tables used read-only
+### Client Payments — `tblJF6czEn0LovTGq` (created 2026-06-09)
 
-- **Clients** `tblPPcVwWJ3IjBRLu` — portal already reads this; has `Status - Client Board`
-  link → Status table.
-- **Status** `tbl3gCA0CQ0S6ewW6` — case board; `Client Payments` (`fld61OYfd6rwgGInz`)
-  links → Payments.
-- **Payments** `tblwulRnma9qIKasp` — every payment received. Fields used: `Amount`
-  (currency), `Cleared?` (singleSelect: Yes / Pending / Bounced — note there are TWO "Yes"
-  choices, "Yes" and "Yes " with trailing space; match trimmed), `Type of Payment`
-  (refund types: "Refund", "Refund (partial)"), `Payment Date`, `Case Name` (link → Status).
+One row per payment received. Refund = negative amount.
+
+| Field | ID | Type |
+|---|---|---|
+| Description (primary) | `fldlvyeUKxOop1jHj` | singleLineText — shown to client |
+| Amount | `fldj4itnsxY3Y1dud` | currency $ |
+| Payment Date | `fldlSsB8Nhvd88LR4` | date (US) |
+| Client | `fldiYDn11BY6cNfa4` | link → Clients (inverse on Clients: `fldToWNVm9buL8T8o` "Client Payments") |
+| Notes | `fldiAtrDbGjNIfWFW` | multilineText — internal only |
+
+Note: the Owed $ table also gained a `Client` link field (`fld3zc6kZnphgZkxd`) before the
+sync idea was dropped — unused by the portal; Regina may delete it.
 
 ## Math (computed in the portal, no Airtable formulas)
 
 - **Total fees** = sum of the client's Client Fees rows.
-- **Paid** = sum of Payments linked to the client's Status record(s) where trimmed
-  `Cleared?` = "Yes". Types containing "Refund" subtract (negate positive amounts).
-- **Balance** = fees − paid.
-- Schedule rows: payments apply oldest-fee-first (by Due Date, then row order) → each fee
-  shows Paid / Partial / Due. No manual matching.
+- **Paid** = sum of the client's Client Payments rows.
+- **Balance** = fees − paid (can go negative → show $0 balance / credit).
+- Schedule: payments apply oldest-fee-first (by Due Date asc, undated last, then row order) →
+  each fee shows Paid / Partial / Due. No manual matching.
 
 ## Page layout (client `status` page)
 
 1. PageHeader (existing editable header/announcement)
 2. **Balance banner**: Total Fees · Paid · Balance · "Pay Now →" button → `https://tinyurl.com/eflpay` (same link for all clients, opens in new tab)
-3. **Payment Schedule** card: one row per fee — description, due date, amount, ✅ Paid / 🔶 Due / partial badge
-4. **Status of Your Case** card (existing content, unchanged)
+3. **Payment Schedule** card: one row per fee — description, due date, amount, Paid / Due / Partial badge
+4. **Payments received** list (description, date, amount) — small, under the schedule
+5. **Status of Your Case** card (existing content, unchanged)
 
 ## Fallbacks
 
-- Client has no Client Fees rows (or pro bono): no billing section at all — page looks like today.
-- Pending/Bounced payments don't count toward Paid.
+- Client has no Client Fees rows AND no payments (or pro bono): no billing section at all —
+  page looks like today.
 - Airtable fetch failure: show case status; omit billing section rather than erroring.
 
 ## Fetch path
 
-Portal client (email → Clients record) → `Status - Client Board` record IDs → Payments rows
-whose `Case Name` contains one of those IDs; Client Fees rows whose `Client` contains the
-Clients record ID. Linked-record filtering done in code on the returned arrays (record-ID
-arrays come back in link fields). Volume is small. Reuse `lib/airtable.ts` fetch helper
-(60s revalidate).
+Portal client (email → Clients record `id`) → list Client Fees and Client Payments rows,
+filter in code where the `Client` link array contains the client's record id (link fields
+return record-ID arrays; volume is small). Reuse the `lib/airtable.ts` fetch helper
+(60s revalidate). Pure math lives in a separate function so it can be unit-tested.
 
 ## Out of scope (discussed, not building now)
 
 - Per-client payment links / amounts pre-filled
 - Online payment processing inside the portal (Pay Now just opens her existing link)
-- Admin UI for fees (managed directly in Airtable)
+- Admin UI for fees/payments (managed directly in Airtable)
+- Reading the firm-wide Payments board or the Owed $ board
