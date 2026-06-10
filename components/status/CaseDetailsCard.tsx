@@ -1,6 +1,7 @@
-// components/status/CaseDetailsCard.tsx — full-width "Case Details" card shown
-// below the Status of Your Case write-up, fields in two columns. Select values
-// are chips colored exactly like the Airtable Status board.
+// components/status/CaseDetailsCard.tsx — "Case Details" card below the Status
+// of Your Case write-up. Three columns (Regina's layout): Stage on the left,
+// the case dates in the middle in date order (oldest first), and the
+// court/case facts on the right. Chips use the Airtable board colors.
 import type { CaseStatusInfo } from "@/lib/airtable"
 import {
   stageColor,
@@ -32,69 +33,100 @@ function Chip({ value, color }: { value: string; color: ChipColor }) {
   )
 }
 
-function Item({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-baseline gap-3 py-2 border-b border-gray-100">
-      <span className="text-sm text-gray-500 w-32 shrink-0">{label}</span>
-      <span className="space-x-1 space-y-1">{children}</span>
-    </div>
-  )
+function ColumnTitle({ children }: { children: React.ReactNode }) {
+  return <h3 className="text-xs uppercase tracking-wide text-gray-500 mb-2">{children}</h3>
 }
 
 export default function CaseDetailsCard({ info }: { info: CaseStatusInfo }) {
-  const answerFiled = info.dateAnswerFiled
-    ? shortDate(info.dateAnswerFiled)
-    : info.answerFiled
-      ? "Yes"
-      : "Not yet"
+  // middle column: every dated event, oldest first
+  const dates: { label: string; date: string }[] = []
+  if (info.caseFiled) dates.push({ label: "Case Filed", date: info.caseFiled })
+  if (info.dateOfService) dates.push({ label: "Date of Service", date: info.dateOfService })
+  if (info.dateAnswerFiled) dates.push({ label: "Answer Filed", date: info.dateAnswerFiled })
+  dates.sort((a, b) => a.date.localeCompare(b.date))
 
-  const items: React.ReactNode[] = []
-  if (info.county) {
-    items.push(<Item key="county" label="County"><Chip value={info.county.replace(/^\*/, "")} color={countyColor(info.county)} /></Item>)
+  // yes/no facts without their own date ride along under the date list
+  const checks: { label: string; value: string; done: boolean }[] = [
+    { label: "Service Perfected", value: info.servicePerfected ? "Yes" : "Not yet", done: info.servicePerfected },
+  ]
+  if (!info.dateAnswerFiled) {
+    checks.push({ label: "Answer Filed", value: info.answerFiled ? "Yes" : "Not yet", done: info.answerFiled })
   }
-  if (info.judge) {
-    items.push(<Item key="judge" label="Judge"><Chip value={info.judge} color={judgeColor(info.judge)} /></Item>)
-  }
-  if (info.caseTypes.length > 0) {
-    items.push(
-      <Item key="type" label="Case Type">
-        {info.caseTypes.map((t) => <Chip key={t} value={t} color={caseTypeColor(t)} />)}
-      </Item>
-    )
-  }
-  if (info.stages.length > 0) {
-    items.push(
-      <Item key="stage" label="Stage">
-        {info.stages.map((s) => <Chip key={s} value={prettyStage(s)} color={stageColor(s)} />)}
-      </Item>
-    )
-  }
-  if (info.plfDft) {
-    items.push(<Item key="plfdft" label="Plf / Dft"><Chip value={info.plfDft} color={plfDftColor(info.plfDft)} /></Item>)
-  }
-  if (info.caseFiled) {
-    items.push(<Item key="filed" label="Case Filed"><span className="text-sm font-semibold text-gray-900">{shortDate(info.caseFiled)}</span></Item>)
-  }
-  items.push(
-    <Item key="perfected" label="Service Perfected">
-      <span className={`text-sm font-semibold ${info.servicePerfected ? "text-green-700" : "text-gray-900"}`}>
-        {info.servicePerfected ? "Yes" : "Not yet"}
-      </span>
-    </Item>
-  )
-  if (info.dateOfService) {
-    items.push(<Item key="served" label="Date of Service"><span className="text-sm font-semibold text-gray-900">{shortDate(info.dateOfService)}</span></Item>)
-  }
-  items.push(
-    <Item key="answer" label="Answer Filed">
-      <span className="text-sm font-semibold text-gray-900">{answerFiled}</span>
-    </Item>
-  )
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <h2 className="text-xs uppercase tracking-wide font-semibold mb-3" style={{ color: "#1b2d45" }}>Case Details</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10">{items}</div>
+      <h2 className="text-xs uppercase tracking-wide font-semibold mb-4" style={{ color: "#1b2d45" }}>Case Details</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        {/* Left: stage */}
+        <div>
+          <ColumnTitle>Stage</ColumnTitle>
+          {info.stages.length > 0 ? (
+            <div className="flex flex-col items-start gap-1.5">
+              {info.stages.map((s) => <Chip key={s} value={prettyStage(s)} color={stageColor(s)} />)}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400">—</p>
+          )}
+        </div>
+
+        {/* Middle: dates, oldest first */}
+        <div>
+          <ColumnTitle>Key Dates</ColumnTitle>
+          {dates.length > 0 ? (
+            <ul>
+              {dates.map((d) => (
+                <li key={d.label} className="flex items-baseline gap-2 py-1">
+                  <span className="w-2 h-2 rounded-full shrink-0 self-center" style={{ background: "#1b2d45" }} />
+                  <span className="text-sm text-gray-500 flex-1">{d.label}</span>
+                  <span className="text-sm font-semibold text-gray-900">{shortDate(d.date)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-gray-400">No dates yet</p>
+          )}
+          {checks.map((c) => (
+            <p key={c.label} className="flex items-baseline gap-2 py-1">
+              <span className={`w-2 h-2 rounded-full shrink-0 self-center ${c.done ? "bg-green-600" : "bg-gray-300"}`} />
+              <span className="text-sm text-gray-500 flex-1">{c.label}</span>
+              <span className={`text-sm font-semibold ${c.done ? "text-green-700" : "text-gray-500"}`}>{c.value}</span>
+            </p>
+          ))}
+        </div>
+
+        {/* Right: court + case facts */}
+        <div>
+          <ColumnTitle>Case Info</ColumnTitle>
+          <div className="space-y-2">
+            {info.county && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 w-16 shrink-0">County</span>
+                <Chip value={info.county.replace(/^\*/, "")} color={countyColor(info.county)} />
+              </div>
+            )}
+            {info.judge && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 w-16 shrink-0">Judge</span>
+                <Chip value={info.judge} color={judgeColor(info.judge)} />
+              </div>
+            )}
+            {info.caseTypes.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-gray-500 w-16 shrink-0">Type</span>
+                {info.caseTypes.map((t) => <Chip key={t} value={t} color={caseTypeColor(t)} />)}
+              </div>
+            )}
+            {info.plfDft && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 w-16 shrink-0">You are</span>
+                <Chip value={info.plfDft} color={plfDftColor(info.plfDft)} />
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
     </div>
   )
 }

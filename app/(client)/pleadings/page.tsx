@@ -5,6 +5,8 @@ import { getPortalClient } from "@/lib/portal-client"
 import AirtableEmbed from "@/components/ui/AirtableEmbed"
 import PageHeader from "@/components/ui/PageHeader"
 import { getPageContent } from "@/lib/page-content"
+import { getPleadings } from "@/lib/pleadings"
+import PleadingsList from "@/components/pleadings/PleadingsList"
 
 export default async function PleadingsPage() {
   const session = await auth()
@@ -12,12 +14,17 @@ export default async function PleadingsPage() {
   const client = await getPortalClient()
   if (!client) redirect("/login")
 
-  const pageContent = await getPageContent(client.clientId, "pleadings")
+  const [pageContent, docs] = await Promise.all([
+    getPageContent(client.clientId, "pleadings"),
+    getPleadings(client.clientBaseId),
+  ])
 
   return (
     <div className="space-y-6">
       <PageHeader defaultTitle="Pleadings" page="pleadings" content={pageContent} />
-      <AirtableEmbed url={client.pleadingsViewLink} title="Pleadings" />
+      {/* Docket-style list replaces the embed; if this client's base can't be
+          read (docs === null) fall back to the old embed so nothing breaks. */}
+      {docs ? <PleadingsList docs={docs} /> : <AirtableEmbed url={client.pleadingsViewLink} title="Pleadings" />}
     </div>
   )
 }

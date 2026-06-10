@@ -184,6 +184,16 @@ export function paymentStatusColor(name: string): ChipColor {
   return fromName(PAYMENT_STATUS[name])
 }
 
+// "Filed by:" on the per-client Pleadings tables (choice names vary slightly
+// between bases — trailing spaces etc — so match by keyword).
+export function filedByColor(name: string): ChipColor {
+  const n = name.toLowerCase()
+  if (n.includes("plaintiff") || n.includes("wife")) return fromName("yellowLight2")
+  if (n.includes("defendant") || n.includes("husband")) return fromName("cyanLight1")
+  if (n.includes("court")) return fromName("redBright")
+  return GRAY
+}
+
 export function judgeColor(name: string): ChipColor {
   const match = JUDGE_PREFIX.find(([prefix]) => name.startsWith(prefix))
   return fromName(match?.[1])
