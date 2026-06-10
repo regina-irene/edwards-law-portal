@@ -104,10 +104,10 @@ export async function getCaseStatus(clientId: string): Promise<CaseStatusInfo | 
   if (!recordId.startsWith("rec")) return null
   try {
     // tbl3gCA0CQ0S6ewW6 = the Status table (by id, so renaming it is safe).
-    // Always fresh (no-store) so the status page's Refresh button pulls live data.
+    // Cached 60s for fast navigation; Refresh button revalidates the path.
     const res = await fetch(
       `https://api.airtable.com/v0/${MAIN_BASE_ID}/tbl3gCA0CQ0S6ewW6/${recordId}`,
-      { headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` }, cache: "no-store" }
+      { headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` }, next: { revalidate: 60 } }
     )
     if (!res.ok) throw new Error(`Airtable error: ${res.status}`)
     const data = await res.json()

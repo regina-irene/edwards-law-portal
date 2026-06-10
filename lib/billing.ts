@@ -47,8 +47,8 @@ interface AirtableRecord {
   fields: Record<string, unknown>
 }
 
-// Fetches every record in the table (follows Airtable pagination). Always
-// fresh (no-store) so the page's Refresh button pulls live data.
+// Fetches every record in the table (follows Airtable pagination). Cached 60s
+// for fast navigation; the Refresh button revalidates the path for instant freshness.
 async function fetchAllRecords(tableName: string): Promise<AirtableRecord[]> {
   const records: AirtableRecord[] = []
   let offset: string | undefined
@@ -58,7 +58,7 @@ async function fetchAllRecords(tableName: string): Promise<AirtableRecord[]> {
       (offset ? `?offset=${encodeURIComponent(offset)}` : "")
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
-      cache: "no-store",
+      next: { revalidate: 60 }, // fast nav; Refresh button revalidates the path for instant freshness
     })
     if (!res.ok) throw new Error(`Airtable error: ${res.status}`)
     const data = await res.json()

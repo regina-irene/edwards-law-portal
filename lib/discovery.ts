@@ -30,7 +30,7 @@ export async function getDiscovery(clientBaseId: string): Promise<DiscoveryDoc[]
         (offset ? `?offset=${encodeURIComponent(offset)}` : "")
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
-        cache: "no-store",
+        next: { revalidate: 60 }, // fast nav; Refresh button revalidates the path for instant freshness
       })
       if (!res.ok) throw new Error(`Airtable error: ${res.status}`)
       const data = await res.json()
