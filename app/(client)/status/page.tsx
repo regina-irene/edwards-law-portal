@@ -38,10 +38,12 @@ export default async function StatusPage() {
   // all cases; the old "Status of Case" field on Clients is just a fallback.
   const statusText = caseStatus?.statusText || client.statusOfCase
   const statusUpdated = caseStatus?.lastModified
-    ? new Date(caseStatus.lastModified).toLocaleDateString("en-US", {
+    ? new Date(caseStatus.lastModified).toLocaleString("en-US", {
         month: "long",
         day: "numeric",
         year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
         timeZone: "America/New_York",
       })
     : null
