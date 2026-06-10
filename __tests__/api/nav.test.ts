@@ -17,7 +17,7 @@ import { auth } from "@/auth"
 const mockSql = sql as unknown as jest.Mock
 const mockAuth = auth as jest.Mock
 
-const DEFAULT_PAGES = ["dashboard", "document-requests", "pleadings", "discovery", "calendar", "messages", "chat"]
+const DEFAULT_PAGES = ["dashboard", "pleadings", "discovery", "calendar", "messages", "settings"]
 
 beforeEach(() => {
   jest.clearAllMocks()

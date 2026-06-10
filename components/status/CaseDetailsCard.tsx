@@ -38,14 +38,25 @@ function ColumnTitle({ children }: { children: React.ReactNode }) {
   return <h3 className="text-xs uppercase tracking-wide mb-2 font-semibold" style={{ color: "#8a7240" }}>{children}</h3>
 }
 
-export interface LatestPleading {
+export interface RecentFiling {
   title: string
   date: string | null
   filedBy: string
   link: string
 }
 
-export default function CaseDetailsCard({ info, latestPleading }: { info: CaseStatusInfo; latestPleading?: LatestPleading | null }) {
+export interface NextCourtDate {
+  title: string
+  start: string // ISO datetime
+}
+
+interface CaseDetailsCardProps {
+  info: CaseStatusInfo
+  recentFilings?: RecentFiling[]
+  nextCourt?: NextCourtDate | null
+}
+
+export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }: CaseDetailsCardProps) {
   // middle column, in Regina's fixed order
   const rows: { label: string; value: string; done: boolean }[] = [
     { label: "Case Filed", value: info.caseFiled ? shortDate(info.caseFiled) : "—", done: Boolean(info.caseFiled) },
@@ -57,8 +68,12 @@ export default function CaseDetailsCard({ info, latestPleading }: { info: CaseSt
       done: Boolean(info.dateAnswerFiled) || info.answerFiled,
     },
   ]
-  if (latestPleading?.date) {
-    rows.push({ label: "Latest Pleading", value: shortDate(latestPleading.date), done: true })
+  if (nextCourt) {
+    rows.push({
+      label: "Next Court Date",
+      value: new Date(nextCourt.start).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      done: true,
+    })
   }
 
   return (
@@ -101,31 +116,8 @@ export default function CaseDetailsCard({ info, latestPleading }: { info: CaseSt
               </li>
             ))}
           </ul>
-          {latestPleading?.date && (
-            <div className="mt-1 pl-4 space-y-1">
-              {latestPleading.link ? (
-                <a
-                  href={latestPleading.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block text-xs font-medium underline hover:opacity-75 break-words"
-                  style={{ color: "#1b2d45" }}
-                  title={latestPleading.title}
-                >
-                  {latestPleading.title}
-                </a>
-              ) : (
-                <p className="text-xs text-gray-500 italic break-words" title={latestPleading.title}>{latestPleading.title}</p>
-              )}
-              {latestPleading.filedBy && (
-                <span
-                  className="inline-block text-[11px] font-medium px-2 py-0.5 rounded-full border border-black/5"
-                  style={{ background: filedByColor(latestPleading.filedBy).bg, color: filedByColor(latestPleading.filedBy).text }}
-                >
-                  Filed by {latestPleading.filedBy.replace(/\s+/g, " ").trim()}
-                </span>
-              )}
-            </div>
+          {nextCourt && (
+            <p className="text-xs text-gray-500 italic mt-0.5 pl-4 truncate" title={nextCourt.title}>{nextCourt.title}</p>
           )}
         </div>
 
@@ -158,6 +150,43 @@ export default function CaseDetailsCard({ info, latestPleading }: { info: CaseSt
               </div>
             )}
           </div>
+
+          {recentFilings.length > 0 && (
+            <div className="mt-5">
+              <ColumnTitle>Recent Filings</ColumnTitle>
+              <ul className="space-y-2">
+                {recentFilings.slice(0, 3).map((f, i) => (
+                  <li key={i} className="text-xs">
+                    {f.link ? (
+                      <a
+                        href={f.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block font-medium underline hover:opacity-75 break-words"
+                        style={{ color: "#1b2d45" }}
+                        title={f.title}
+                      >
+                        {f.title}
+                      </a>
+                    ) : (
+                      <span className="block font-medium text-gray-700 break-words">{f.title}</span>
+                    )}
+                    <span className="text-gray-500">
+                      {f.date ? shortDate(f.date) : ""}
+                      {f.filedBy && (
+                        <span
+                          className="inline-block ml-1.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-black/5"
+                          style={{ background: filedByColor(f.filedBy).bg, color: filedByColor(f.filedBy).text }}
+                        >
+                          Filed by {f.filedBy.replace(/\s+/g, " ").trim()}
+                        </span>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
       </div>

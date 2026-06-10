@@ -5,7 +5,6 @@ import type { NavPage } from "@/lib/portal-pages"
 
 const ICONS: Record<string, string> = {
   dashboard: "🏠",
-  "document-requests": "📄",
   pleadings: "⚖️",
   discovery: "🔎",
   status: "📊",

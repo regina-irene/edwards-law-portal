@@ -19,13 +19,13 @@ import { CSS } from "@dnd-kit/utilities"
 
 const BUILTIN_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
-  "document-requests": "Document Requests",
   pleadings: "Pleadings",
   discovery: "Discovery",
   status: "Case Status",
   tasks: "Tasks",
   calendar: "Calendar",
   messages: "Messages",
+  settings: "Settings",
 }
 const BUILTIN_KEYS = Object.keys(BUILTIN_LABELS)
 

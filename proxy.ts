@@ -3,7 +3,6 @@ import { NextResponse } from "next/server"
 
 const PROTECTED_PATHS = [
   "/dashboard",
-  "/document-requests",
   "/pleadings",
   "/discovery",
   "/calendar",
@@ -30,7 +29,6 @@ export default auth((req) => {
 export const config = {
   matcher: [
     "/dashboard/:path*",
-    "/document-requests/:path*",
     "/pleadings/:path*",
     "/discovery/:path*",
     "/calendar/:path*",

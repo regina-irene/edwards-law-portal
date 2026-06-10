@@ -19,6 +19,7 @@ import PageHeader from "@/components/ui/PageHeader"
 import { getPageContent } from "@/lib/page-content"
 import { getClientBilling } from "@/lib/billing"
 import { getPleadings } from "@/lib/pleadings"
+import { getCaseEvents, nextCourtDate } from "@/lib/calendar"
 import BillingSection from "@/components/billing/BillingSection"
 import CaseDetailsCard from "@/components/status/CaseDetailsCard"
 import { paymentStatusColor } from "@/lib/airtable-colors"
@@ -29,22 +30,21 @@ export default async function StatusPage() {
   const client = await getPortalClient()
   if (!client) redirect("/login")
 
-  const [pageContent, billing, caseStatus, pleadings] = await Promise.all([
+  const [pageContent, billing, caseStatus, pleadings, events] = await Promise.all([
     getPageContent(client.clientId, "status"),
     getClientBilling(client.id),
     getCaseStatus(String(client.clientId)),
     getPleadings(client.clientBaseId),
+    getCaseEvents(String(client.clientId)),
   ])
-  // pleadings come back newest-first; surface the latest filing in Case Details
-  const latest = pleadings?.[0]
-  const latestPleading = latest
-    ? {
-        title: latest.title,
-        date: latest.filedOn ?? (latest.created ? latest.created.slice(0, 10) : null),
-        filedBy: latest.filedBy,
-        link: latest.link,
-      }
-    : null
+  // pleadings come back newest-first; surface the last 3 filings in Case Details
+  const recentFilings = (pleadings ?? []).slice(0, 3).map((p) => ({
+    title: p.title,
+    date: p.filedOn ?? (p.created ? p.created.slice(0, 10) : null),
+    filedBy: p.filedBy,
+    link: p.link,
+  }))
+  const nextCourt = events ? nextCourtDate(events) : null
   const refreshedAt = formatRefreshed(Date.now())
   // Refresh button is admin-only (shown during preview-as-client); clients get
   // fresh Airtable data on every page load anyway.
@@ -97,7 +97,13 @@ export default async function StatusPage() {
           )}
       </div>
 
-      {caseStatus && <CaseDetailsCard info={caseStatus} latestPleading={latestPleading} />}
+      {caseStatus && (
+        <CaseDetailsCard
+          info={caseStatus}
+          recentFilings={recentFilings}
+          nextCourt={nextCourt ? { title: nextCourt.title, start: nextCourt.start } : null}
+        />
+      )}
 
       {caseStatus?.paymentStatus && (
         <div className="flex items-center gap-2">

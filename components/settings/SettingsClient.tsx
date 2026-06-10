@@ -1,11 +1,39 @@
 "use client"
-// components/settings/SettingsClient.tsx — theme picker (10 swatches) + joke
-// of the day toggle. Saves to /api/settings, then refreshes so the new
-// background applies immediately.
+// components/settings/SettingsClient.tsx — theme picker (base looks, holidays,
+// sports incl. NFL/MLB team colors) + joke of the day toggle. Everything is
+// selected right on this page; saving applies the background immediately.
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { THEMES } from "@/lib/themes"
+import { BASE_THEMES, HOLIDAY_THEMES, SPORT_THEMES, NFL_THEMES, MLB_THEMES, getTheme, type PortalTheme } from "@/lib/themes"
+
+function Swatch({ t, selected, onSelect }: { t: PortalTheme; selected: boolean; onSelect: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`rounded-xl border-2 overflow-hidden text-left transition-all ${selected ? "ring-2 ring-offset-2 ring-blue-500 border-blue-500" : "border-gray-200 hover:border-gray-400"}`}
+    >
+      <div className="h-14 w-full flex items-end px-2 pb-1" style={{ background: t.bg }}>
+        <span className="text-[10px] font-semibold" style={{ color: t.ink }}>Aa</span>
+      </div>
+      <div className="px-2 py-1.5 bg-white">
+        <p className="text-xs font-medium text-gray-800">{t.label}</p>
+        {selected && <p className="text-[10px] text-blue-600 font-semibold">Selected ✓</p>}
+      </div>
+    </button>
+  )
+}
+
+function Section({ title, blurb, children }: { title: string; blurb: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <h2 className="text-xs uppercase tracking-wide font-semibold mb-1" style={{ color: "#1b2d45" }}>{title}</h2>
+      <p className="text-sm text-gray-500 mb-4">{blurb}</p>
+      {children}
+    </div>
+  )
+}
 
 export default function SettingsClient({ initialTheme, initialShowJoke }: { initialTheme: string; initialShowJoke: boolean }) {
   const router = useRouter()
@@ -13,6 +41,10 @@ export default function SettingsClient({ initialTheme, initialShowJoke }: { init
   const [showJoke, setShowJoke] = useState(initialShowJoke)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+
+  const selectedTheme = getTheme(theme)
+  const nflPick = theme.startsWith("nfl-") ? theme : ""
+  const mlbPick = theme.startsWith("mlb-") ? theme : ""
 
   async function save() {
     setSaving(true)
@@ -31,32 +63,56 @@ export default function SettingsClient({ initialTheme, initialShowJoke }: { init
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-xs uppercase tracking-wide font-semibold mb-1" style={{ color: "#1b2d45" }}>Background</h2>
-        <p className="text-sm text-gray-500 mb-4">Pick the look of your portal. Dark options switch to light text.</p>
+      <Section title="Background" blurb="Pick the look of your portal. Dark options switch to light text.">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-          {THEMES.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTheme(t.key)}
-              className={`rounded-xl border-2 overflow-hidden text-left transition-all ${theme === t.key ? "ring-2 ring-offset-2 ring-blue-500 border-blue-500" : "border-gray-200 hover:border-gray-400"}`}
-            >
-              <div className="h-14 w-full flex items-end px-2 pb-1" style={{ background: t.bg }}>
-                <span className="text-[10px] font-semibold" style={{ color: t.ink }}>Aa</span>
-              </div>
-              <div className="px-2 py-1.5 bg-white">
-                <p className="text-xs font-medium text-gray-800">{t.label}</p>
-                {theme === t.key && <p className="text-[10px] text-blue-600 font-semibold">Selected ✓</p>}
-              </div>
-            </button>
-          ))}
+          {BASE_THEMES.map((t) => <Swatch key={t.key} t={t} selected={theme === t.key} onSelect={() => setTheme(t.key)} />)}
         </div>
-      </div>
+      </Section>
 
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-xs uppercase tracking-wide font-semibold mb-1" style={{ color: "#1b2d45" }}>Joke of the Day</h2>
-        <p className="text-sm text-gray-500 mb-4">A clean, family-friendly joke at the top of your portal. A fresh one appears every 4 hours.</p>
+      <Section title="Holidays" blurb="Feeling festive? Dress the portal for the season.">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          {HOLIDAY_THEMES.map((t) => <Swatch key={t.key} t={t} selected={theme === t.key} onSelect={() => setTheme(t.key)} />)}
+        </div>
+      </Section>
+
+      <Section title="Sports" blurb="Game-day backgrounds — or pick your favorite NFL or MLB team's colors.">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-5">
+          {SPORT_THEMES.map((t) => <Swatch key={t.key} t={t} selected={theme === t.key} onSelect={() => setTheme(t.key)} />)}
+        </div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <label className="block">
+            <span className="text-xs uppercase tracking-wide text-gray-500 font-semibold">🏈 NFL team</span>
+            <select
+              value={nflPick}
+              onChange={(e) => e.target.value && setTheme(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white"
+            >
+              <option value="">Choose a team…</option>
+              {NFL_THEMES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs uppercase tracking-wide text-gray-500 font-semibold">⚾ MLB team</span>
+            <select
+              value={mlbPick}
+              onChange={(e) => e.target.value && setTheme(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white"
+            >
+              <option value="">Choose a team…</option>
+              {MLB_THEMES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+            </select>
+          </label>
+        </div>
+        {(nflPick || mlbPick) && (
+          <div className="mt-4 rounded-xl overflow-hidden border border-gray-200">
+            <div className="h-16 flex items-center justify-center" style={{ background: selectedTheme.bg }}>
+              <span className="text-sm font-bold" style={{ color: selectedTheme.ink }}>{selectedTheme.label} — Selected ✓</span>
+            </div>
+          </div>
+        )}
+      </Section>
+
+      <Section title="Joke of the Day" blurb="A clean, family-friendly joke at the top of your portal. A fresh one appears every 4 hours.">
         <label className="flex items-center gap-3 cursor-pointer select-none">
           <input
             type="checkbox"
@@ -66,7 +122,7 @@ export default function SettingsClient({ initialTheme, initialShowJoke }: { init
           />
           <span className="text-sm text-gray-800 font-medium">Show me a silly joke 😄</span>
         </label>
-      </div>
+      </Section>
 
       <div className="flex items-center gap-3">
         <button

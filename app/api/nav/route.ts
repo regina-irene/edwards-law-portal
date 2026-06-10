@@ -4,12 +4,11 @@ import { sql } from "@/lib/db"
 
 const DEFAULT_PAGES = [
   "dashboard",
-  "document-requests",
   "pleadings",
   "discovery",
   "calendar",
   "messages",
-  "chat",
+  "settings",
 ]
 
 export async function GET() {

@@ -3,7 +3,6 @@ import { sql } from "@/lib/db"
 // Built-in portal pages (fixed routes) with their nav labels, in default order.
 export const BUILTIN_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
-  "document-requests": "Document Requests",
   pleadings: "Pleadings",
   discovery: "Discovery",
   status: "Case Status",
