@@ -73,7 +73,7 @@ export default async function AdminHome() {
         {stats.map((s) => (
           <Link key={s.label} href={s.href} className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-2 hover:border-gray-300 transition-colors">
             <span className="section-label">{s.label}</span>
-            <span className="text-3xl font-semibold tabular-nums text-gray-900" style={{ fontFamily: "var(--font-fraunces), serif" }}>{s.value}</span>
+            <span className="text-3xl font-semibold tabular-nums text-gray-900" style={{ fontFamily: "var(--font-baskerville), serif" }}>{s.value}</span>
           </Link>
         ))}
       </div>
