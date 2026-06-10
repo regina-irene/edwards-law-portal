@@ -37,20 +37,25 @@ function ColumnTitle({ children }: { children: React.ReactNode }) {
   return <h3 className="text-xs uppercase tracking-wide mb-2 font-semibold" style={{ color: "#8a7240" }}>{children}</h3>
 }
 
-export default function CaseDetailsCard({ info }: { info: CaseStatusInfo }) {
-  // middle column: every dated event, oldest first
-  const dates: { label: string; date: string }[] = []
-  if (info.caseFiled) dates.push({ label: "Case Filed", date: info.caseFiled })
-  if (info.dateOfService) dates.push({ label: "Date of Service", date: info.dateOfService })
-  if (info.dateAnswerFiled) dates.push({ label: "Answer Filed", date: info.dateAnswerFiled })
-  dates.sort((a, b) => a.date.localeCompare(b.date))
+export interface LatestPleading {
+  title: string
+  date: string | null
+}
 
-  // yes/no facts without their own date ride along under the date list
-  const checks: { label: string; value: string; done: boolean }[] = [
+export default function CaseDetailsCard({ info, latestPleading }: { info: CaseStatusInfo; latestPleading?: LatestPleading | null }) {
+  // middle column, in Regina's fixed order
+  const rows: { label: string; value: string; done: boolean }[] = [
+    { label: "Case Filed", value: info.caseFiled ? shortDate(info.caseFiled) : "—", done: Boolean(info.caseFiled) },
     { label: "Service Perfected", value: info.servicePerfected ? "Yes" : "Not yet", done: info.servicePerfected },
+    { label: "Date of Service", value: info.dateOfService ? shortDate(info.dateOfService) : "—", done: Boolean(info.dateOfService) },
+    {
+      label: "Answer Filed",
+      value: info.dateAnswerFiled ? shortDate(info.dateAnswerFiled) : info.answerFiled ? "Yes" : "Not yet",
+      done: Boolean(info.dateAnswerFiled) || info.answerFiled,
+    },
   ]
-  if (!info.dateAnswerFiled) {
-    checks.push({ label: "Answer Filed", value: info.answerFiled ? "Yes" : "Not yet", done: info.answerFiled })
+  if (latestPleading?.date) {
+    rows.push({ label: "Latest Pleading", value: shortDate(latestPleading.date), done: true })
   }
 
   return (
@@ -66,7 +71,7 @@ export default function CaseDetailsCard({ info }: { info: CaseStatusInfo }) {
         className="rounded-b-lg rounded-tr-lg border p-6 shadow-sm"
         style={{ background: "#FAF0D7", borderColor: "#E0CD9E" }}
       >
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_0.85fr_1.25fr] gap-6">
 
         {/* Left: stage */}
         <div>
@@ -80,29 +85,23 @@ export default function CaseDetailsCard({ info }: { info: CaseStatusInfo }) {
           )}
         </div>
 
-        {/* Middle: dates, oldest first */}
+        {/* Middle: key dates in fixed order */}
         <div>
           <ColumnTitle>Key Dates</ColumnTitle>
-          {dates.length > 0 ? (
-            <ul>
-              {dates.map((d) => (
-                <li key={d.label} className="flex items-baseline gap-2 py-1">
-                  <span className="w-2 h-2 rounded-full shrink-0 self-center" style={{ background: "#1b2d45" }} />
-                  <span className="text-sm text-gray-500 flex-1">{d.label}</span>
-                  <span className="text-sm font-semibold text-gray-900">{shortDate(d.date)}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-gray-400">No dates yet</p>
-          )}
-          {checks.map((c) => (
-            <p key={c.label} className="flex items-baseline gap-2 py-1">
-              <span className={`w-2 h-2 rounded-full shrink-0 self-center ${c.done ? "bg-green-600" : "bg-gray-300"}`} />
-              <span className="text-sm text-gray-500 flex-1">{c.label}</span>
-              <span className={`text-sm font-semibold ${c.done ? "text-green-700" : "text-gray-500"}`}>{c.value}</span>
+          <ul>
+            {rows.map((r) => (
+              <li key={r.label} className="flex items-baseline gap-2 py-1">
+                <span className={`w-2 h-2 rounded-full shrink-0 self-center ${r.done ? "bg-green-600" : "bg-gray-300"}`} />
+                <span className="text-sm text-gray-500 flex-1">{r.label}</span>
+                <span className={`text-sm font-semibold whitespace-nowrap ${r.done ? "text-gray-900" : "text-gray-500"}`}>{r.value}</span>
+              </li>
+            ))}
+          </ul>
+          {latestPleading?.date && (
+            <p className="text-xs text-gray-500 italic mt-1 pl-4 truncate" title={latestPleading.title}>
+              {latestPleading.title}
             </p>
-          ))}
+          )}
         </div>
 
         {/* Right: court + case facts */}
