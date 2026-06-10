@@ -9,6 +9,7 @@ import {
   countyColor,
   judgeColor,
   plfDftColor,
+  filedByColor,
   type ChipColor,
 } from "@/lib/airtable-colors"
 
@@ -40,6 +41,8 @@ function ColumnTitle({ children }: { children: React.ReactNode }) {
 export interface LatestPleading {
   title: string
   date: string | null
+  filedBy: string
+  link: string
 }
 
 export default function CaseDetailsCard({ info, latestPleading }: { info: CaseStatusInfo; latestPleading?: LatestPleading | null }) {
@@ -98,9 +101,30 @@ export default function CaseDetailsCard({ info, latestPleading }: { info: CaseSt
             ))}
           </ul>
           {latestPleading?.date && (
-            <p className="text-xs text-gray-500 italic mt-1 pl-4 truncate" title={latestPleading.title}>
-              {latestPleading.title}
-            </p>
+            <div className="mt-1 pl-4 space-y-1">
+              {latestPleading.link ? (
+                <a
+                  href={latestPleading.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-xs font-medium underline hover:opacity-75 break-words"
+                  style={{ color: "#1b2d45" }}
+                  title={latestPleading.title}
+                >
+                  {latestPleading.title}
+                </a>
+              ) : (
+                <p className="text-xs text-gray-500 italic break-words" title={latestPleading.title}>{latestPleading.title}</p>
+              )}
+              {latestPleading.filedBy && (
+                <span
+                  className="inline-block text-[11px] font-medium px-2 py-0.5 rounded-full border border-black/5"
+                  style={{ background: filedByColor(latestPleading.filedBy).bg, color: filedByColor(latestPleading.filedBy).text }}
+                >
+                  Filed by {latestPleading.filedBy.replace(/\s+/g, " ").trim()}
+                </span>
+              )}
+            </div>
           )}
         </div>
 

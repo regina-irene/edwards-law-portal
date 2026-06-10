@@ -38,7 +38,12 @@ export default async function StatusPage() {
   // pleadings come back newest-first; surface the latest filing in Case Details
   const latest = pleadings?.[0]
   const latestPleading = latest
-    ? { title: latest.title, date: latest.filedOn ?? (latest.created ? latest.created.slice(0, 10) : null) }
+    ? {
+        title: latest.title,
+        date: latest.filedOn ?? (latest.created ? latest.created.slice(0, 10) : null),
+        filedBy: latest.filedBy,
+        link: latest.link,
+      }
     : null
   const refreshedAt = formatRefreshed(Date.now())
   // Refresh button is admin-only (shown during preview-as-client); clients get
