@@ -5,7 +5,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { BASE_THEMES, HOLIDAY_THEMES, SPORT_THEMES, NFL_THEMES, MLB_THEMES, getTheme, type PortalTheme } from "@/lib/themes"
+import { BASE_THEMES, NFL_THEMES, MLB_THEMES, getTheme, type PortalTheme } from "@/lib/themes"
 
 function Swatch({ t, selected, onSelect }: { t: PortalTheme; selected: boolean; onSelect: () => void }) {
   return (
@@ -69,16 +69,7 @@ export default function SettingsClient({ initialTheme, initialShowJoke }: { init
         </div>
       </Section>
 
-      <Section title="Holidays" blurb="Feeling festive? Dress the portal for the season.">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-          {HOLIDAY_THEMES.map((t) => <Swatch key={t.key} t={t} selected={theme === t.key} onSelect={() => setTheme(t.key)} />)}
-        </div>
-      </Section>
-
-      <Section title="Sports" blurb="Game-day backgrounds — or pick your favorite NFL or MLB team's colors.">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-5">
-          {SPORT_THEMES.map((t) => <Swatch key={t.key} t={t} selected={theme === t.key} onSelect={() => setTheme(t.key)} />)}
-        </div>
+      <Section title="Sports" blurb="Pick your favorite NFL or MLB team for a team-logo wallpaper in team colors.">
         <div className="grid sm:grid-cols-2 gap-4">
           <label className="block">
             <span className="text-xs uppercase tracking-wide text-gray-500 font-semibold">🏈 NFL team</span>
