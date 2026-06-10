@@ -10,8 +10,8 @@ export default function GlobalPagesEditor() {
           These apply to <strong>all clients</strong> unless overridden for a specific client via that client&apos;s Pages editor.
         </p>
       </div>
-      <p className="text-xs text-gray-500">The checkbox on each page sets whether it shows for clients by default (override per client in their Pages editor).</p>
-      <PageContentEditor clientId="_global" allowRename />
+      <p className="text-xs text-gray-500">Pick a page below to edit it. The checkbox sets whether it shows for clients by default (override per client in their Pages editor).</p>
+      <PageContentEditor clientId="_global" allowRename layout="tabs" />
     </div>
   )
 }
