@@ -113,10 +113,10 @@ export function FirmAnnouncementView({ html, dark = false }: { html: string; dar
   if (!html) return null
   return (
     <div
-      className="border-b px-4 sm:px-6 py-2.5 print:hidden"
+      className="border-b px-4 sm:px-6 py-2.5 print:hidden backdrop-blur-md"
       style={{
-        background: dark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.45)",
-        borderColor: dark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.06)",
+        background: dark ? "rgba(15,23,42,0.7)" : "rgba(255,255,255,0.85)",
+        borderColor: dark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.08)",
       }}
     >
       <div className="flex items-center justify-center gap-3 text-center">

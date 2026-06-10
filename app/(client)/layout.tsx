@@ -102,11 +102,11 @@ export default async function ClientLayout({ children }: { children: React.React
         <FirmAnnouncementView html={firmAnnouncement} dark={darkText} />
         {joke && (
           <div
-            className="px-6 py-1.5 text-center text-sm italic border-b print:hidden"
+            className="px-6 py-1.5 text-center text-sm italic border-b print:hidden backdrop-blur-md"
             style={{
-              color: darkText ? "rgba(255,255,255,0.85)" : "#4b443b",
-              background: darkText ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.55)",
-              borderColor: darkText ? "rgba(255,255,255,0.15)" : "#E8DFD2",
+              color: darkText ? "rgba(255,255,255,0.92)" : "#4b443b",
+              background: darkText ? "rgba(15,23,42,0.7)" : "rgba(255,255,255,0.85)",
+              borderColor: darkText ? "rgba(255,255,255,0.2)" : "#E8DFD2",
             }}
           >
             😄 {joke}
