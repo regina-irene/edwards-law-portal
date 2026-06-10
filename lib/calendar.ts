@@ -23,6 +23,19 @@ function text(v: unknown): string {
   return typeof v === "string" ? v.trim() : ""
 }
 
+// The Zoom link might live in the Zoom Link field OR be buried in the event
+// description/notes. Find the first zoom.us/zoom.com URL anywhere; fall back
+// to the Zoom Link field if it's any URL at all.
+function findZoomUrl(...sources: string[]): string {
+  for (const s of sources) {
+    const urls = s.match(/https?:\/\/[^\s<>"')\]]+/gi) ?? []
+    const zoom = urls.find((u) => /zoom\.(us|com)/i.test(u))
+    if (zoom) return zoom
+  }
+  const first = sources[0]
+  return /^https?:\/\//i.test(first) ? first : ""
+}
+
 export async function getCaseEvents(clientId: string): Promise<CaseEvent[] | null> {
   const statusRecordId = String(clientId).split(",")[0].trim()
   if (!statusRecordId.startsWith("rec")) return null
@@ -56,7 +69,7 @@ export async function getCaseEvents(clientId: string): Promise<CaseEvent[] | nul
         allDay: r.fields["All Day"] === true,
         location: text(r.fields["Location"]),
         description: text(r.fields["Description"]),
-        zoomLink: text(r.fields["Zoom Link"]),
+        zoomLink: findZoomUrl(text(r.fields["Zoom Link"]), text(r.fields["Description"]), text(r.fields["Location"])),
         eventLink: text(r.fields["Event Link"]),
         status: text(r.fields["Status"]),
       }))

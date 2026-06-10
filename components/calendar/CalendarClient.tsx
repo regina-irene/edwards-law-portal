@@ -224,6 +224,13 @@ export default function CalendarClient({ events }: { events: CaseEvent[] }) {
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-gray-900">{e.title}</p>
                 {e.location && <p className="text-xs text-gray-600 mt-0.5"><LocationLink location={e.location} /></p>}
+                {e.zoomLink && (
+                  <p className="text-xs mt-0.5">
+                    <a href={e.zoomLink} target="_blank" rel="noopener noreferrer" className="underline break-all text-gray-500 hover:opacity-75">
+                      🎥 {e.zoomLink}
+                    </a>
+                  </p>
+                )}
                 {e.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{e.description}</p>}
               </div>
               {e.zoomLink && (
