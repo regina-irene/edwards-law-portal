@@ -9,6 +9,8 @@ import { getClientNav } from "@/lib/portal-pages"
 import { getClientPrefs } from "@/lib/client-prefs"
 import { getTheme } from "@/lib/themes"
 import { getJokeOfTheDay } from "@/lib/joke"
+import { getFirmAnnouncement } from "@/lib/firm-announcement"
+import { FirmAnnouncementView } from "@/components/announcement/FirmAnnouncementBanner"
 
 async function getUnreadCounts(clientId: string) {
   try {
@@ -62,10 +64,11 @@ export default async function ClientLayout({ children }: { children: React.React
     )
   }
 
-  const [pages, unread, prefs] = await Promise.all([
+  const [pages, unread, prefs, firmAnnouncement] = await Promise.all([
     getClientNav(String(client.clientId)),
     getUnreadCounts(client.clientId),
     getClientPrefs(String(client.clientId)),
+    getFirmAnnouncement(),
   ])
   const theme = getTheme(prefs.theme)
   // "light text" can come from a dark theme or the explicit Settings toggle
@@ -94,6 +97,7 @@ export default async function ClientLayout({ children }: { children: React.React
           <span className="section-label" style={darkText ? { color: "rgba(255,255,255,0.75)" } : undefined}>{today}</span>
           <span className="text-[12px]" style={{ color: darkText ? "rgba(255,255,255,0.75)" : "#334155" }}>{client.name}</span>
         </div>
+        <FirmAnnouncementView html={firmAnnouncement} />
         {joke && (
           <div
             className="px-6 py-1.5 text-center text-sm italic border-b print:hidden"
