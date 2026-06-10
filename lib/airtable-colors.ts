@@ -123,6 +123,15 @@ const COUNTY: Record<string, string> = {
   "Barrow": "redDark1",
 }
 
+const PLF_DFT: Record<string, string> = {
+  "Plaintiff": "yellowLight2",
+  "Defendant": "cyanLight1",
+  "Special Master": "blueLight2",
+  "GAL": "cyanLight2",
+  "Plf + Dft": "purpleLight1",
+  "N/A": "tealLight1",
+}
+
 const PAYMENT_STATUS: Record<string, string> = {
   "Current": "greenLight1",
   "Owes $": "orangeBright",
@@ -165,6 +174,10 @@ export function caseTypeColor(name: string): ChipColor {
 
 export function countyColor(name: string): ChipColor {
   return fromName(COUNTY[name])
+}
+
+export function plfDftColor(name: string): ChipColor {
+  return fromName(PLF_DFT[name])
 }
 
 export function paymentStatusColor(name: string): ChipColor {

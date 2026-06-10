@@ -68,9 +68,8 @@ export default async function StatusPage() {
       {/* Embed removed per Regina (2026-06-09) — the pulled-out info below replaces the Airtable embed view */}
       <PageHeader defaultTitle="Case Status" page="status" content={{ ...pageContent, embed_url: null }} />
 
-      {/* Status of Your Case (highlighted, with last-modified label) + Case Details side by side */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200 border-l-4" style={{ borderLeftColor: "#1b2d45" }}>
+      {/* Status of Your Case (highlighted, with last-modified label), Case Details below */}
+      <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200 border-l-4" style={{ borderLeftColor: "#1b2d45" }}>
           <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
             <h2 className="text-xs uppercase tracking-wide font-semibold" style={{ color: "#1b2d45" }}>Status of Your Case</h2>
             {statusUpdated && (
@@ -84,9 +83,9 @@ export default async function StatusPage() {
           ) : (
             <p className="text-sm text-gray-500">No status update available. Please contact your attorney.</p>
           )}
-        </div>
-        {caseStatus && <CaseDetailsCard info={caseStatus} />}
       </div>
+
+      {caseStatus && <CaseDetailsCard info={caseStatus} />}
 
       {caseStatus?.paymentStatus && (
         <div className="flex items-center gap-2">

@@ -85,8 +85,10 @@ export interface CaseStatusInfo {
   county: string
   judge: string
   paymentStatus: string
+  plfDft: string
   caseFiled: string | null
   dateOfService: string | null
+  servicePerfected: boolean
   answerFiled: boolean
   dateAnswerFiled: string | null
   statusText: string
@@ -123,8 +125,10 @@ export async function getCaseStatus(clientId: string): Promise<CaseStatusInfo | 
       county: text(f["County"]),
       judge: text(f["Judge"]),
       paymentStatus: text(f["Payment Status"]),
+      plfDft: text(f["Plf /  Dft"]), // field name has two spaces on the board
       caseFiled: date(f["Case Filed"]),
       dateOfService: date(f["Date of Service"]),
+      servicePerfected: f["Service Perfected?"] === true,
       answerFiled: f["Answer Filed?"] === true,
       dateAnswerFiled: date(f["Date Answer Filed"]),
       // "Case Status - Dashboard" on the Status board is THE case status text for
