@@ -124,12 +124,17 @@ export default function PageContentEditor({ clientId, allowRename = false, layou
   const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
   const labelCls = "block text-xs font-medium text-gray-500 mb-1"
 
+  // Pages that render their own live content don't need a content section or
+  // banner image on the GLOBAL editor (per Regina).
+  const GLOBAL_TITLE_ANNOUNCEMENT_ONLY = new Set(["pleadings", "discovery", "status", "tasks", "messages"])
+
   // the editor fields for one page — shared by the accordion and tab layouts.
   // The embed field is hidden on the GLOBAL editor (per Regina) — pages render
   // their own live content now; per-client overrides can still set an embed.
   function editorBody(page: string) {
     const c = get(page)
     const showEmbed = !isGlobal
+    const showBodyAndImage = !(isGlobal && GLOBAL_TITLE_ANNOUNCEMENT_ONLY.has(page))
     return (
       <div className="px-4 pb-5 pt-3 space-y-4 border-t border-gray-100">
         {!isGlobal && (
@@ -158,10 +163,13 @@ export default function PageContentEditor({ clientId, allowRename = false, layou
             </div>
           </div>
         )}
+        {showBodyAndImage && (
         <div>
           <label className={labelCls}>Content section</label>
           <RichTextEditor key={`${page}-body`} value={c.body} onChange={(v) => update(page, "body", v)} />
         </div>
+        )}
+        {showBodyAndImage && (
         <div>
           <label className={labelCls}>Banner image (saves immediately)</label>
           {c.image_name ? (
@@ -176,6 +184,7 @@ export default function PageContentEditor({ clientId, allowRename = false, layou
               onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(page, f); e.target.value = "" }} />
           </label>
         </div>
+        )}
         <div className="flex items-center gap-3 pt-1 border-t border-gray-100">
           <button onClick={() => save(page)} disabled={saving === page} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50">
             {saving === page ? "Saving…" : "Save"}
