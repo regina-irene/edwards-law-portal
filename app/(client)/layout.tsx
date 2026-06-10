@@ -99,7 +99,7 @@ export default async function ClientLayout({ children }: { children: React.React
           <span className="section-label" style={darkText ? { color: "rgba(255,255,255,0.75)" } : undefined}>{today}</span>
           <span className="text-[12px]" style={{ color: darkText ? "rgba(255,255,255,0.75)" : "#334155" }}>{firstName}</span>
         </div>
-        <FirmAnnouncementView html={firmAnnouncement} />
+        <FirmAnnouncementView html={firmAnnouncement} dark={darkText} />
         {joke && (
           <div
             className="px-6 py-1.5 text-center text-sm italic border-b print:hidden"

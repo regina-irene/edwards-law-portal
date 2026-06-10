@@ -76,7 +76,7 @@ export default function FirmAnnouncementBanner({ initialHtml }: { initialHtml: s
 
   // ── display mode ──
   return (
-    <div className="border-b border-amber-200 bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 px-4 sm:px-6 py-2.5 print:hidden">
+    <div className="border-b border-amber-200/60 bg-amber-50/50 px-4 sm:px-6 py-2.5 print:hidden">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1.5 shrink-0">
           <span className="text-base">📢</span>
@@ -107,19 +107,26 @@ export default function FirmAnnouncementBanner({ initialHtml }: { initialHtml: s
   )
 }
 
-// Display-only version for the CLIENT portal.
-export function FirmAnnouncementView({ html }: { html: string }) {
+// Display-only version for the CLIENT portal. Translucent so it blends with
+// whatever background theme the client picked.
+export function FirmAnnouncementView({ html, dark = false }: { html: string; dark?: boolean }) {
   if (!html) return null
   return (
-    <div className="border-b border-amber-200 bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 px-4 sm:px-6 py-2.5 keep-ink print:hidden">
+    <div
+      className="border-b px-4 sm:px-6 py-2.5 print:hidden"
+      style={{
+        background: dark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.45)",
+        borderColor: dark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.06)",
+      }}
+    >
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1.5 shrink-0">
           <span className="text-base">📢</span>
-          <span className="text-xs font-bold text-amber-700 uppercase tracking-wide">Firm Announcements</span>
+          <span className={`text-xs font-bold uppercase tracking-wide ${dark ? "text-amber-200" : "text-amber-700"}`}>Firm Announcements</span>
         </div>
-        <span className="text-amber-300 shrink-0">|</span>
-        <div className="flex-1 min-w-0 text-sm text-amber-900">
-          <RichTextView html={html} className="!text-amber-900" />
+        <span className={`shrink-0 ${dark ? "text-white/30" : "text-amber-300"}`}>|</span>
+        <div className="flex-1 min-w-0 text-sm">
+          <RichTextView html={html} className={dark ? "!text-white/90" : "!text-[#3d3426]"} />
         </div>
       </div>
     </div>
