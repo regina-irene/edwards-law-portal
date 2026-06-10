@@ -13,6 +13,44 @@ function getClient() {
   return new Resend(process.env.RESEND_API_KEY!)
 }
 
+// Welcome / portal invite — sent from the admin client list.
+export async function sendInviteEmail(opts: { to: string; firstName: string }): Promise<void> {
+  const resend = getClient()
+  const FROM = process.env.EMAIL_FROM ?? "portal@edwardslaw.com"
+  const PORTAL_URL = process.env.AUTH_URL ?? "https://edwards-law-portal.vercel.app"
+
+  const greeting = opts.firstName ? `Dear ${opts.firstName},` : "Hello,"
+  const body = `${greeting}
+
+Welcome! Edwards Family Law has set up a secure client portal for your case. It's your one place to:
+
+  - See the current status of your case and key dates
+  - View court filings and discovery documents
+  - Check your upcoming hearings and appointments
+  - Review your fees, payments, and balance
+  - Send secure messages and documents to your legal team
+
+HOW TO LOG IN
+
+  1. Go to ${PORTAL_URL}
+  2. Click "Sign in with Google"
+  3. Sign in with THIS email address: ${opts.to}
+
+That's it — no password to create. Just be sure to use this exact email address, since it's the one connected to your case.
+
+If you have any trouble signing in or any questions, simply reply to this email or contact our office.
+
+Warm regards,
+Edwards Family Law`
+
+  await resend.emails.send({
+    from: FROM,
+    to: opts.to,
+    subject: "Welcome to your Edwards Family Law client portal",
+    text: body,
+  })
+}
+
 export async function sendReminderEmail(opts: ReminderEmailOptions): Promise<void> {
   const { to, clientName, taskName, dueDate, overdue } = opts
   const resend = getClient()

@@ -6,6 +6,7 @@ import { refreshClients } from "../actions"
 import { startPreview } from "@/app/preview-actions"
 import ClientLabelEditor from "../ClientLabelEditor"
 import RefreshButton from "@/components/ui/RefreshButton"
+import InviteButton from "@/components/admin/InviteButton"
 import Link from "next/link"
 
 function formatRefreshed(ms: number): string {
@@ -86,6 +87,7 @@ export default async function ClientsPage() {
                   {activity.unread_chat > 0 && (
                     <span className="text-xs bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full font-medium">{activity.unread_chat} unread chat</span>
                   )}
+                  <InviteButton email={c.email} firstName={(c.name.split("|")[1] ?? "").trim()} />
                   <Link href={`/admin/messages?c=${encodeURIComponent(c.id)}`} className="text-sm text-blue-600 hover:underline">Messages</Link>
                   <Link href={`/admin/clients/${c.id}/pages`} className="text-sm text-blue-600 hover:underline">Pages</Link>
                   <form action={startPreview.bind(null, c.id)}>
