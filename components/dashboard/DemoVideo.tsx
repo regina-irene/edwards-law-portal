@@ -28,12 +28,12 @@ export default function DemoVideo({ embedUrl }: { embedUrl: string }) {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-4">
         <p className="text-base font-semibold text-gray-900">▶ New here? Watch a quick demo of your portal</p>
         <button
           type="button"
           onClick={toggle}
-          className="text-sm text-blue-600 hover:underline shrink-0"
+          className="text-sm font-medium text-blue-600 hover:underline shrink-0"
         >
           {collapsed ? "Show video ▾" : "Hide video ▴"}
         </button>

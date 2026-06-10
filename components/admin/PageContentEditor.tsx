@@ -124,14 +124,12 @@ export default function PageContentEditor({ clientId, allowRename = false, layou
   const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
   const labelCls = "block text-xs font-medium text-gray-500 mb-1"
 
-  // pages that render their own live content (e.g. the pleadings table) don't
-  // use the embed or content-section fields — hide them in the editor
-  const NO_EMBED_OR_BODY = new Set(["pleadings"])
-
-  // the editor fields for one page — shared by the accordion and tab layouts
+  // the editor fields for one page — shared by the accordion and tab layouts.
+  // The embed field is hidden on the GLOBAL editor (per Regina) — pages render
+  // their own live content now; per-client overrides can still set an embed.
   function editorBody(page: string) {
     const c = get(page)
-    const showEmbedAndBody = !NO_EMBED_OR_BODY.has(page)
+    const showEmbed = !isGlobal
     return (
       <div className="px-4 pb-5 pt-3 space-y-4 border-t border-gray-100">
         {!isGlobal && (
@@ -148,7 +146,7 @@ export default function PageContentEditor({ clientId, allowRename = false, layou
           <label className={labelCls}>Announcement (highlighted banner)</label>
           <RichTextEditor key={`${page}-ann`} value={c.announcement} onChange={(v) => update(page, "announcement", v)} />
         </div>
-        {showEmbedAndBody && (
+        {showEmbed && (
           <div>
             <label className={labelCls}>Embed a link (web page, another project, or Airtable table)</label>
             <input value={c.embed_url} onChange={(e) => update(page, "embed_url", e.target.value)} placeholder="https://… — shows inside this page" className={inputCls} />
@@ -160,12 +158,10 @@ export default function PageContentEditor({ clientId, allowRename = false, layou
             </div>
           </div>
         )}
-        {showEmbedAndBody && (
-          <div>
-            <label className={labelCls}>Content section</label>
-            <RichTextEditor key={`${page}-body`} value={c.body} onChange={(v) => update(page, "body", v)} />
-          </div>
-        )}
+        <div>
+          <label className={labelCls}>Content section</label>
+          <RichTextEditor key={`${page}-body`} value={c.body} onChange={(v) => update(page, "body", v)} />
+        </div>
         <div>
           <label className={labelCls}>Banner image (saves immediately)</label>
           {c.image_name ? (
