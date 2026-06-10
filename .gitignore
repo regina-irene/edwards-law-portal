@@ -39,3 +39,6 @@ next-env.d.ts
 # scratch reference captures
 screencapture-*.png
 screencapture-*.pdf
+
+# brainstorming mockups
+.superpowers/

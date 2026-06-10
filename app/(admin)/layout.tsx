@@ -8,7 +8,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (check.status !== "ok") redirect("/login")
 
   const initials = check.email.replace(/@.*/, "").slice(0, 2).toUpperCase() || "EFL"
-  const today = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
+  const today = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" })
 
   return (
     <div className="flex min-h-screen" style={{ background: "#FBF8F3" }}>

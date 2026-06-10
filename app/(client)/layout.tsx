@@ -64,7 +64,7 @@ export default async function ClientLayout({ children }: { children: React.React
     getUnreadCounts(client.clientId),
   ])
 
-  const today = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
+  const today = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" })
 
   return (
     <div className="flex min-h-screen" style={{ background: "#FBF8F3" }}>
