@@ -26,27 +26,48 @@ function longDay(d: Date): string {
   return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })
 }
 
+function mapsUrl(location: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`
+}
+
+function LocationLink({ location, className = "" }: { location: string; className?: string }) {
+  return (
+    <a
+      href={mapsUrl(location)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`underline hover:opacity-75 ${className}`}
+      title="Open in Google Maps"
+    >
+      📍 {location}
+    </a>
+  )
+}
+
+function ZoomLink({ url, className = "" }: { url: string; className?: string }) {
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" className={`underline hover:opacity-75 ${className}`} title="Join Zoom meeting">
+      🎥 Join Zoom
+    </a>
+  )
+}
+
 function EventChip({ e, detailed = false }: { e: CaseEvent; detailed?: boolean }) {
-  const body = (
+  return (
     <div
       className={`rounded-md px-1.5 py-0.5 text-[11px] leading-tight font-medium truncate ${detailed ? "px-3 py-2 text-sm whitespace-normal" : ""}`}
       style={{ background: "#dceefb", color: NAVY }}
       title={`${e.title}${e.location ? ` · ${e.location}` : ""}`}
     >
       <span className="font-semibold">{timeOf(e)}</span> {e.title}
-      {detailed && e.location && <span className="block text-xs opacity-75">📍 {e.location}</span>}
-      {detailed && e.zoomLink && <span className="block text-xs underline">💻 Zoom link</span>}
+      {detailed && e.location && <LocationLink location={e.location} className="block text-xs opacity-90" />}
+      {detailed && e.zoomLink && <ZoomLink url={e.zoomLink} className="block text-xs font-semibold" />}
     </div>
-  )
-  return e.zoomLink && detailed ? (
-    <a href={e.zoomLink} target="_blank" rel="noopener noreferrer" className="block hover:opacity-80">{body}</a>
-  ) : (
-    body
   )
 }
 
 export default function CalendarClient({ events }: { events: CaseEvent[] }) {
-  const [view, setView] = useState<View>("month")
+  const [view, setView] = useState<View>("agenda")
   const [cursor, setCursor] = useState(() => {
     const d = new Date()
     d.setHours(0, 0, 0, 0)
@@ -126,7 +147,7 @@ export default function CalendarClient({ events }: { events: CaseEvent[] }) {
           <span className="text-sm font-semibold ml-1" style={{ color: NAVY }}>{heading}</span>
         </div>
         <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm">
-          {(["month", "week", "agenda"] as View[]).map((v) => (
+          {(["agenda", "month", "week"] as View[]).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
@@ -202,12 +223,12 @@ export default function CalendarClient({ events }: { events: CaseEvent[] }) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-gray-900">{e.title}</p>
-                {e.location && <p className="text-xs text-gray-500 mt-0.5">📍 {e.location}</p>}
+                {e.location && <p className="text-xs text-gray-600 mt-0.5"><LocationLink location={e.location} /></p>}
                 {e.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{e.description}</p>}
               </div>
               {e.zoomLink && (
                 <a href={e.zoomLink} target="_blank" rel="noopener noreferrer" className="shrink-0 text-sm font-semibold px-3.5 py-1.5 rounded-lg text-white hover:opacity-90" style={{ background: NAVY }}>
-                  Join Zoom
+                  🎥 Join Zoom
                 </a>
               )}
             </div>
