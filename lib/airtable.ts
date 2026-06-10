@@ -81,6 +81,7 @@ export async function getClientTasks(clientBaseId: string): Promise<AirtableTask
 
 export interface CaseStatusInfo {
   stages: string[]
+  statusText: string
   lastModified: string | null
 }
 
@@ -105,7 +106,12 @@ export async function getCaseStatus(clientId: string): Promise<CaseStatusInfo | 
       .map((s: unknown) => String(s).replace(/^\d+\s*-\s*/, "").trim())
       .filter(Boolean)
     const lastModified = typeof data.fields?.["Last Modified"] === "string" ? data.fields["Last Modified"] : null
-    return { stages, lastModified }
+    // "Case Status - Dashboard" on the Status board is THE case status text for
+    // all cases (per Regina) — the old "Status of Case" field on Clients is legacy.
+    const statusText = typeof data.fields?.["Case Status - Dashboard"] === "string"
+      ? data.fields["Case Status - Dashboard"].trim()
+      : ""
+    return { stages, statusText, lastModified }
   } catch {
     return null
   }

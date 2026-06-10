@@ -32,6 +32,9 @@ export default async function StatusPage() {
     getCaseStatus(String(client.clientId)),
   ])
   const refreshedAt = formatRefreshed(Date.now())
+  // The Status board's "Case Status - Dashboard" field is the case status for
+  // all cases; the old "Status of Case" field on Clients is just a fallback.
+  const statusText = caseStatus?.statusText || client.statusOfCase
 
   const statusUpdated = caseStatus?.lastModified
     ? new Date(caseStatus.lastModified).toLocaleDateString("en-US", {
@@ -74,8 +77,8 @@ export default async function StatusPage() {
       {billing && <BillingSection billing={billing} />}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h2 className="text-xs uppercase tracking-wide text-gray-500 mb-3">Status of Your Case</h2>
-        {client.statusOfCase ? (
-          <p className="text-gray-800 whitespace-pre-wrap">{client.statusOfCase}</p>
+        {statusText ? (
+          <p className="text-gray-800 whitespace-pre-wrap">{statusText}</p>
         ) : (
           <p className="text-sm text-gray-500">No status update available. Please contact your attorney.</p>
         )}
