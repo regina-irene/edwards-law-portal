@@ -1,6 +1,7 @@
 "use client"
 // components/admin/InviteButton.tsx — per-client "Send invite" on the admin
 // client list: emails the welcome/login instructions via Resend.
+// Rendered as a big icon with a label underneath (client-list action style).
 
 import { useState } from "react"
 
@@ -22,15 +23,18 @@ export default function InviteButton({ email, firstName }: { email: string; firs
   }
 
   if (!email) return null
-  if (status === "sent") return <span className="text-sm text-green-700 font-medium">Invite sent ✓</span>
   return (
     <button
       type="button"
       onClick={send}
-      disabled={status === "sending"}
-      className="text-sm text-blue-600 hover:underline disabled:opacity-60"
+      disabled={status === "sending" || status === "sent"}
+      title={`Email portal login instructions to ${email}`}
+      className="flex flex-col items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors w-[4.5rem] disabled:opacity-70"
     >
-      {status === "sending" ? "Sending…" : status === "error" ? "Failed — retry?" : "Send invite"}
+      <span className="text-2xl leading-none">{status === "sent" ? "✅" : "✉️"}</span>
+      <span className={`text-[11px] font-medium ${status === "error" ? "text-red-600" : "text-gray-600"}`}>
+        {status === "sending" ? "Sending…" : status === "sent" ? "Sent" : status === "error" ? "Retry" : "Invite"}
+      </span>
     </button>
   )
 }

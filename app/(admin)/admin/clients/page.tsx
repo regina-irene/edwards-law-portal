@@ -77,32 +77,43 @@ export default async function ClientsPage() {
         <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
           {clients.map((c) => {
             const activity = activityMap.get(c.id) ?? { unread_chat: 0, unread_messages: 0 }
+            const actionCls = "flex flex-col items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors w-[4.5rem]"
             return (
-              <div key={c.id} className="flex items-center justify-between px-6 py-4 flex-wrap gap-3">
-                <div>
+              <div key={c.id} className="flex items-center justify-between px-6 py-3.5 flex-wrap gap-3">
+                <div className="min-w-[14rem]">
                   <ClientLabelEditor clientId={c.id} label={c.label} />
-                  <p className="text-xs text-gray-400">{c.email} · Updated {refreshedAt}</p>
-                </div>
-                <div className="flex items-center gap-3 flex-wrap">
+                  <p className="text-xs text-gray-400">{c.email}</p>
                   {activity.unread_chat > 0 && (
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full font-medium">{activity.unread_chat} unread chat</span>
+                    <span className="inline-block mt-1 text-xs bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full font-medium">{activity.unread_chat} unread</span>
                   )}
+                </div>
+                <div className="flex items-center gap-1">
                   {c.clientBaseId.startsWith("app") && (
                     <a
                       href={`https://airtable.com/${c.clientBaseId}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:underline"
+                      className={actionCls}
                       title="Open this client's Airtable base"
                     >
-                      Airtable ↗
+                      <span className="text-2xl leading-none">🔗</span>
+                      <span className="text-[11px] font-medium text-gray-600">Airtable</span>
                     </a>
                   )}
                   <InviteButton email={c.email} firstName={(c.name.split("|")[1] ?? "").trim()} />
-                  <Link href={`/admin/messages?c=${encodeURIComponent(c.id)}`} className="text-sm text-blue-600 hover:underline">Messages</Link>
-                  <Link href={`/admin/clients/${c.id}/pages`} className="text-sm text-blue-600 hover:underline">Pages</Link>
+                  <Link href={`/admin/messages?c=${encodeURIComponent(c.id)}`} className={actionCls} title="Open this conversation in the Message Center">
+                    <span className="text-2xl leading-none">💬</span>
+                    <span className="text-[11px] font-medium text-gray-600">Messages</span>
+                  </Link>
+                  <Link href={`/admin/clients/${c.id}/pages`} className={actionCls} title="Edit this client's pages">
+                    <span className="text-2xl leading-none">📄</span>
+                    <span className="text-[11px] font-medium text-gray-600">Pages</span>
+                  </Link>
                   <form action={startPreview.bind(null, c.id)}>
-                    <button type="submit" className="text-sm text-blue-600 hover:underline">Preview</button>
+                    <button type="submit" className={actionCls} title="View the portal as this client">
+                      <span className="text-2xl leading-none">👁️</span>
+                      <span className="text-[11px] font-medium text-gray-600">Preview</span>
+                    </button>
                   </form>
                 </div>
               </div>
