@@ -89,8 +89,8 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
         className="rounded-b-lg rounded-tr-lg border p-6 shadow-sm keep-ink"
         style={{ background: "#FAF0D7", borderColor: "#E0CD9E" }}
       >
-      {/* Stage column hugs its content so Key Dates sits close beside it */}
-      <div className="grid grid-cols-1 md:grid-cols-[fit-content(13rem)_minmax(15rem,0.9fr)_1.4fr] gap-6">
+      {/* Stage and Key Dates columns hug their content; Case Info takes the rest */}
+      <div className="grid grid-cols-1 md:grid-cols-[fit-content(13rem)_max-content_1fr] gap-6">
 
         {/* Left: stage */}
         <div>
@@ -111,13 +111,13 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
             {rows.map((r) => (
               <li key={r.label} className="flex items-baseline gap-2 py-1">
                 <span className={`w-2 h-2 rounded-full shrink-0 self-center ${r.done ? "bg-green-600" : "bg-gray-300"}`} />
-                <span className="text-sm text-gray-500 flex-1">{r.label}</span>
+                <span className="text-sm text-gray-500 w-32 shrink-0">{r.label}</span>
                 <span className={`text-sm font-semibold whitespace-nowrap ${r.done ? "text-gray-900" : "text-gray-500"}`}>{r.value}</span>
               </li>
             ))}
           </ul>
           {nextCourt && (
-            <p className="text-xs text-gray-500 italic mt-0.5 pl-4 truncate" title={nextCourt.title}>{nextCourt.title}</p>
+            <p className="text-xs text-gray-500 italic mt-0.5 pl-4 truncate max-w-[16rem]" title={nextCourt.title}>{nextCourt.title}</p>
           )}
         </div>
 
