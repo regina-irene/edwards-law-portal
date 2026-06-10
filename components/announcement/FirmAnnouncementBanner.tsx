@@ -83,7 +83,7 @@ export default function FirmAnnouncementBanner({ initialHtml }: { initialHtml: s
           <span className="text-xs font-bold text-amber-700 uppercase tracking-wide">Firm Announcements</span>
         </div>
         <span className="text-amber-300 shrink-0">|</span>
-        <div className="flex-1 min-w-0 text-sm text-amber-900">
+        <div className="flex-1 min-w-0 text-sm text-amber-900 text-center [&_div]:!text-center [&_p]:!text-center">
           <RichTextView html={saved} className="!text-amber-900" />
         </div>
         <div className="flex items-center gap-1 shrink-0">
@@ -125,7 +125,7 @@ export function FirmAnnouncementView({ html, dark = false }: { html: string; dar
           <span className={`text-xs font-bold uppercase tracking-wide ${dark ? "text-amber-200" : "text-amber-700"}`}>Firm Announcements</span>
         </div>
         <span className={`shrink-0 ${dark ? "text-white/30" : "text-amber-300"}`}>|</span>
-        <div className="min-w-0 text-sm">
+        <div className="min-w-0 text-sm text-center [&_div]:!text-center [&_p]:!text-center">
           <RichTextView html={html} className={dark ? "!text-white/90" : "!text-[#3d3426]"} />
         </div>
       </div>
