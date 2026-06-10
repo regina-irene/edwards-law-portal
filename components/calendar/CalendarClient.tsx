@@ -5,7 +5,9 @@
 import { useMemo, useState } from "react"
 import type { CaseEvent } from "@/lib/calendar"
 
-type View = "month" | "week" | "agenda"
+type View = "month" | "week" | "twoweeks" | "agenda"
+
+const VIEW_LABELS: Record<View, string> = { agenda: "Agenda", month: "Month", week: "Week", twoweeks: "2 Weeks" }
 
 const NAVY = "#1b2d45"
 
@@ -52,6 +54,97 @@ function ZoomLink({ url, className = "" }: { url: string; className?: string }) 
   )
 }
 
+// ---- add-to-calendar helpers ----
+
+function pad(n: number): string {
+  return String(n).padStart(2, "0")
+}
+
+// UTC stamp "20260714T140000Z" (or date-only "20260714" for all-day events)
+function calStamp(iso: string, allDay: boolean, addDays = 0): string {
+  const d = new Date(iso)
+  d.setDate(d.getDate() + addDays)
+  if (allDay) return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`
+  return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`
+}
+
+function eventEnd(e: CaseEvent): string {
+  if (e.end) return e.end
+  const d = new Date(e.start)
+  d.setHours(d.getHours() + 1)
+  return d.toISOString()
+}
+
+function eventDetails(e: CaseEvent): string {
+  return [e.description, e.zoomLink ? `Zoom: ${e.zoomLink}` : ""].filter(Boolean).join("\n")
+}
+
+function googleCalUrl(e: CaseEvent): string {
+  const dates = e.allDay
+    ? `${calStamp(e.start, true)}/${calStamp(e.start, true, 1)}`
+    : `${calStamp(e.start, false)}/${calStamp(eventEnd(e), false)}`
+  const p = new URLSearchParams({ action: "TEMPLATE", text: e.title, dates, details: eventDetails(e), location: e.location })
+  return `https://calendar.google.com/calendar/render?${p.toString()}`
+}
+
+function outlookCalUrl(e: CaseEvent): string {
+  const p = new URLSearchParams({
+    path: "/calendar/action/compose",
+    rru: "addevent",
+    subject: e.title,
+    startdt: new Date(e.start).toISOString(),
+    enddt: new Date(eventEnd(e)).toISOString(),
+    body: eventDetails(e),
+    location: e.location,
+    allday: String(e.allDay),
+  })
+  return `https://outlook.live.com/calendar/0/deeplink/compose?${p.toString()}`
+}
+
+function icsEscape(s: string): string {
+  return s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n")
+}
+
+// Apple Calendar (and everything else) — downloads a standard .ics file
+function downloadIcs(e: CaseEvent) {
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Edwards Family Law Portal//EN",
+    "BEGIN:VEVENT",
+    `UID:${e.id}@edwards-law-portal`,
+    `DTSTAMP:${calStamp(new Date().toISOString(), false)}`,
+    e.allDay ? `DTSTART;VALUE=DATE:${calStamp(e.start, true)}` : `DTSTART:${calStamp(e.start, false)}`,
+    e.allDay ? `DTEND;VALUE=DATE:${calStamp(e.start, true, 1)}` : `DTEND:${calStamp(eventEnd(e), false)}`,
+    `SUMMARY:${icsEscape(e.title)}`,
+    e.location ? `LOCATION:${icsEscape(e.location)}` : "",
+    eventDetails(e) ? `DESCRIPTION:${icsEscape(eventDetails(e))}` : "",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].filter(Boolean)
+  const blob = new Blob([lines.join("\r\n")], { type: "text/calendar;charset=utf-8" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `${e.title.replace(/[^a-z0-9 ]/gi, "").trim() || "event"}.ics`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+function AddToCalendar({ e }: { e: CaseEvent }) {
+  const cls = "text-[11px] font-medium px-2 py-0.5 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors"
+  return (
+    <span className="inline-flex items-center gap-1.5 flex-wrap">
+      <span className="text-[11px] text-gray-400">Add to:</span>
+      <a href={googleCalUrl(e)} target="_blank" rel="noopener noreferrer" className={cls}>Google</a>
+      <a href={outlookCalUrl(e)} target="_blank" rel="noopener noreferrer" className={cls}>Outlook</a>
+      <button type="button" onClick={() => downloadIcs(e)} className={cls}>Apple / .ics</button>
+    </span>
+  )
+}
+
 function EventChip({ e, detailed = false }: { e: CaseEvent; detailed?: boolean }) {
   return (
     <div
@@ -90,6 +183,7 @@ export default function CalendarClient({ events }: { events: CaseEvent[] }) {
     const d = new Date(cursor)
     if (view === "month") d.setMonth(d.getMonth() + dir)
     else if (view === "week") d.setDate(d.getDate() + dir * 7)
+    else if (view === "twoweeks") d.setDate(d.getDate() + dir * 14)
     setCursor(d)
   }
 
@@ -107,16 +201,17 @@ export default function CalendarClient({ events }: { events: CaseEvent[] }) {
     return cells
   }, [cursor])
 
-  // ---- week days ----
+  // ---- week / 2-week days ----
   const weekDays = useMemo(() => {
     const start = new Date(cursor)
     start.setDate(cursor.getDate() - cursor.getDay())
-    return Array.from({ length: 7 }, (_, i) => {
+    const count = view === "twoweeks" ? 14 : 7
+    return Array.from({ length: count }, (_, i) => {
       const d = new Date(start)
       d.setDate(start.getDate() + i)
       return d
     })
-  }, [cursor])
+  }, [cursor, view])
 
   // ---- agenda: upcoming events ----
   const agenda = useMemo(() => {
@@ -128,8 +223,8 @@ export default function CalendarClient({ events }: { events: CaseEvent[] }) {
   const heading =
     view === "month"
       ? cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" })
-      : view === "week"
-        ? `Week of ${weekDays[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${weekDays[6].toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+      : view === "week" || view === "twoweeks"
+        ? `${weekDays[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${weekDays[weekDays.length - 1].toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
         : "Upcoming"
 
   return (
@@ -147,14 +242,14 @@ export default function CalendarClient({ events }: { events: CaseEvent[] }) {
           <span className="text-sm font-semibold ml-1" style={{ color: NAVY }}>{heading}</span>
         </div>
         <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm">
-          {(["agenda", "month", "week"] as View[]).map((v) => (
+          {(["agenda", "month", "week", "twoweeks"] as View[]).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className="px-3.5 py-1.5 capitalize"
+              className="px-3.5 py-1.5"
               style={view === v ? { background: NAVY, color: "#fff", fontWeight: 600 } : { color: "#374151" }}
             >
-              {v}
+              {VIEW_LABELS[v]}
             </button>
           ))}
         </div>
@@ -190,8 +285,8 @@ export default function CalendarClient({ events }: { events: CaseEvent[] }) {
         </div>
       )}
 
-      {/* week view */}
-      {view === "week" && (
+      {/* week / 2-week view */}
+      {(view === "week" || view === "twoweeks") && (
         <div className="grid grid-cols-1 sm:grid-cols-7 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
           {weekDays.map((d) => {
             const k = ymd(d)
@@ -232,6 +327,7 @@ export default function CalendarClient({ events }: { events: CaseEvent[] }) {
                   </p>
                 )}
                 {e.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{e.description}</p>}
+                <p className="mt-1.5"><AddToCalendar e={e} /></p>
               </div>
               {e.zoomLink && (
                 <a href={e.zoomLink} target="_blank" rel="noopener noreferrer" className="shrink-0 text-sm font-semibold px-3.5 py-1.5 rounded-lg text-white hover:opacity-90" style={{ background: NAVY }}>
