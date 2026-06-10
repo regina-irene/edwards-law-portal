@@ -76,6 +76,8 @@ export default async function ClientLayout({ children }: { children: React.React
   const joke = prefs.showJoke ? await getJokeOfTheDay() : null
 
   const today = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" })
+  // Airtable names are "Last | First" — greet the client by first name only
+  const firstName = (client.name.split("|")[1] ?? client.name).trim()
 
   return (
     <div className={`flex min-h-screen ${darkText ? "theme-dark" : ""}`} style={{ background: theme.bg, color: darkText && !theme.dark ? "#f4f6fa" : theme.ink }}>
@@ -95,7 +97,7 @@ export default async function ClientLayout({ children }: { children: React.React
           style={{ borderColor: darkText ? "rgba(255,255,255,0.15)" : "#E8DFD2" }}
         >
           <span className="section-label" style={darkText ? { color: "rgba(255,255,255,0.75)" } : undefined}>{today}</span>
-          <span className="text-[12px]" style={{ color: darkText ? "rgba(255,255,255,0.75)" : "#334155" }}>{client.name}</span>
+          <span className="text-[12px]" style={{ color: darkText ? "rgba(255,255,255,0.75)" : "#334155" }}>{firstName}</span>
         </div>
         <FirmAnnouncementView html={firmAnnouncement} />
         {joke && (
