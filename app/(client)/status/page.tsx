@@ -20,6 +20,7 @@ import { getPageContent } from "@/lib/page-content"
 import { getClientBilling } from "@/lib/billing"
 import BillingSection from "@/components/billing/BillingSection"
 import CasePills from "@/components/status/CasePills"
+import { paymentStatusColor } from "@/lib/airtable-colors"
 
 export default async function StatusPage() {
   const session = await auth()
@@ -57,7 +58,8 @@ export default async function StatusPage() {
         </form>
       </div>
 
-      <PageHeader defaultTitle="Case Status" page="status" content={pageContent} />
+      {/* Embed removed per Regina (2026-06-09) — the pulled-out info below replaces the Airtable embed view */}
+      <PageHeader defaultTitle="Case Status" page="status" content={{ ...pageContent, embed_url: null }} />
 
       {/* Status of Your Case — top, highlighted, with the last-modified label */}
       <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200 border-l-4" style={{ borderLeftColor: "#1b2d45" }}>
@@ -77,6 +79,18 @@ export default async function StatusPage() {
       </div>
 
       {caseStatus && <CasePills info={caseStatus} />}
+
+      {caseStatus?.paymentStatus && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs uppercase tracking-wide font-semibold" style={{ color: "#1b2d45" }}>Payment Status</span>
+          <span
+            className="px-3.5 py-1.5 rounded-full text-sm font-semibold shadow-sm border border-black/5"
+            style={{ background: paymentStatusColor(caseStatus.paymentStatus).bg, color: paymentStatusColor(caseStatus.paymentStatus).text }}
+          >
+            {caseStatus.paymentStatus}
+          </span>
+        </div>
+      )}
 
       {billing && <BillingSection billing={billing} />}
     </div>

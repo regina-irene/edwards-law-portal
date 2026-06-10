@@ -84,6 +84,7 @@ export interface CaseStatusInfo {
   caseTypes: string[]
   county: string
   judge: string
+  paymentStatus: string
   caseFiled: string | null
   dateOfService: string | null
   answerFiled: boolean
@@ -109,8 +110,10 @@ export async function getCaseStatus(clientId: string): Promise<CaseStatusInfo | 
     if (!res.ok) throw new Error(`Airtable error: ${res.status}`)
     const data = await res.json()
     const f = data.fields ?? {}
+    // Option names are kept EXACTLY as on the board (incl. "4 - " prefixes) so
+    // they can be matched to their Airtable colors; the UI prettifies them.
     const selectList = (v: unknown) =>
-      (Array.isArray(v) ? v : []).map((s: unknown) => String(s).replace(/^\d+\s*-\s*/, "").trim()).filter(Boolean)
+      (Array.isArray(v) ? v : []).map((s: unknown) => String(s).trim()).filter(Boolean)
     const text = (v: unknown) => (typeof v === "string" ? v.trim() : "")
     const date = (v: unknown) => (typeof v === "string" && v ? v : null)
 
@@ -119,6 +122,7 @@ export async function getCaseStatus(clientId: string): Promise<CaseStatusInfo | 
       caseTypes: selectList(f["Case Type"]),
       county: text(f["County"]),
       judge: text(f["Judge"]),
+      paymentStatus: text(f["Payment Status"]),
       caseFiled: date(f["Case Filed"]),
       dateOfService: date(f["Date of Service"]),
       answerFiled: f["Answer Filed?"] === true,
