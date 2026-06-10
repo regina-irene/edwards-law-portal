@@ -83,8 +83,8 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
         className="rounded-b-lg rounded-tr-lg border p-6 shadow-sm keep-ink"
         style={{ background: "#FAF0D7", borderColor: "#E0CD9E" }}
       >
-      {/* Stage and Key Dates hug their content; Case Info flexes; Next Court Date gets its own column */}
-      <div className={`grid grid-cols-1 gap-6 ${nextCourt ? "md:grid-cols-[fit-content(13rem)_max-content_1fr_minmax(11rem,0.9fr)]" : "md:grid-cols-[fit-content(13rem)_max-content_1fr]"}`}>
+      {/* Equal-width columns: 1 per row on phones, 2 on tablets, all side-by-side on desktop */}
+      <div className={`grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2 ${nextCourt ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
 
         {/* Left: stage */}
         <div>
@@ -105,7 +105,7 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
             {rows.map((r) => (
               <li key={r.label} className="flex items-baseline gap-2 py-1">
                 <span className={`w-2 h-2 rounded-full shrink-0 self-center ${r.done ? "bg-green-600" : "bg-gray-300"}`} />
-                <span className="text-sm text-gray-500 w-32 shrink-0">{r.label}</span>
+                <span className="text-sm text-gray-500 w-28 shrink-0">{r.label}</span>
                 <span className={`text-sm font-semibold whitespace-nowrap ${r.done ? "text-gray-900" : "text-gray-500"}`}>{r.value}</span>
               </li>
             ))}
