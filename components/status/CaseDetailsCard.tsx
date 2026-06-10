@@ -34,7 +34,7 @@ function Chip({ value, color }: { value: string; color: ChipColor }) {
 }
 
 function ColumnTitle({ children }: { children: React.ReactNode }) {
-  return <h3 className="text-xs uppercase tracking-wide text-gray-500 mb-2">{children}</h3>
+  return <h3 className="text-xs uppercase tracking-wide mb-2 font-semibold" style={{ color: "#8a7240" }}>{children}</h3>
 }
 
 export default function CaseDetailsCard({ info }: { info: CaseStatusInfo }) {
@@ -54,8 +54,18 @@ export default function CaseDetailsCard({ info }: { info: CaseStatusInfo }) {
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <h2 className="text-xs uppercase tracking-wide font-semibold mb-4" style={{ color: "#1b2d45" }}>Case Details</h2>
+    <div>
+      {/* manila case-file folder with tab (Regina's pick from the 8 mockups) */}
+      <div
+        className="inline-block rounded-t-lg px-5 py-1.5 text-xs font-bold uppercase tracking-wider border border-b-0 shadow-sm"
+        style={{ background: "#F3E3BF", borderColor: "#E0CD9E", color: "#6b5328" }}
+      >
+        📁 Case File
+      </div>
+      <div
+        className="rounded-b-lg rounded-tr-lg border p-6 shadow-sm"
+        style={{ background: "#FAF0D7", borderColor: "#E0CD9E" }}
+      >
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
         {/* Left: stage */}
@@ -126,6 +136,7 @@ export default function CaseDetailsCard({ info }: { info: CaseStatusInfo }) {
           </div>
         </div>
 
+      </div>
       </div>
     </div>
   )
