@@ -230,7 +230,8 @@ export default function MessageCenter() {
                   <div key={m.id}>
                     {showDay && <div className="text-center my-3"><span className="text-[10px] uppercase tracking-wider text-gray-400">{day}</span></div>}
                     <div className={`flex ${firm ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${firm ? "text-white" : "text-gray-800 bg-white border border-gray-200"}`} style={firm ? { background: "#1B2D45" } : undefined}>
+                      {/* firm bubbles: navy = portal only; lighter blue = also sent via text */}
+                      <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${firm ? "text-white" : "text-gray-800 bg-white border border-gray-200"}`} style={firm ? { background: m.sms_status === "full" ? "#4F86D6" : "#1B2D45" } : undefined}>
                         <p className="whitespace-pre-wrap break-words">{m.body}</p>
                         {m.files?.map((f) => (
                           <a key={f.id} href={`/api/message-files/${f.id}`} target="_blank" rel="noreferrer" className={`block text-xs mt-1 underline ${firm ? "text-white/90" : "text-blue-600"}`}>📎 {f.file_name}</a>
