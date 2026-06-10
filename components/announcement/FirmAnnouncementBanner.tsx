@@ -38,7 +38,7 @@ export default function FirmAnnouncementBanner({ initialHtml }: { initialHtml: s
           onClick={() => { setDraft(""); setEditing(true) }}
           className="text-xs text-gray-400 hover:text-amber-600 transition-colors flex items-center gap-1"
         >
-          <span className="text-sm leading-none">+</span> Add firm announcement
+          <span className="text-sm leading-none">📢 +</span> Add firm announcement
         </button>
       </div>
     )
