@@ -7,6 +7,84 @@ interface Msg { id: string; sender: "client" | "firm"; body: string; created_at:
 
 function timeOf(d: string) { return new Date(d).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) }
 function dayLabel(d: string) { return new Date(d).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }) }
+function stamp(d: string) { return new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) }
+
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+}
+
+// ---- export helpers (PDF via print dialog, Word, Excel, Print) ----
+
+function transcriptHtml(messages: Msg[]): string {
+  const rows = messages.map((m) => `
+    <div style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #eee">
+      <p style="font-size:12px;color:#666;margin:0 0 4px 0">
+        <strong>${m.sender === "firm" ? "Edwards Family Law" : "Client"}</strong> · ${esc(stamp(m.created_at))}
+      </p>
+      <p style="font-size:14px;white-space:pre-wrap;margin:0">${esc(m.body)}</p>
+      ${(m.files ?? []).map((f) => `<p style="font-size:12px;color:#444;margin:4px 0 0 0">📎 ${esc(f.file_name)}</p>`).join("")}
+    </div>`)
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Message Transcript</title></head>
+    <body style="max-width:720px;margin:0 auto;padding:32px;font-family:Georgia,serif;color:#111">
+      <h1 style="font-size:22px;margin-bottom:4px">Edwards Family Law — Message Transcript</h1>
+      <p style="font-size:12px;color:#555;margin-bottom:20px">Generated ${esc(new Date().toLocaleString("en-US"))}</p>
+      ${rows.join("")}
+    </body></html>`
+}
+
+function downloadBlob(content: string, mime: string, filename: string) {
+  const blob = new Blob([content], { type: mime })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+// Print and PDF both open the print dialog (choose "Save as PDF" for a file)
+function printTranscript(messages: Msg[]) {
+  const w = window.open("", "_blank")
+  if (!w) return
+  w.document.write(transcriptHtml(messages))
+  w.document.close()
+  w.focus()
+  setTimeout(() => w.print(), 300)
+}
+
+function exportWord(messages: Msg[]) {
+  downloadBlob(transcriptHtml(messages), "application/msword", "messages.doc")
+}
+
+function exportExcel(messages: Msg[]) {
+  const rows = messages.map((m) => `
+    <tr>
+      <td>${esc(stamp(m.created_at))}</td>
+      <td>${m.sender === "firm" ? "Edwards Family Law" : "Client"}</td>
+      <td>${esc(m.body)}</td>
+      <td>${esc((m.files ?? []).map((f) => f.file_name).join(", "))}</td>
+    </tr>`)
+  const table = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body>
+    <table border="1"><tr><th>Date</th><th>From</th><th>Message</th><th>Attachments</th></tr>${rows.join("")}</table>
+  </body></html>`
+  downloadBlob(table, "application/vnd.ms-excel", "messages.xls")
+}
+
+function ExportButtons({ messages }: { messages: Msg[] }) {
+  const cls = "text-[11px] font-medium px-2 py-1 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors"
+  if (messages.length === 0) return null
+  return (
+    <span className="inline-flex items-center gap-1.5 flex-wrap">
+      <span className="text-[11px] text-gray-400">Export:</span>
+      <button type="button" className={cls} onClick={() => printTranscript(messages)} title="In the print window, choose Save as PDF">PDF</button>
+      <button type="button" className={cls} onClick={() => exportWord(messages)}>Word</button>
+      <button type="button" className={cls} onClick={() => exportExcel(messages)}>Excel</button>
+      <button type="button" className={cls} onClick={() => printTranscript(messages)}>🖨️ Print</button>
+    </span>
+  )
+}
 
 export default function ClientThread() {
   const [messages, setMessages] = useState<Msg[]>([])
@@ -52,8 +130,11 @@ export default function ClientThread() {
   let lastDay = ""
   return (
     <div className="flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden" style={{ height: "calc(100vh - 16rem)" }}>
-      <div className="border-b border-gray-200 bg-white px-4 py-2.5 flex items-center justify-between gap-3">
-        <span className="text-sm text-gray-500">Have documents for your legal team?</span>
+      <div className="border-b border-gray-200 bg-white px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-4 flex-wrap">
+          <span className="text-sm text-gray-500">Have documents for your legal team?</span>
+          <ExportButtons messages={messages} />
+        </div>
         {sendFilesButton}
       </div>
       <div ref={ref} className="flex-1 overflow-auto px-4 py-4 space-y-3" style={{ background: "#FBF8F3" }}>
