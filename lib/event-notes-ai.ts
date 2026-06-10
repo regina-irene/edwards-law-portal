@@ -48,12 +48,13 @@ export async function getFormattedNotes(events: CaseEvent[]): Promise<Record<str
 
   const result: Record<string, string> = {}
   try {
-    // 1. cached?
+    // 1. cached? (sql.query for the array parameter — the tagged template
+    // only accepts scalar primitives)
     const ids = candidates.map((e) => e.id)
-    const cached = await sql`
-      SELECT event_id, source_hash, html FROM event_note_ai
-      WHERE event_id = ANY(${ids as unknown as string[]})
-    `
+    const cached = await sql.query(
+      "SELECT event_id, source_hash, html FROM event_note_ai WHERE event_id = ANY($1)",
+      [ids]
+    )
     const cacheMap = new Map<string, { hash: string; html: string }>()
     for (const row of cached.rows) cacheMap.set(row.event_id, { hash: row.source_hash, html: row.html })
 
