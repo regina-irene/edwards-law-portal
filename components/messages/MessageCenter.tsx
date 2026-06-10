@@ -16,7 +16,7 @@ interface Msg {
   sender: "client" | "firm"
   body: string
   created_at: string
-  sms_status?: "notification" | "full" | null
+  sms_status?: "notification" | "full" | "inbound" | null
   files?: { id: string; file_name: string }[]
 }
 
@@ -235,6 +235,7 @@ export default function MessageCenter() {
                               {m.sms_status === "full" ? "· 💬 portal + 📱 texted" : m.sms_status === "notification" ? "· 💬 portal + 📱 text alert" : "· 💬 portal"}
                             </span>
                           )}
+                          {!firm && m.sms_status === "inbound" && <span className="ml-1.5">· 📱 received as text</span>}
                         </p>
                       </div>
                     </div>
