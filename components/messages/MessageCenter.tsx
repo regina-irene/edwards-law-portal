@@ -41,6 +41,8 @@ export default function MessageCenter() {
   const [body, setBody] = useState("")
   const [sending, setSending] = useState(false)
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [alsoText, setAlsoText] = useState(false)
+  const [smsNotice, setSmsNotice] = useState<string | null>(null)
   const threadRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -76,13 +78,21 @@ export default function MessageCenter() {
   async function send() {
     if ((!body.trim() && pendingFiles.length === 0) || !selected) return
     setSending(true)
+    setSmsNotice(null)
     const res = await fetch("/api/admin/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clientId: selected, body: body.trim() || "📎 Attachment" }),
+      body: JSON.stringify({ clientId: selected, body: body.trim() || "📎 Attachment", sms: alsoText }),
     })
     if (res.ok) {
       const d = await res.json()
+      if (d.sms) {
+        setSmsNotice(
+          d.sms.sent
+            ? alsoText ? "📱 Message sent as text" : "📱 Text notification sent"
+            : `📱 Text not sent — ${d.sms.reason}`
+        )
+      }
       for (const f of pendingFiles) {
         const fd = new FormData()
         fd.append("file", f)
@@ -91,6 +101,7 @@ export default function MessageCenter() {
       }
       setBody("")
       setPendingFiles([])
+      setAlsoText(false)
       await loadThread(selected)
       loadConvos()
     }
@@ -200,6 +211,13 @@ export default function MessageCenter() {
                 <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length) setPendingFiles((p) => [...p, ...fs]); e.target.value = "" }} />
                 <textarea value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() } }} rows={1} placeholder="Send a message…" className="flex-1 resize-none px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32" />
                 <button onClick={send} disabled={(!body.trim() && pendingFiles.length === 0) || sending} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 disabled:opacity-50">{sending ? "…" : "Send"}</button>
+              </div>
+              <div className="flex items-center justify-between gap-3 mt-1.5">
+                <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer select-none" title="Sends the message body as an SMS (requires SMS Reminders checked on the Clients board)">
+                  <input type="checkbox" checked={alsoText} onChange={(e) => setAlsoText(e.target.checked)} className="h-3.5 w-3.5 rounded border-gray-300" />
+                  📱 Also send this message as a text
+                </label>
+                {smsNotice && <span className={`text-xs ${smsNotice.includes("not sent") ? "text-amber-700" : "text-green-700"}`}>{smsNotice}</span>}
               </div>
             </div>
           </>
