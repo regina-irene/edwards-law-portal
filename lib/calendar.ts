@@ -23,17 +23,56 @@ function text(v: unknown): string {
   return typeof v === "string" ? v.trim() : ""
 }
 
+// ---- Google Calendar sync cleanup ----------------------------------------
+// Synced events arrive messy: HTML entities (&amp;), raw <a> tags, Google
+// redirect-wrapped URLs (google.com/url?q=...), Zoom links in the Location
+// field, and Zoom invite boilerplate in the description.
+
+export function decodeEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+}
+
+// "https://www.google.com/url?q=https://zoom.us/j/123&sa=D&..." → the real URL
+export function unwrapGoogleRedirect(url: string): string {
+  if (!/google\.com\/url/i.test(url)) return url
+  try {
+    const q = new URL(url).searchParams.get("q")
+    return q || url
+  } catch {
+    return url
+  }
+}
+
+export function cleanDescription(raw: string): string {
+  let s = decodeEntities(raw)
+  s = s.replace(/<[^>]*>/g, " ") // strip HTML tags
+  s = s.split(/[─—_-]{6,}/)[0] // keep only what's before a divider line
+  // drop Zoom invite boilerplate from wherever it starts
+  s = s.replace(/[^.\n]*is inviting you to a scheduled Zoom meeting[\s\S]*$/i, "")
+  s = s.replace(/Join Zoom Meeting[\s\S]*$/i, "")
+  s = s.replace(/https?:\/\/[^\s]+/g, "") // bare URLs add noise; links render separately
+  return s.replace(/\s+/g, " ").trim()
+}
+
 // The Zoom link might live in the Zoom Link field OR be buried in the event
-// description/notes. Find the first zoom.us/zoom.com URL anywhere; fall back
-// to the Zoom Link field if it's any URL at all.
+// description/notes/location. Find the first zoom.us/zoom.com URL anywhere
+// (unwrapping Google redirects); fall back to the Zoom Link field if it's any
+// URL at all.
 function findZoomUrl(...sources: string[]): string {
-  for (const s of sources) {
-    const urls = s.match(/https?:\/\/[^\s<>"')\]]+/gi) ?? []
+  for (const raw of sources) {
+    const s = decodeEntities(raw)
+    const urls = (s.match(/https?:\/\/[^\s<>"')\]]+/gi) ?? []).map(unwrapGoogleRedirect)
     const zoom = urls.find((u) => /zoom\.(us|com)/i.test(u))
     if (zoom) return zoom
   }
-  const first = sources[0]
-  return /^https?:\/\//i.test(first) ? first : ""
+  const first = decodeEntities(sources[0] ?? "")
+  return /^https?:\/\//i.test(first) ? unwrapGoogleRedirect(first) : ""
 }
 
 export async function getCaseEvents(clientId: string): Promise<CaseEvent[] | null> {
@@ -61,18 +100,24 @@ export async function getCaseEvents(clientId: string): Promise<CaseEvent[] | nul
         const links = r.fields["EFL Status (name of case)"]
         return Array.isArray(links) && links.includes(statusRecordId)
       })
-      .map((r) => ({
-        id: r.id,
-        title: text(r.fields["Title"]) || "Event",
-        start: text(r.fields["Start"]),
-        end: text(r.fields["End"]) || null,
-        allDay: r.fields["All Day"] === true,
-        location: text(r.fields["Location"]),
-        description: text(r.fields["Description"]),
-        zoomLink: findZoomUrl(text(r.fields["Zoom Link"]), text(r.fields["Description"]), text(r.fields["Location"])),
-        eventLink: text(r.fields["Event Link"]),
-        status: text(r.fields["Status"]),
-      }))
+      .map((r) => {
+        const rawLocation = text(r.fields["Location"])
+        const rawDescription = text(r.fields["Description"])
+        const location = decodeEntities(rawLocation)
+        return {
+          id: r.id,
+          title: decodeEntities(text(r.fields["Title"])) || "Event",
+          start: text(r.fields["Start"]),
+          end: text(r.fields["End"]) || null,
+          allDay: r.fields["All Day"] === true,
+          // a URL in the Location field is a meeting link, not a place — no 📍
+          location: /^https?:\/\//i.test(location) ? "" : location,
+          description: cleanDescription(rawDescription),
+          zoomLink: findZoomUrl(text(r.fields["Zoom Link"]), rawDescription, rawLocation),
+          eventLink: text(r.fields["Event Link"]),
+          status: text(r.fields["Status"]),
+        }
+      })
       .filter((e) => e.start && e.status.toLowerCase() !== "cancelled")
       .sort((a, b) => a.start.localeCompare(b.start))
 

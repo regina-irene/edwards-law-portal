@@ -322,7 +322,7 @@ export default function CalendarClient({ events }: { events: CaseEvent[] }) {
                 {e.zoomLink && (
                   <p className="text-xs mt-0.5">
                     <a href={e.zoomLink} target="_blank" rel="noopener noreferrer" className="underline break-all text-gray-500 hover:opacity-75">
-                      🎥 {e.zoomLink}
+                      🎥 {e.zoomLink.replace(/^https?:\/\//i, "").split("?")[0]}
                     </a>
                   </p>
                 )}
