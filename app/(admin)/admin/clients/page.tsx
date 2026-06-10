@@ -63,7 +63,8 @@ export default async function ClientsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    /* capped width so name and actions stay close together on wide screens */
+    <div className="space-y-6 max-w-3xl">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
         <form action={refreshClients}>
