@@ -9,6 +9,7 @@ const PROTECTED_PATHS = [
   "/calendar",
   "/messages",
   "/chat",
+  "/settings",
   "/p",
   "/admin",
 ]
@@ -35,6 +36,7 @@ export const config = {
     "/calendar/:path*",
     "/messages/:path*",
     "/chat/:path*",
+    "/settings/:path*",
     "/p/:path*",
     "/admin/:path*",
   ],

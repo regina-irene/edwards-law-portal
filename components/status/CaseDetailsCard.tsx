@@ -74,7 +74,8 @@ export default function CaseDetailsCard({ info, latestPleading }: { info: CaseSt
         className="rounded-b-lg rounded-tr-lg border p-6 shadow-sm"
         style={{ background: "#FAF0D7", borderColor: "#E0CD9E" }}
       >
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_0.85fr_1.25fr] gap-6">
+      {/* Stage column hugs its content so Key Dates sits close beside it */}
+      <div className="grid grid-cols-1 md:grid-cols-[fit-content(13rem)_minmax(15rem,0.9fr)_1.4fr] gap-6">
 
         {/* Left: stage */}
         <div>

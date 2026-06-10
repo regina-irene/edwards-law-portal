@@ -13,6 +13,7 @@ const ICONS: Record<string, string> = {
   calendar: "📅",
   messages: "✉️",
   chat: "💬",
+  settings: "⚙️",
 }
 
 interface SidebarProps {

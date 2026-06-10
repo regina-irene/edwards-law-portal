@@ -10,6 +10,7 @@ export const BUILTIN_LABELS: Record<string, string> = {
   tasks: "Tasks",
   calendar: "Calendar",
   messages: "Messages",
+  settings: "Settings",
 }
 export const BUILTIN_PAGE_KEYS = Object.keys(BUILTIN_LABELS)
 

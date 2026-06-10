@@ -213,6 +213,14 @@ export const MIGRATION_SQL = `
     event_id TEXT PRIMARY KEY,
     dismissed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
+
+  -- Per-client portal preferences (Settings page: theme + joke of the day)
+  CREATE TABLE IF NOT EXISTS client_prefs (
+    client_id TEXT PRIMARY KEY,
+    theme TEXT NOT NULL DEFAULT 'classic',
+    show_joke BOOLEAN NOT NULL DEFAULT false,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
 `
 
 async function migrate(): Promise<void> {

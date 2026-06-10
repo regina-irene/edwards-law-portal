@@ -6,6 +6,9 @@ import { stopPreview } from "@/app/preview-actions"
 import { sql } from "@/lib/db"
 import Sidebar from "@/components/nav/Sidebar"
 import { getClientNav } from "@/lib/portal-pages"
+import { getClientPrefs } from "@/lib/client-prefs"
+import { getTheme } from "@/lib/themes"
+import { getJokeOfTheDay } from "@/lib/joke"
 
 async function getUnreadCounts(clientId: string) {
   try {
@@ -59,15 +62,18 @@ export default async function ClientLayout({ children }: { children: React.React
     )
   }
 
-  const [pages, unread] = await Promise.all([
+  const [pages, unread, prefs] = await Promise.all([
     getClientNav(String(client.clientId)),
     getUnreadCounts(client.clientId),
+    getClientPrefs(String(client.clientId)),
   ])
+  const theme = getTheme(prefs.theme)
+  const joke = prefs.showJoke ? await getJokeOfTheDay() : null
 
   const today = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" })
 
   return (
-    <div className="flex min-h-screen" style={{ background: "#FBF8F3" }}>
+    <div className="flex min-h-screen" style={{ background: theme.bg, color: theme.ink }}>
       <Sidebar pages={pages} unreadMessages={unread.messages} unreadChat={unread.chat} />
       <div className="flex-1 flex flex-col min-h-0">
         {previewEmail && (
@@ -79,10 +85,25 @@ export default async function ClientLayout({ children }: { children: React.React
           </div>
         )}
         {/* Meta strip */}
-        <div className="flex items-center justify-between px-6 py-2 border-b print:hidden" style={{ borderColor: "#E8DFD2" }}>
-          <span className="section-label">{today}</span>
-          <span className="text-[12px]" style={{ color: "#334155" }}>{client.name}</span>
+        <div
+          className="flex items-center justify-between px-6 py-2 border-b print:hidden"
+          style={{ borderColor: theme.dark ? "rgba(255,255,255,0.15)" : "#E8DFD2" }}
+        >
+          <span className="section-label" style={theme.dark ? { color: "rgba(255,255,255,0.75)" } : undefined}>{today}</span>
+          <span className="text-[12px]" style={{ color: theme.dark ? "rgba(255,255,255,0.75)" : "#334155" }}>{client.name}</span>
         </div>
+        {joke && (
+          <div
+            className="px-6 py-1.5 text-center text-sm italic border-b print:hidden"
+            style={{
+              color: theme.dark ? "rgba(255,255,255,0.85)" : "#4b443b",
+              background: theme.dark ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.55)",
+              borderColor: theme.dark ? "rgba(255,255,255,0.15)" : "#E8DFD2",
+            }}
+          >
+            😄 {joke}
+          </div>
+        )}
         <main className="flex-1 px-6 py-6 overflow-auto">{children}</main>
       </div>
     </div>
