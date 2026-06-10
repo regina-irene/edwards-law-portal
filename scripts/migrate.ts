@@ -230,6 +230,20 @@ export const MIGRATION_SQL = `
     html TEXT NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
+
+  -- per-conversation "text me when this client replies" switch (admin)
+  CREATE TABLE IF NOT EXISTS admin_sms_watch (
+    client_id TEXT PRIMARY KEY,
+    enabled BOOLEAN NOT NULL DEFAULT true,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+
+  -- small key/value settings (e.g. admin_notify_phone)
+  CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
 `
 
 async function migrate(): Promise<void> {

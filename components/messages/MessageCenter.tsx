@@ -43,6 +43,40 @@ export default function MessageCenter() {
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [alsoText, setAlsoText] = useState(false)
   const [smsNotice, setSmsNotice] = useState<string | null>(null)
+  const [watchOn, setWatchOn] = useState(false)
+  const [watchPhone, setWatchPhone] = useState("")
+
+  // load the "text me on reply" state for the open conversation
+  useEffect(() => {
+    if (!selected) return
+    fetch(`/api/admin/sms-watch?clientId=${encodeURIComponent(selected)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) { setWatchOn(Boolean(d.enabled)); setWatchPhone(d.adminPhone ?? "") } })
+      .catch(() => {})
+  }, [selected])
+
+  async function toggleWatch() {
+    if (!selected) return
+    const next = !watchOn
+    let adminPhone: string | undefined
+    if (next && !watchPhone) {
+      const entered = window.prompt("What cell number should reply alerts go to? (one-time setup)")
+      if (!entered) return
+      adminPhone = entered
+    }
+    const res = await fetch("/api/admin/sms-watch", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clientId: selected, enabled: next, ...(adminPhone ? { adminPhone } : {}) }),
+    })
+    if (res.ok) {
+      setWatchOn(next)
+      if (adminPhone) setWatchPhone(adminPhone)
+    } else {
+      const d = await res.json().catch(() => null)
+      alert(d?.error ?? "Could not update the setting")
+    }
+  }
   const threadRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -166,6 +200,13 @@ export default function MessageCenter() {
                 <div className="text-xs text-gray-400">{active.email}</div>
               </div>
               <div className="flex items-center gap-3">
+                <button
+                  onClick={toggleWatch}
+                  title={watchOn ? `Reply alerts go to ${watchPhone}` : "Text my cell when this client replies in the portal"}
+                  className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${watchOn ? "bg-green-100 border-green-300 text-green-800 font-semibold" : "border-gray-300 text-gray-500 hover:bg-gray-50"}`}
+                >
+                  📱 Text me on reply: {watchOn ? "ON" : "off"}
+                </button>
                 <button onClick={exportTxt} className="text-xs text-blue-600 hover:underline">Export</button>
                 <a href={`/admin/messages/print/${active.id}`} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">Print / PDF</a>
               </div>
