@@ -101,7 +101,7 @@ export default async function StatusPage() {
         <CaseDetailsCard
           info={caseStatus}
           recentFilings={recentFilings}
-          nextCourt={nextCourt ? { title: nextCourt.title, start: nextCourt.start } : null}
+          nextCourt={nextCourt ? { title: nextCourt.title, start: nextCourt.start, allDay: nextCourt.allDay } : null}
         />
       )}
 

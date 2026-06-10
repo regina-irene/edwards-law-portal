@@ -48,6 +48,7 @@ export interface RecentFiling {
 export interface NextCourtDate {
   title: string
   start: string // ISO datetime
+  allDay?: boolean
 }
 
 interface CaseDetailsCardProps {
@@ -68,13 +69,6 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
       done: Boolean(info.dateAnswerFiled) || info.answerFiled,
     },
   ]
-  if (nextCourt) {
-    rows.push({
-      label: "Next Court Date",
-      value: new Date(nextCourt.start).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-      done: true,
-    })
-  }
 
   return (
     <div>
@@ -89,8 +83,8 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
         className="rounded-b-lg rounded-tr-lg border p-6 shadow-sm keep-ink"
         style={{ background: "#FAF0D7", borderColor: "#E0CD9E" }}
       >
-      {/* Stage and Key Dates columns hug their content; Case Info takes the rest */}
-      <div className="grid grid-cols-1 md:grid-cols-[fit-content(13rem)_max-content_1fr] gap-6">
+      {/* Stage and Key Dates hug their content; Case Info flexes; Next Court Date gets its own column */}
+      <div className={`grid grid-cols-1 gap-6 ${nextCourt ? "md:grid-cols-[fit-content(13rem)_max-content_1fr_minmax(11rem,0.9fr)]" : "md:grid-cols-[fit-content(13rem)_max-content_1fr]"}`}>
 
         {/* Left: stage */}
         <div>
@@ -116,9 +110,6 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
               </li>
             ))}
           </ul>
-          {nextCourt && (
-            <p className="text-xs text-gray-500 italic mt-0.5 pl-4 truncate max-w-[16rem]" title={nextCourt.title}>{nextCourt.title}</p>
-          )}
         </div>
 
         {/* Right: court + case facts */}
@@ -188,6 +179,22 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
             </div>
           )}
         </div>
+
+        {/* 4th column: next court date — full title, never cut off */}
+        {nextCourt && (
+          <div>
+            <ColumnTitle>Next Court Date</ColumnTitle>
+            <p className="text-lg font-bold" style={{ color: "#1b2d45" }}>
+              {new Date(nextCourt.start).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+            </p>
+            {!nextCourt.allDay && (
+              <p className="text-sm font-semibold text-gray-700">
+                {new Date(nextCourt.start).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+              </p>
+            )}
+            <p className="text-sm text-gray-600 mt-1.5 break-words">{nextCourt.title}</p>
+          </div>
+        )}
 
       </div>
       </div>
