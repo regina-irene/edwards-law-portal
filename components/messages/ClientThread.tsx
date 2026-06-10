@@ -131,11 +131,11 @@ export default function ClientThread() {
   return (
     <div className="flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden" style={{ height: "calc(100vh - 16rem)" }}>
       <div className="border-b border-gray-200 bg-white px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap">
           <span className="text-sm text-gray-500">Have documents for your legal team?</span>
-          <ExportButtons messages={messages} />
+          {sendFilesButton}
         </div>
-        {sendFilesButton}
+        <ExportButtons messages={messages} />
       </div>
       <div ref={ref} className="flex-1 overflow-auto px-4 py-4 space-y-3" style={{ background: "#FBF8F3" }}>
         {messages.map((m) => {
