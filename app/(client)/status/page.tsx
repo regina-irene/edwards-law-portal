@@ -19,6 +19,7 @@ import PageHeader from "@/components/ui/PageHeader"
 import { getPageContent } from "@/lib/page-content"
 import { getClientBilling } from "@/lib/billing"
 import BillingSection from "@/components/billing/BillingSection"
+import CasePills from "@/components/status/CasePills"
 
 export default async function StatusPage() {
   const session = await auth()
@@ -35,7 +36,6 @@ export default async function StatusPage() {
   // The Status board's "Case Status - Dashboard" field is the case status for
   // all cases; the old "Status of Case" field on Clients is just a fallback.
   const statusText = caseStatus?.statusText || client.statusOfCase
-
   const statusUpdated = caseStatus?.lastModified
     ? new Date(caseStatus.lastModified).toLocaleDateString("en-US", {
         month: "long",
@@ -59,30 +59,26 @@ export default async function StatusPage() {
 
       <PageHeader defaultTitle="Case Status" page="status" content={pageContent} />
 
-      {caseStatus && caseStatus.stages.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-          {caseStatus.stages.map((stage) => (
-            <span
-              key={stage}
-              className="px-3.5 py-1.5 rounded-full text-sm font-semibold text-white shadow-sm"
-              style={{ background: "#1b2d45" }}
-            >
-              {stage}
+      {/* Status of Your Case — top, highlighted, with the last-modified label */}
+      <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200 border-l-4" style={{ borderLeftColor: "#1b2d45" }}>
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+          <h2 className="text-xs uppercase tracking-wide font-semibold" style={{ color: "#1b2d45" }}>Status of Your Case</h2>
+          {statusUpdated && (
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: "#efe2d2", color: "#1b2d45" }}>
+              Updated {statusUpdated}
             </span>
-          ))}
-          {statusUpdated && <span className="text-xs text-gray-600">Updated {statusUpdated}</span>}
+          )}
         </div>
-      )}
-
-      {billing && <BillingSection billing={billing} />}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-xs uppercase tracking-wide text-gray-500 mb-3">Status of Your Case</h2>
         {statusText ? (
           <p className="text-gray-800 whitespace-pre-wrap">{statusText}</p>
         ) : (
           <p className="text-sm text-gray-500">No status update available. Please contact your attorney.</p>
         )}
       </div>
+
+      {caseStatus && <CasePills info={caseStatus} />}
+
+      {billing && <BillingSection billing={billing} />}
     </div>
   )
 }

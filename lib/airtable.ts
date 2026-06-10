@@ -81,6 +81,13 @@ export async function getClientTasks(clientBaseId: string): Promise<AirtableTask
 
 export interface CaseStatusInfo {
   stages: string[]
+  caseTypes: string[]
+  county: string
+  judge: string
+  caseFiled: string | null
+  dateOfService: string | null
+  answerFiled: boolean
+  dateAnswerFiled: string | null
   statusText: string
   lastModified: string | null
 }
@@ -101,17 +108,26 @@ export async function getCaseStatus(clientId: string): Promise<CaseStatusInfo | 
     )
     if (!res.ok) throw new Error(`Airtable error: ${res.status}`)
     const data = await res.json()
-    const rawStages = data.fields?.["Case Stage"]
-    const stages = (Array.isArray(rawStages) ? rawStages : [])
-      .map((s: unknown) => String(s).replace(/^\d+\s*-\s*/, "").trim())
-      .filter(Boolean)
-    const lastModified = typeof data.fields?.["Last Modified"] === "string" ? data.fields["Last Modified"] : null
-    // "Case Status - Dashboard" on the Status board is THE case status text for
-    // all cases (per Regina) — the old "Status of Case" field on Clients is legacy.
-    const statusText = typeof data.fields?.["Case Status - Dashboard"] === "string"
-      ? data.fields["Case Status - Dashboard"].trim()
-      : ""
-    return { stages, statusText, lastModified }
+    const f = data.fields ?? {}
+    const selectList = (v: unknown) =>
+      (Array.isArray(v) ? v : []).map((s: unknown) => String(s).replace(/^\d+\s*-\s*/, "").trim()).filter(Boolean)
+    const text = (v: unknown) => (typeof v === "string" ? v.trim() : "")
+    const date = (v: unknown) => (typeof v === "string" && v ? v : null)
+
+    return {
+      stages: selectList(f["Case Stage"]),
+      caseTypes: selectList(f["Case Type"]),
+      county: text(f["County"]),
+      judge: text(f["Judge"]),
+      caseFiled: date(f["Case Filed"]),
+      dateOfService: date(f["Date of Service"]),
+      answerFiled: f["Answer Filed?"] === true,
+      dateAnswerFiled: date(f["Date Answer Filed"]),
+      // "Case Status - Dashboard" on the Status board is THE case status text for
+      // all cases (per Regina) — the old "Status of Case" field on Clients is legacy.
+      statusText: text(f["Case Status - Dashboard"]),
+      lastModified: date(f["Last Modified"]),
+    }
   } catch {
     return null
   }
