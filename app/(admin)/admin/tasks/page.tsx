@@ -331,6 +331,36 @@ export default function AdminTasksPage() {
         </form>
       </section>
 
+      {/* Assigned tasks — up top so current client work is visible at a glance */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold text-gray-800">Assigned Tasks</h2>
+        {tasks.length === 0 ? (
+          <p className="text-sm text-gray-400">No tasks assigned yet.</p>
+        ) : (
+          taskGroupsByClient.map(([clientId, list]) => (
+            <div key={clientId} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 text-sm font-semibold text-gray-700">{clientLabelOf(clientId)}</div>
+              <ul className="divide-y divide-gray-100">
+                {list.map((t) => (
+                  <li key={t.id} className="flex items-center justify-between px-4 py-3 gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm text-gray-800">{t.title}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {t.stage ?? "—"}{t.due_date ? ` · Due ${new Date(t.due_date).toLocaleDateString()}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${t.status === "done" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>{t.status}</span>
+                      <button onClick={() => deleteTask(t.id)} className="text-xs text-red-500 hover:text-red-700">Remove</button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        )}
+      </section>
+
       {/* Task board (templates grouped by stage) */}
       <section className="space-y-4">
         {stageGroups.length === 0 ? (
@@ -521,35 +551,6 @@ export default function AdminTasksPage() {
       </section>
 
 
-      {/* Assigned tasks */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-800">Assigned Tasks</h2>
-        {tasks.length === 0 ? (
-          <p className="text-sm text-gray-400">No tasks assigned yet.</p>
-        ) : (
-          taskGroupsByClient.map(([clientId, list]) => (
-            <div key={clientId} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 text-sm font-semibold text-gray-700">{clientLabelOf(clientId)}</div>
-              <ul className="divide-y divide-gray-100">
-                {list.map((t) => (
-                  <li key={t.id} className="flex items-center justify-between px-4 py-3 gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm text-gray-800">{t.title}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {t.stage ?? "—"}{t.due_date ? ` · Due ${new Date(t.due_date).toLocaleDateString()}` : ""}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${t.status === "done" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>{t.status}</span>
-                      <button onClick={() => deleteTask(t.id)} className="text-xs text-red-500 hover:text-red-700">Remove</button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))
-        )}
-      </section>
     </div>
   )
 }
