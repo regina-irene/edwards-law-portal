@@ -17,7 +17,8 @@ export async function GET() {
       SELECT ct.id, ct.template_id, ct.title, ct.description, ct.status, ct.due_date,
              ct.stage, ct.tag, ct.stage_order, ct.sort_order, ct.created_at,
              COALESCE(ct.notes, tt.notes) AS notes,
-             COALESCE(ct.form_key, tt.form_key) AS form_key
+             COALESCE(ct.form_key, tt.form_key) AS form_key,
+             COALESCE(ct.embed_url, tt.embed_url) AS embed_url
       FROM client_tasks ct
       LEFT JOIN task_templates tt ON tt.id = ct.template_id
       WHERE ct.client_id = ${cid}

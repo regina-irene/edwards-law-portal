@@ -5,6 +5,7 @@ import { useState, useEffect } from "react"
 import { groupByStage } from "@/lib/task-stages"
 import { RichTextView } from "@/components/ui/RichTextEditor"
 import FormFill from "@/components/tasks/FormFill"
+import AirtableEmbed from "@/components/ui/AirtableEmbed"
 
 interface Attachment {
   id: string
@@ -22,6 +23,7 @@ interface Task {
   tag: string | null
   notes: string | null
   form_key: string | null
+  embed_url: string | null
   firmFiles?: Attachment[]
   myFiles?: Attachment[]
   stage_order?: number
@@ -151,6 +153,12 @@ export default function TasksClient() {
                       {task.form_key && (
                         <div className="rounded-lg bg-white border border-gray-200 p-3">
                           <FormFill formKey={task.form_key} />
+                        </div>
+                      )}
+
+                      {task.embed_url && (
+                        <div className="rounded-lg bg-white border border-gray-200 p-3">
+                          <AirtableEmbed url={task.embed_url} title={task.title} height={650} />
                         </div>
                       )}
 

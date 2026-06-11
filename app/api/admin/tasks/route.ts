@@ -11,7 +11,7 @@ export async function GET() {
 
   try {
     const [templates, tasks] = await Promise.all([
-      sql`SELECT id, title, description, stage, tag, notes, form_key, stage_order, sort_order, created_at
+      sql`SELECT id, title, description, stage, tag, notes, form_key, embed_url, stage_order, sort_order, created_at
           FROM task_templates ORDER BY stage_order ASC, sort_order ASC, created_at ASC`,
       sql`SELECT id, client_id, title, description, status, due_date, stage, tag, stage_order, sort_order, created_at
           FROM client_tasks ORDER BY client_id ASC, stage_order ASC, sort_order ASC, created_at DESC`,
@@ -119,7 +119,7 @@ export async function PATCH(req: Request) {
   const check = await requireAdmin()
   if (check.status !== "ok") return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  let id: unknown, title: unknown, tag: unknown, oldStage: unknown, newStage: unknown, notes: unknown, formKey: unknown
+  let id: unknown, title: unknown, tag: unknown, oldStage: unknown, newStage: unknown, notes: unknown, formKey: unknown, embedUrl: unknown
   try {
     const parsed = await req.json()
     id = parsed?.id
@@ -129,6 +129,7 @@ export async function PATCH(req: Request) {
     newStage = parsed?.newStage
     notes = parsed?.notes
     formKey = parsed?.formKey
+    embedUrl = parsed?.embedUrl
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
   }
@@ -138,6 +139,18 @@ export async function PATCH(req: Request) {
     const fk = typeof formKey === "string" && formKey.trim() ? formKey.trim() : null
     try {
       await sql`UPDATE task_templates SET form_key = ${fk} WHERE id = ${id}`
+      return NextResponse.json({ ok: true })
+    } catch {
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
+  }
+
+  // Set/clear an embedded form URL on a task (e.g. an Airtable form)
+  if (typeof id === "string" && id && embedUrl !== undefined) {
+    const raw = typeof embedUrl === "string" ? embedUrl.trim() : ""
+    const url = raw && /^https?:\/\//i.test(raw) ? raw : raw ? `https://${raw}` : null
+    try {
+      await sql`UPDATE task_templates SET embed_url = ${url} WHERE id = ${id}`
       return NextResponse.json({ ok: true })
     } catch {
       return NextResponse.json({ error: "Internal server error" }, { status: 500 })

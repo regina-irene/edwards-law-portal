@@ -13,6 +13,7 @@ interface Template {
   tag: string | null
   notes: string | null
   form_key: string | null
+  embed_url: string | null
   stage_order?: number
   sort_order?: number
   created_at: string
@@ -127,6 +128,15 @@ export default function AdminTasksPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: templateId, formKey: formKey || "" }),
+    })
+    if (res.ok) load()
+  }
+
+  async function setEmbedUrl(templateId: string, embedUrl: string) {
+    const res = await fetch("/api/admin/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: templateId, embedUrl: embedUrl.trim() }),
     })
     if (res.ok) load()
   }
@@ -368,6 +378,19 @@ export default function AdminTasksPage() {
                         <span className="text-xs text-gray-400">
                           {t.form_key ? "Clients fill this form from the task." : "Pick a FileFlow form to attach."}
                         </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-gray-200 space-y-2">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Embedded form (Airtable form or any URL)</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <input
+                          defaultValue={t.embed_url ?? ""}
+                          onBlur={(e) => { if (e.target.value.trim() !== (t.embed_url ?? "")) setEmbedUrl(t.id, e.target.value) }}
+                          placeholder="https://airtable.com/…/form — shows inside the task"
+                          className="flex-1 min-w-[18rem] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="text-xs text-gray-400">{t.embed_url ? "Embedded in the task for clients. Clear to remove." : "Saves when you click away."}</span>
                       </div>
                     </div>
 

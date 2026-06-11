@@ -245,6 +245,10 @@ export const MIGRATION_SQL = `
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
 
+  -- embeddable form URL on tasks (e.g. an Airtable contact-info form)
+  ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS embed_url TEXT;
+  ALTER TABLE client_tasks ADD COLUMN IF NOT EXISTS embed_url TEXT;
+
   -- how a firm message was delivered: null=portal only, notification=text alert sent, full=message texted
   ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS sms_status TEXT;
 `
