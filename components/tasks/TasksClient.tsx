@@ -100,9 +100,51 @@ export default function TasksClient() {
   }
 
   const groups = groupByStage(tasks)
+  const open = tasks.filter((t) => t.status === "pending")
+  const doneCount = tasks.length - open.length
+  const today = new Date(new Date().toLocaleDateString("en-US", { timeZone: "America/New_York" }))
+  const deadlines = open
+    .filter((t) => t.due_date)
+    .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
+  const fmtDue = (d: string) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 
   return (
     <div className="space-y-5">
+      {/* At-a-glance: open tasks + deadlines */}
+      <div className="rounded-xl border border-blue-200 bg-blue-50 keep-ink p-4 sm:p-5">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+          <div>
+            <p className="text-2xl font-bold text-blue-900">{open.length}</p>
+            <p className="text-xs font-medium text-blue-700">Open task{open.length === 1 ? "" : "s"}</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-green-700">{doneCount}</p>
+            <p className="text-xs font-medium text-green-700">Completed</p>
+          </div>
+          <div className="flex-1 min-w-[14rem]">
+            <p className="text-xs font-semibold text-blue-900 mb-1">Upcoming deadlines</p>
+            {deadlines.length === 0 ? (
+              <p className="text-xs text-blue-700/70">No deadlines right now.</p>
+            ) : (
+              <ul className="space-y-0.5">
+                {deadlines.slice(0, 4).map((t) => {
+                  const overdue = new Date(t.due_date!) < today
+                  return (
+                    <li key={t.id} className="flex items-baseline gap-2 text-xs">
+                      <span className={`whitespace-nowrap font-semibold ${overdue ? "text-red-600" : "text-blue-900"}`}>
+                        {overdue ? "Overdue · " : ""}{fmtDue(t.due_date!)}
+                      </span>
+                      <span className="text-gray-700 truncate">{t.title}</span>
+                    </li>
+                  )
+                })}
+                {deadlines.length > 4 && <li className="text-xs text-blue-700/70">+ {deadlines.length - 4} more below</li>}
+              </ul>
+            )}
+          </div>
+        </div>
+      </div>
+
       {groups.map((group) => {
         const done = group.tasks.filter((t) => t.status === "done").length
         return (

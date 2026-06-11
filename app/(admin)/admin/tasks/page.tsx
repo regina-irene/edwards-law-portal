@@ -255,12 +255,13 @@ export default function AdminTasksPage() {
   if (loading) return <p className="text-gray-400 text-sm">Loading...</p>
 
   const stageGroups = groupByStage(templates)
+  const clientLabelOf = (id: string) => clientList.find((c) => c.id === id)?.label ?? id
   const taskGroupsByClient = Object.entries(
     tasks.reduce<Record<string, ClientTask[]>>((acc, t) => {
       ;(acc[t.client_id] ??= []).push(t)
       return acc
     }, {})
-  )
+  ).sort((a, b) => clientLabelOf(a[0]).localeCompare(clientLabelOf(b[0]), undefined, { sensitivity: "base" }))
 
   return (
     <div className="space-y-10">
@@ -528,7 +529,7 @@ export default function AdminTasksPage() {
         ) : (
           taskGroupsByClient.map(([clientId, list]) => (
             <div key={clientId} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500">Client: {clientId}</div>
+              <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 text-sm font-semibold text-gray-700">{clientLabelOf(clientId)}</div>
               <ul className="divide-y divide-gray-100">
                 {list.map((t) => (
                   <li key={t.id} className="flex items-center justify-between px-4 py-3 gap-3">
