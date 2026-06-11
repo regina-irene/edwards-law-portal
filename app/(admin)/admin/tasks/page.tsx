@@ -86,6 +86,7 @@ export default function AdminTasksPage() {
   const [assignClientId, setAssignClientId] = useState("")
   const [assignTemplateId, setAssignTemplateId] = useState("")
   const [assignDueDate, setAssignDueDate] = useState("")
+  const [clientList, setClientList] = useState<{ id: string; label: string }[]>([])
 
   async function load() {
     const res = await fetch("/api/admin/tasks")
@@ -120,6 +121,10 @@ export default function AdminTasksPage() {
     fetch("/api/admin/fileflow-forms")
       .then((r) => r.json())
       .then((d) => setForms(d.forms ?? []))
+      .catch(() => {})
+    fetch("/api/admin/clients-list")
+      .then((r) => r.json())
+      .then((d) => setClientList(d.clients ?? []))
       .catch(() => {})
   }, [])
 
@@ -462,8 +467,11 @@ export default function AdminTasksPage() {
         <h2 className="text-lg font-semibold text-gray-800">Assign Task to Client</h2>
         <form onSubmit={assignTask} className="flex gap-3 flex-wrap items-end">
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">Client ID</label>
-            <input value={assignClientId} onChange={(e) => setAssignClientId(e.target.value)} placeholder="client id" className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+            <label className="text-xs text-gray-500">Client</label>
+            <select value={assignClientId} onChange={(e) => setAssignClientId(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-xs" required>
+              <option value="">Select client</option>
+              {clientList.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+            </select>
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs text-gray-500">Task</label>
