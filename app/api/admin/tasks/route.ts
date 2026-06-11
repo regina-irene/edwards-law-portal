@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   const check = await requireAdmin()
   if (check.status !== "ok") return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  let action: unknown, title: unknown, description: unknown, clientId: unknown, templateId: unknown, dueDate: unknown, stage: unknown, tag: unknown
+  let action: unknown, title: unknown, description: unknown, clientId: unknown, templateId: unknown, templateIds: unknown, dueDate: unknown, stage: unknown, tag: unknown
   try {
     const parsed = await req.json()
     action = parsed?.action
@@ -35,6 +35,7 @@ export async function POST(req: Request) {
     description = parsed?.description
     clientId = parsed?.clientId
     templateId = parsed?.templateId
+    templateIds = parsed?.templateIds
     dueDate = parsed?.dueDate
     stage = parsed?.stage
     tag = parsed?.tag
@@ -78,35 +79,45 @@ export async function POST(req: Request) {
     const taskDesc = typeof description === "string" && description.trim() ? description.trim() : null
     const taskTemplateId = typeof templateId === "string" && templateId ? templateId : null
     const taskDueDate = typeof dueDate === "string" && dueDate ? dueDate : null
+    // one or many templates per assign
+    const taskTemplateIds: string[] = Array.isArray(templateIds)
+      ? templateIds.filter((x): x is string => typeof x === "string" && Boolean(x))
+      : taskTemplateId
+        ? [taskTemplateId]
+        : []
 
-    if (!taskTitle && !taskTemplateId) {
-      return NextResponse.json({ error: "title or templateId required" }, { status: 400 })
+    if (!taskTitle && taskTemplateIds.length === 0) {
+      return NextResponse.json({ error: "title or templateIds required" }, { status: 400 })
     }
 
     try {
-      let finalTitle = taskTitle
-      let finalDesc = taskDesc
-      let finalStage: string | null = typeof stage === "string" && stage.trim() ? stage.trim() : null
-      let finalTag: string | null = typeof tag === "string" && tag.trim() ? tag.trim() : null
-      let finalStageOrder = 0
-      let finalSortOrder = 0
-      if (taskTemplateId && !taskTitle) {
-        const tmpl = await sql`SELECT title, description, stage, tag, stage_order, sort_order FROM task_templates WHERE id = ${taskTemplateId}`
-        if (tmpl.rows.length === 0) return NextResponse.json({ error: "Template not found" }, { status: 404 })
-        finalTitle = tmpl.rows[0].title
-        finalDesc = tmpl.rows[0].description
-        finalStage = tmpl.rows[0].stage
-        finalTag = tmpl.rows[0].tag
-        finalStageOrder = tmpl.rows[0].stage_order ?? 0
-        finalSortOrder = tmpl.rows[0].sort_order ?? 0
+      // custom one-off task (no template)
+      if (taskTitle) {
+        const finalStage = typeof stage === "string" && stage.trim() ? stage.trim() : null
+        const finalTag = typeof tag === "string" && tag.trim() ? tag.trim() : null
+        const result = await sql`
+          INSERT INTO client_tasks (client_id, template_id, title, description, due_date, stage, tag, stage_order, sort_order)
+          VALUES (${clientId}, ${taskTemplateId}, ${taskTitle}, ${taskDesc}, ${taskDueDate}, ${finalStage}, ${finalTag}, 0, 0)
+          RETURNING id, client_id, title, description, status, due_date, stage, tag, stage_order, sort_order, created_at
+        `
+        return NextResponse.json({ task: result.rows[0], tasks: result.rows }, { status: 201 })
       }
 
-      const result = await sql`
-        INSERT INTO client_tasks (client_id, template_id, title, description, due_date, stage, tag, stage_order, sort_order)
-        VALUES (${clientId}, ${taskTemplateId}, ${finalTitle!}, ${finalDesc}, ${taskDueDate}, ${finalStage}, ${finalTag}, ${finalStageOrder}, ${finalSortOrder})
-        RETURNING id, client_id, title, description, status, due_date, stage, tag, stage_order, sort_order, created_at
-      `
-      return NextResponse.json({ task: result.rows[0] }, { status: 201 })
+      // template-based: assign each selected template
+      const created = []
+      for (const tid of taskTemplateIds) {
+        const tmpl = await sql`SELECT title, description, stage, tag, stage_order, sort_order FROM task_templates WHERE id = ${tid}`
+        if (tmpl.rows.length === 0) continue
+        const t = tmpl.rows[0]
+        const result = await sql`
+          INSERT INTO client_tasks (client_id, template_id, title, description, due_date, stage, tag, stage_order, sort_order)
+          VALUES (${clientId}, ${tid}, ${t.title}, ${t.description}, ${taskDueDate}, ${t.stage}, ${t.tag}, ${t.stage_order ?? 0}, ${t.sort_order ?? 0})
+          RETURNING id, client_id, title, description, status, due_date, stage, tag, stage_order, sort_order, created_at
+        `
+        created.push(result.rows[0])
+      }
+      if (created.length === 0) return NextResponse.json({ error: "Template not found" }, { status: 404 })
+      return NextResponse.json({ task: created[0], tasks: created }, { status: 201 })
     } catch {
       return NextResponse.json({ error: "Internal server error" }, { status: 500 })
     }

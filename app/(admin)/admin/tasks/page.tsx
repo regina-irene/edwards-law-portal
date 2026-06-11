@@ -84,7 +84,7 @@ export default function AdminTasksPage() {
   const [newStageName, setNewStageName] = useState("")
 
   const [assignClientId, setAssignClientId] = useState("")
-  const [assignTemplateId, setAssignTemplateId] = useState("")
+  const [assignTemplateIds, setAssignTemplateIds] = useState<string[]>([])
   const [assignDueDate, setAssignDueDate] = useState("")
   const [clientList, setClientList] = useState<{ id: string; label: string }[]>([])
 
@@ -225,18 +225,22 @@ export default function AdminTasksPage() {
 
   async function assignTask(e: React.FormEvent) {
     e.preventDefault()
-    if (!assignClientId.trim() || !assignTemplateId) return
+    if (!assignClientId.trim() || assignTemplateIds.length === 0) return
     const res = await fetch("/api/admin/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "assign",
         clientId: assignClientId.trim(),
-        templateId: assignTemplateId,
+        templateIds: assignTemplateIds,
         dueDate: assignDueDate || undefined,
       }),
     })
-    if (res.ok) { setAssignClientId(""); setAssignTemplateId(""); setAssignDueDate(""); load() }
+    if (res.ok) { setAssignClientId(""); setAssignTemplateIds([]); setAssignDueDate(""); load() }
+  }
+
+  function toggleAssignTemplate(id: string) {
+    setAssignTemplateIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
   }
 
   async function deleteTask(id: string) {
@@ -276,30 +280,53 @@ export default function AdminTasksPage() {
       {/* Assign to client — up top, it's the most-used action */}
       <section className="space-y-4 bg-white rounded-xl border border-gray-200 p-5">
         <h2 className="text-lg font-semibold text-gray-800">Assign Task to Client</h2>
-        <form onSubmit={assignTask} className="flex gap-3 flex-wrap items-end">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">Client</label>
-            <select value={assignClientId} onChange={(e) => setAssignClientId(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-xs" required>
-              <option value="">Select client</option>
-              {clientList.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-            </select>
+        <form onSubmit={assignTask} className="space-y-4">
+          <div className="flex gap-3 flex-wrap items-end">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-gray-500">Client</label>
+              <select value={assignClientId} onChange={(e) => setAssignClientId(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-xs" required>
+                <option value="">Select client</option>
+                {clientList.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-gray-500">Due Date (optional, applies to all selected tasks)</label>
+              <input type="date" value={assignDueDate} onChange={(e) => setAssignDueDate(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <button
+              type="submit"
+              disabled={!assignClientId || assignTemplateIds.length === 0}
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            >
+              {assignTemplateIds.length > 1 ? `Assign ${assignTemplateIds.length} Tasks` : "Assign"}
+            </button>
+            {assignTemplateIds.length > 0 && (
+              <button type="button" onClick={() => setAssignTemplateIds([])} className="text-xs text-gray-400 hover:text-gray-600 pb-2.5">
+                Clear selection
+              </button>
+            )}
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">Task</label>
-            <select value={assignTemplateId} onChange={(e) => setAssignTemplateId(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-xs" required>
-              <option value="">Select task</option>
+            <label className="text-xs text-gray-500">Tasks (check one or more)</label>
+            <div className="border border-gray-300 rounded-lg max-h-56 overflow-y-auto divide-y divide-gray-100">
               {stageGroups.map((g) => (
-                <optgroup key={g.stage} label={g.stage}>
-                  {g.tasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
-                </optgroup>
+                <div key={g.stage}>
+                  <p className="px-3 py-1.5 bg-gray-50 text-xs font-semibold text-gray-500 sticky top-0">{g.stage}</p>
+                  {g.tasks.map((t) => (
+                    <label key={t.id} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-800 cursor-pointer hover:bg-blue-50">
+                      <input
+                        type="checkbox"
+                        checked={assignTemplateIds.includes(t.id)}
+                        onChange={() => toggleAssignTemplate(t.id)}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      {t.title}
+                    </label>
+                  ))}
+                </div>
               ))}
-            </select>
+            </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">Due Date (optional)</label>
-            <input type="date" value={assignDueDate} onChange={(e) => setAssignDueDate(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <button type="submit" className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">Assign</button>
         </form>
       </section>
 
