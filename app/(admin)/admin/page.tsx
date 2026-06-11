@@ -20,11 +20,15 @@ function relTime(d: string | Date): string {
 const num = (r: any) => parseInt(r?.rows?.[0]?.count ?? "0", 10) || 0
 
 export default async function AdminHome() {
-  const [clients, labels, unreadMessages, pendingTasks, activity] = await Promise.all([
+  const [clients, labels, unreadMessages, openTasksRes, activity] = await Promise.all([
     fetchAllClientsRaw().catch(() => []),
     getClientLabels().catch(() => ({} as Record<string, string>)),
     sql`SELECT COUNT(*) AS count FROM chat_messages WHERE sender='client' AND read=false`.catch(() => ({ rows: [{ count: "0" }] })),
-    sql`SELECT COUNT(*) AS count FROM client_tasks WHERE status='pending'`.catch(() => ({ rows: [{ count: "0" }] })),
+    sql`
+      SELECT id, client_id, title, due_date, stage
+      FROM client_tasks WHERE status='pending'
+      ORDER BY due_date ASC NULLS LAST, created_at ASC
+    `.catch(() => ({ rows: [] as any[] })),
     sql`
       SELECT * FROM (
         SELECT 'chat' AS kind, id::text AS id, client_id, body AS detail, sender, created_at FROM chat_messages
@@ -56,10 +60,14 @@ export default async function AdminHome() {
     return `/admin/clients/${id}/pages`
   }
 
+  const openTasks = openTasksRes.rows
+  const today = new Date(new Date().toLocaleDateString("en-US", { timeZone: "America/New_York" }))
+  const fmtDue = (d: string | Date) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+
   const stats = [
     { label: "Clients", value: clients.length, href: "/admin/clients" },
     { label: "Unread messages", value: num(unreadMessages), href: "/admin/messages" },
-    { label: "Pending tasks", value: num(pendingTasks), href: "/admin/tasks" },
+    { label: "Pending tasks", value: openTasks.length, href: "/admin/tasks" },
   ]
 
   return (
@@ -76,6 +84,41 @@ export default async function AdminHome() {
             <span className="text-3xl font-semibold tabular-nums text-gray-900" style={{ fontFamily: "var(--font-baskerville), serif" }}>{s.value}</span>
           </Link>
         ))}
+      </div>
+
+      {/* Open tasks across all clients */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="serif text-base font-semibold text-gray-900">Open tasks</h2>
+          <Link href="/admin/tasks" className="text-xs text-blue-600 hover:underline">Manage tasks →</Link>
+        </div>
+        {openTasks.length === 0 ? (
+          <div className="px-5 py-8 text-center text-sm text-gray-400">No open tasks — everything's done.</div>
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {openTasks.slice(0, 10).map((t: any) => {
+              const overdue = t.due_date ? new Date(t.due_date) < today : false
+              return (
+                <li key={t.id} className="flex items-center gap-3 px-5 py-2.5">
+                  <Link href="/admin/tasks" className="min-w-0 flex-1">
+                    <p className="text-sm text-gray-800 truncate">
+                      <span className="font-semibold text-gray-900">{nameFor(String(t.client_id))}</span>
+                      {" — "}{t.title}
+                    </p>
+                  </Link>
+                  <span className={`text-xs whitespace-nowrap flex-shrink-0 ${overdue ? "text-red-600 font-semibold" : "text-gray-400"}`}>
+                    {t.due_date ? `${overdue ? "Overdue — was due " : "Due "}${fmtDue(t.due_date)}` : "No due date"}
+                  </span>
+                </li>
+              )
+            })}
+            {openTasks.length > 10 && (
+              <li className="px-5 py-2.5">
+                <Link href="/admin/tasks" className="text-xs text-blue-600 hover:underline">+ {openTasks.length - 10} more on the Tasks page</Link>
+              </li>
+            )}
+          </ul>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
