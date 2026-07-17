@@ -2,6 +2,8 @@
 import type { PageContent } from "@/lib/page-content"
 import { RichTextView } from "@/components/ui/RichTextEditor"
 import AirtableEmbed from "@/components/ui/AirtableEmbed"
+import PageTitle from "@/components/ui/PageTitle"
+import { taglineFor } from "@/lib/taglines"
 
 interface PageHeaderProps {
   defaultTitle: string
@@ -13,7 +15,7 @@ export default function PageHeader({ defaultTitle, page, content }: PageHeaderPr
   const title = content.header || defaultTitle
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+      <PageTitle title={title} tagline={taglineFor(page)} />
 
       {content.announcement && (
         /* per-page announcement: full width, centered, translucent so it
@@ -36,7 +38,7 @@ export default function PageHeader({ defaultTitle, page, content }: PageHeaderPr
       )}
 
       {content.body && (
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
           <RichTextView html={content.body} />
         </div>
       )}
