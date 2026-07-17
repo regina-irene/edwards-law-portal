@@ -4,6 +4,8 @@
 import { useState, useEffect } from "react"
 import { groupByStage } from "@/lib/task-stages"
 import { RichTextEditor } from "@/components/ui/RichTextEditor"
+import PageTitle from "@/components/ui/PageTitle"
+import { taglineFor } from "@/lib/taglines"
 
 interface Template {
   id: string
@@ -265,18 +267,21 @@ export default function AdminTasksPage() {
 
   return (
     <div className="space-y-10">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-2xl font-bold text-gray-900">Tasks</h1>
-        <form onSubmit={addStage} className="flex items-center gap-2">
-          <input
-            value={newStageName}
-            onChange={(e) => setNewStageName(e.target.value)}
-            placeholder="New stage name"
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button type="submit" className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">+ Add Stage</button>
-        </form>
-      </div>
+      <PageTitle
+        title="Tasks"
+        tagline={taglineFor("admin:tasks")}
+        actions={
+          <form onSubmit={addStage} className="flex items-center gap-2">
+            <input
+              value={newStageName}
+              onChange={(e) => setNewStageName(e.target.value)}
+              placeholder="New stage name"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button type="submit" className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">+ Add Stage</button>
+          </form>
+        }
+      />
 
       {/* Assign to client — up top, it's the most-used action */}
       <section className="space-y-4 bg-white rounded-xl border border-gray-200 p-5">

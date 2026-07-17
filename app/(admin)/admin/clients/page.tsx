@@ -8,6 +8,8 @@ import ClientLabelEditor from "../ClientLabelEditor"
 import RefreshButton from "@/components/ui/RefreshButton"
 import InviteButton from "@/components/admin/InviteButton"
 import Link from "next/link"
+import PageTitle from "@/components/ui/PageTitle"
+import { taglineFor } from "@/lib/taglines"
 
 function formatRefreshed(ms: number): string {
   return new Date(ms).toLocaleString("en-US", {
@@ -65,13 +67,16 @@ export default async function ClientsPage() {
   return (
     /* capped width so name and actions stay close together on wide screens */
     <div className="space-y-6 max-w-3xl">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
-        <form action={refreshClients}>
-          <RefreshButton />
-          <span className="block text-right text-xs text-gray-400 mt-1">Last refreshed {refreshedAt}</span>
-        </form>
-      </div>
+      <PageTitle
+        title="Clients"
+        tagline={taglineFor("admin:clients")}
+        actions={
+          <form action={refreshClients}>
+            <RefreshButton />
+            <span className="block text-right text-xs text-gray-400 mt-1">Last refreshed {refreshedAt}</span>
+          </form>
+        }
+      />
       {clients.length === 0 ? (
         <p className="text-gray-500">No clients found in Airtable.</p>
       ) : (

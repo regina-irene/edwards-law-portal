@@ -16,6 +16,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import PageTitle from "@/components/ui/PageTitle"
+import { taglineFor } from "@/lib/taglines"
 
 const BUILTIN_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
@@ -105,7 +107,7 @@ export default function AdminSettingsPage() {
   return (
     <div className="max-w-md space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        <PageTitle title="Settings" tagline={taglineFor("admin:settings")} />
         <p className="mt-1 text-sm text-gray-500">Add pages, reorder the navigation, and manage the portal.</p>
       </div>
 

@@ -53,17 +53,6 @@ h1, h2.serif {
   letter-spacing: -0.01em;
 }
 
-/* Dark theme / light-text mode (Settings): text sitting directly on a dark
-   background goes light. White cards (and .keep-ink surfaces like the manila
-   case file and the status page's own light gradient) keep dark text. */
-.theme-dark :is(h1, h2, .text-gray-400, .text-gray-500, .text-gray-600, .text-gray-700, .text-gray-800, .text-gray-900):not(.bg-white *):not(.keep-ink *):not(.bg-white):not(.keep-ink) {
-  color: rgba(255, 255, 255, 0.9);
-}
-.theme-dark .bg-white,
-.theme-dark .keep-ink {
-  color: #262220;
-}
-
 /* Signature uppercase tracked section label — in the clay accent. */
 .section-label {
   font-size: 10px;

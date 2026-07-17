@@ -21,7 +21,7 @@ export default function NavItem({ href, label, icon, unreadCount = 0 }: NavItemP
       title={label}
       aria-label={label}
       className={`relative w-[84px] py-2.5 rounded-xl flex flex-col items-center gap-1.5 transition-colors ${
-        isActive ? "bg-[#1B2D45] text-white" : "text-[#4b443b] hover:bg-[#efe7da]"
+        isActive ? "bg-[#1B2D45] text-white" : "text-[#33404c] hover:bg-[#efe7da]"
       }`}
     >
       <span className="text-[23px] leading-none">{icon}</span>

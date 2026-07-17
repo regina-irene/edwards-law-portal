@@ -137,7 +137,7 @@ export default function ClientThread() {
 
   let lastDay = ""
   return (
-    <div className="flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden" style={{ height: "calc(100vh - 16rem)" }}>
+    <div className="flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden" style={{ height: "calc(100vh - 18rem)" }}>
       <div className="border-b border-gray-200 bg-white px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-sm text-gray-500">Have documents for your legal team?</span>
