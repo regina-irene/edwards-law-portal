@@ -172,7 +172,7 @@ export default function MessageCenter() {
       <div className="w-80 shrink-0 border-r border-gray-200 flex flex-col" style={{ background: "#FBF8F3" }}>
         <div className="p-3 border-b border-gray-200">
           <div className="flex items-center justify-between gap-2 mb-2">
-            <h1 className="serif text-lg font-semibold text-gray-900">Messages</h1>
+            <h2 className="serif text-lg font-semibold text-gray-900">Messages</h2>
           </div>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search messages…" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
