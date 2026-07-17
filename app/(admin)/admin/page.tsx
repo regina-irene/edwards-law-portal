@@ -4,6 +4,8 @@ import { fetchAllClientsRaw, clientDisplayLabel } from "@/lib/airtable"
 import { getClientLabels } from "@/lib/client-labels"
 import { dismissActivity } from "./actions"
 import Link from "next/link"
+import PageTitle from "@/components/ui/PageTitle"
+import { taglineFor } from "@/lib/taglines"
 
 function relTime(d: string | Date): string {
   const diff = Date.now() - new Date(d).getTime()
@@ -74,7 +76,7 @@ export default async function AdminHome() {
     <div className="space-y-7">
       <div>
         <p className="section-label">Welcome back</p>
-        <h1 className="text-3xl font-bold text-gray-900 mt-1">Dashboard</h1>
+        <PageTitle title="Dashboard" tagline={taglineFor("admin:dashboard")} />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

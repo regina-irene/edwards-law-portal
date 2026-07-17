@@ -1,11 +1,13 @@
 // app/(admin)/admin/pages/page.tsx
 import PageContentEditor from "@/components/admin/PageContentEditor"
+import PageTitle from "@/components/ui/PageTitle"
+import { taglineFor } from "@/lib/taglines"
 
 export default function GlobalPagesEditor() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Global Page Defaults</h1>
+        <PageTitle title="Global Page Defaults" tagline={taglineFor("admin:pages")} />
         <p className="text-sm text-gray-500 mt-1">
           These apply to <strong>all clients</strong>{" "}unless overridden for a specific client via that client&apos;s Pages editor.
         </p>
