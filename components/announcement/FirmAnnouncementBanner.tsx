@@ -108,25 +108,25 @@ export default function FirmAnnouncementBanner({ initialHtml }: { initialHtml: s
 }
 
 // Display-only version for the CLIENT portal. Translucent so it blends with
-// whatever background theme the client picked.
-export function FirmAnnouncementView({ html, dark = false }: { html: string; dark?: boolean }) {
+// the fixed navy/cream background.
+export function FirmAnnouncementView({ html }: { html: string }) {
   if (!html) return null
   return (
     <div
       className="border-b px-4 sm:px-6 py-2.5 print:hidden backdrop-blur-md"
       style={{
-        background: dark ? "rgba(15,23,42,0.7)" : "rgba(255,255,255,0.85)",
-        borderColor: dark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.08)",
+        background: "rgba(255,255,255,0.85)",
+        borderColor: "rgba(0,0,0,0.08)",
       }}
     >
       <div className="flex items-center justify-center gap-3 text-center">
         <div className="flex items-center gap-1.5 shrink-0">
           <span className="text-base">📢</span>
-          <span className={`text-xs font-bold uppercase tracking-wide ${dark ? "text-amber-200" : "text-amber-700"}`}>Firm Announcements</span>
+          <span className="text-xs font-bold uppercase tracking-wide text-amber-700">Firm Announcements</span>
         </div>
-        <span className={`shrink-0 ${dark ? "text-white/30" : "text-amber-300"}`}>|</span>
+        <span className="shrink-0 text-amber-300">|</span>
         <div className="min-w-0 text-sm text-center [&_div]:!text-center [&_p]:!text-center">
-          <RichTextView html={html} className={dark ? "!text-white/90" : "!text-[#3d3426]"} />
+          <RichTextView html={html} className="!text-[#3d3426]" />
         </div>
       </div>
     </div>
