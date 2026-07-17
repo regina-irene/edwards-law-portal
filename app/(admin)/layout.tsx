@@ -24,7 +24,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <span className="text-[12px]" style={{ color: "#334155" }}>Edwards Family Law · Admin</span>
         </div>
         <FirmAnnouncementBanner initialHtml={firmAnnouncement} />
-        <main className="flex-1 px-6 py-6 overflow-auto">{children}</main>
+        <main className="flex-1 px-6 py-8 md:px-10 overflow-auto relative z-10">{children}</main>
       </div>
     </div>
   )

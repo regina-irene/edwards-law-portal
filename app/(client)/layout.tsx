@@ -103,7 +103,7 @@ export default async function ClientLayout({ children }: { children: React.React
             😄 {joke}
           </div>
         )}
-        <main className="flex-1 px-6 py-6 overflow-auto">{children}</main>
+        <main className="flex-1 px-6 py-8 md:px-10 overflow-auto relative z-10">{children}</main>
       </div>
     </div>
   )

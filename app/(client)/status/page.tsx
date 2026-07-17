@@ -64,10 +64,7 @@ export default async function StatusPage() {
     : null
 
   return (
-    <div
-      className="-m-6 min-h-[calc(100%+3rem)] px-6 py-6 space-y-6 keep-ink"
-      style={{ background: "linear-gradient(170deg, #eaf7fa 0%, #c8e8f0 35%, #9fd3e3 70%, #76b9d3 100%)", color: "#262220" }}
-    >
+    <div className="space-y-6">
       {isAdminPreview && (
         <div className="flex justify-start">
           <form action={refreshStatusPage}>
