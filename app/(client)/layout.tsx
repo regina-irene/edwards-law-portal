@@ -5,6 +5,7 @@ import { getPortalClient, getActivePreviewEmail } from "@/lib/portal-client"
 import { stopPreview } from "@/app/preview-actions"
 import { sql } from "@/lib/db"
 import Sidebar from "@/components/nav/Sidebar"
+import Motif from "@/components/ui/Motif"
 import { getClientNav } from "@/lib/portal-pages"
 import { getClientPrefs } from "@/lib/client-prefs"
 import { getJokeOfTheDay } from "@/lib/joke"
@@ -78,6 +79,7 @@ export default async function ClientLayout({ children }: { children: React.React
   return (
     <div className="flex min-h-screen" style={{ background: "#FBF8F3" }}>
       <Sidebar pages={pages} unreadMessages={unread.messages} unreadChat={unread.chat} />
+      <Motif />
       <div className="flex-1 flex flex-col min-h-0">
         {previewEmail && (
           <div className="bg-amber-100 border-b border-amber-300 text-amber-900 text-sm px-4 py-2 flex items-center justify-center gap-3 print:hidden">
