@@ -69,3 +69,15 @@ h1, h2.serif {
 .animate-refresh-bar {
   animation: refresh-bar 0.9s ease-in-out infinite;
 }
+
+/* Client color schemes (2026-07-23): nav items + page-title emoji read CSS
+   vars set by the client layout; fallbacks = today's hardcoded values, so
+   the admin layout (no vars) is unchanged. */
+.nav-item { color: var(--nav-ink, #33404c); }
+.nav-item:hover { background: var(--nav-hover-bg, #efe7da); }
+.nav-item.nav-item-active {
+  background: var(--nav-active-bg, #1B2D45);
+  color: var(--nav-active-ink, #ffffff);
+}
+.nav-item.nav-item-active:hover { background: var(--nav-active-bg, #1B2D45); }
+h1.page-title::before { content: var(--scheme-title-emoji, ""); }

@@ -8,6 +8,8 @@ import Sidebar from "@/components/nav/Sidebar"
 import Motif from "@/components/ui/Motif"
 import { getClientNav } from "@/lib/portal-pages"
 import { getClientPrefs } from "@/lib/client-prefs"
+import { getScheme } from "@/lib/color-schemes"
+import SchemeDecor from "@/components/ui/SchemeDecor"
 import { getJokeOfTheDay } from "@/lib/joke"
 import { getFirmAnnouncement } from "@/lib/firm-announcement"
 import { FirmAnnouncementView } from "@/components/announcement/FirmAnnouncementBanner"
@@ -71,16 +73,33 @@ export default async function ClientLayout({ children }: { children: React.React
     getFirmAnnouncement(),
   ])
   const joke = prefs.showJoke ? await getJokeOfTheDay() : null
+  const scheme = getScheme(prefs.scheme)
 
   const today = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" })
   // Airtable names are "Last | First" — greet the client by first name only
   const firstName = (client.name.split("|")[1] ?? client.name).trim()
 
   return (
-    <div className="flex min-h-screen" style={{ background: "#FBF8F3" }}>
-      <Sidebar pages={pages} unreadMessages={unread.messages} unreadChat={unread.chat} />
+    <div
+      className="flex min-h-screen"
+      style={{
+        background: scheme.pageBg,
+        ["--scheme-accent" as string]: scheme.accent,
+        ["--scheme-heading" as string]: scheme.heading,
+        ["--sidebar-bg" as string]: scheme.sidebarBg,
+        ["--sidebar-logo-bg" as string]: scheme.sidebarLogoBg,
+        ["--nav-ink" as string]: scheme.navInk,
+        ["--nav-hover-bg" as string]: scheme.navHoverBg,
+        ["--nav-active-bg" as string]: scheme.navActiveBg,
+        ["--nav-active-ink" as string]: scheme.navActiveInk,
+        ["--scheme-title-emoji" as string]: scheme.titleEmoji ? `"${scheme.titleEmoji} "` : '""',
+      }}
+    >
+      <Sidebar pages={pages} unreadMessages={unread.messages} unreadChat={unread.chat} baseEmoji={scheme.titleEmoji} />
       <Motif />
+      <SchemeDecor scheme={scheme} />
       <div className="flex-1 flex flex-col min-h-0">
+        {scheme.stripe && <div className="h-1.5 shrink-0 print:hidden" style={{ background: scheme.stripe }} />}
         {previewEmail && (
           <div className="bg-amber-100 border-b border-amber-300 text-amber-900 text-sm px-4 py-2 flex items-center justify-center gap-3 print:hidden">
             <span>Admin preview — viewing the portal as <strong>{client.name}</strong></span>
@@ -90,7 +109,7 @@ export default async function ClientLayout({ children }: { children: React.React
           </div>
         )}
         {/* Meta strip */}
-        <div className="flex items-center justify-between px-6 py-2 border-b print:hidden" style={{ borderColor: "#E8DFD2" }}>
+        <div className="flex items-center justify-between px-6 py-2 border-b print:hidden" style={{ borderColor: scheme.metaBorder }}>
           <span className="section-label">{today}</span>
           <span className="text-[12px]" style={{ color: "#334155" }}>{firstName}</span>
         </div>
