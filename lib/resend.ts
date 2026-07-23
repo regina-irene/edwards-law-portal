@@ -51,6 +51,36 @@ Edwards Family Law`
   })
 }
 
+// New-message notice — sent on every firm reply in Messages unless the
+// client's "No Message Emails" box is checked on the Airtable Clients board.
+// Deliberately generic: for confidentiality the message text stays in the portal.
+export async function sendNewMessageEmail(opts: { to: string; firstName: string }): Promise<void> {
+  const resend = getClient()
+  const FROM = process.env.EMAIL_FROM ?? "portal@edwardslaw.com"
+  const PORTAL_URL = process.env.AUTH_URL ?? "https://edwards-law-portal.vercel.app"
+
+  const greeting = opts.firstName ? `Dear ${opts.firstName},` : "Hello,"
+  const body = `${greeting}
+
+You have a new secure message from Edwards Family Law.
+
+For your privacy, the message itself can only be read in your client portal:
+
+  ${PORTAL_URL}/messages
+
+Sign in with Google using this email address to read and reply.
+
+Warm regards,
+Edwards Family Law`
+
+  await resend.emails.send({
+    from: FROM,
+    to: opts.to,
+    subject: "New message from Edwards Family Law",
+    text: body,
+  })
+}
+
 export async function sendReminderEmail(opts: ReminderEmailOptions): Promise<void> {
   const { to, clientName, taskName, dueDate, overdue } = opts
   const resend = getClient()

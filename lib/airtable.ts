@@ -10,6 +10,7 @@ export interface AirtableClient {
   clientBaseId: string
   statusOfCase: string
   smsReminders: boolean
+  noMessageEmails: boolean
 }
 
 export interface AirtableTask {
@@ -31,6 +32,8 @@ function mapClientRecord(r: any): AirtableClient {
     clientBaseId: r.fields["Client Base ID"] ?? "",
     statusOfCase: r.fields["Status of Case"] ?? "",
     smsReminders: r.fields["SMS Reminders"] === true,
+    // Opt-OUT checkbox: unchecked (default) = email the client on every firm message
+    noMessageEmails: r.fields["No Message Emails"] === true,
   }
 }
 

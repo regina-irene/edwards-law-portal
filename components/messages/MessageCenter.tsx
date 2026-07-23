@@ -17,6 +17,7 @@ interface Msg {
   body: string
   created_at: string
   sms_status?: "notification" | "full" | "inbound" | null
+  email_status?: "notification" | null
   files?: { id: string; file_name: string }[]
 }
 
@@ -121,12 +122,19 @@ export default function MessageCenter() {
     })
     if (res.ok) {
       const d = await res.json()
-      if (d.sms) {
-        setSmsNotice(
-          d.sms.sent
-            ? alsoText ? "📱 Message sent as text" : "📱 Text notification sent"
-            : `📱 Text not sent — ${d.sms.reason}`
-        )
+      if (d.sms || d.email) {
+        const parts: string[] = []
+        if (d.sms) {
+          parts.push(
+            d.sms.sent
+              ? alsoText ? "📱 Message sent as text" : "📱 Text notification sent"
+              : `📱 Text not sent — ${d.sms.reason}`
+          )
+        }
+        if (d.email) {
+          parts.push(d.email.sent ? "📧 Email alert sent" : `📧 Email not sent — ${d.email.reason}`)
+        }
+        setSmsNotice(parts.join("  ·  "))
       }
       for (const f of pendingFiles) {
         const fd = new FormData()
@@ -145,7 +153,9 @@ export default function MessageCenter() {
 
   function channelOf(m: Msg): string {
     if (m.sender === "firm") {
-      return m.sms_status === "full" ? "portal + texted" : m.sms_status === "notification" ? "portal + text alert" : "portal"
+      let c = m.sms_status === "full" ? "portal + texted" : m.sms_status === "notification" ? "portal + text alert" : "portal"
+      if (m.email_status === "notification") c += " + emailed"
+      return c
     }
     return m.sms_status === "inbound" ? "text message" : "portal"
   }
@@ -241,6 +251,7 @@ export default function MessageCenter() {
                           {firm && (
                             <span className="ml-1.5">
                               {m.sms_status === "full" ? "· 💬 portal + 📱 texted" : m.sms_status === "notification" ? "· 💬 portal + 📱 text alert" : "· 💬 portal"}
+                              {m.email_status === "notification" && " + 📧 emailed"}
                             </span>
                           )}
                           {!firm && m.sms_status === "inbound" && <span className="ml-1.5">· 📱 received as text</span>}

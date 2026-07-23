@@ -2,6 +2,8 @@ import { GET, POST } from "@/app/api/admin/chat/route"
 
 jest.mock("@/auth", () => ({ auth: jest.fn() }))
 jest.mock("@/lib/db", () => ({ sql: jest.fn() }))
+// the real resend package can't load under jsdom (needs TextEncoder)
+jest.mock("@/lib/resend", () => ({ sendNewMessageEmail: jest.fn().mockResolvedValue(undefined) }))
 
 import { auth } from "@/auth"
 import { sql } from "@/lib/db"
