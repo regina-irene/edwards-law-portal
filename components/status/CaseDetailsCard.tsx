@@ -193,7 +193,7 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
         {/* 4th column: next court date — full title, never cut off */}
         {nextCourt && (
           <div className={`${COL_DIVIDER} sm:border-t-0 sm:pt-0 sm:border-l sm:pl-5`}>
-            <ColumnTitle>Next Court Date</ColumnTitle>
+            <ColumnTitle>Next Important Calendar Date</ColumnTitle>
             <p className="text-lg font-bold" style={{ color: "#1b2d45" }}>
               {new Date(nextCourt.start).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
             </p>
