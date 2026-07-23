@@ -20,12 +20,15 @@ export interface PleadingDoc {
 }
 
 // "2019.08.19 Final Decree of Divorce (Lindholm).pdf"
-//   → { filedOn: "2019-08-19", title: "2019.08.19 Final Decree of Divorce (Lindholm)" }
-// The Document column shows the FULL file name — leading date and case tag
-// included (Regina, 2026-07-23); only the file extension is dropped. The date
-// is still parsed out for the Date column, sorting, and Recent Filings.
+//   → { filedOn: "2019-08-19", title: "2019.08.19 Final Decree of Divorce" }
+// The Document column keeps the leading date in the name (Regina, 2026-07-23)
+// but drops the file extension and the short trailing case tag. The date is
+// also parsed out for the Date column, sorting, and Recent Filings.
 export function parsePleadingName(raw: string): { title: string; filedOn: string | null } {
-  const name = raw.trim().replace(/\.(pdf|docx?|xlsx?|pptx?|jpe?g|png|gif|txt|rtf)$/i, "")
+  const name = raw
+    .trim()
+    .replace(/\.(pdf|docx?|xlsx?|pptx?|jpe?g|png|gif|txt|rtf)$/i, "")
+    .replace(/\s*\([^()]{1,25}\)\s*$/, "")
   // leading date in YYYY.MM.DD / YYYY-MM-DD / YYYY_MM_DD form
   const m = name.match(/^(\d{4})[.\-_](\d{1,2})[.\-_](\d{1,2})\s*[-–—.]?\s*/)
   if (!m) return { title: name, filedOn: null }
