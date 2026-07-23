@@ -20,20 +20,17 @@ export interface PleadingDoc {
 }
 
 // "2019.08.19 Final Decree of Divorce (Lindholm).pdf"
-//   → { filedOn: "2019-08-19", title: "Final Decree of Divorce (Lindholm)" }
+//   → { filedOn: "2019-08-19", title: "2019.08.19 Final Decree of Divorce (Lindholm)" }
+// The Document column shows the FULL file name — leading date and case tag
+// included (Regina, 2026-07-23); only the file extension is dropped. The date
+// is still parsed out for the Date column, sorting, and Recent Filings.
 export function parsePleadingName(raw: string): { title: string; filedOn: string | null } {
-  let name = raw.trim()
-  // drop a file extension
-  name = name.replace(/\.(pdf|docx?|xlsx?|pptx?|jpe?g|png|gif|txt|rtf)$/i, "")
-  // drop a short trailing case tag like " (Leslie)"
-  name = name.replace(/\s*\([^()]{1,25}\)\s*$/, "")
+  const name = raw.trim().replace(/\.(pdf|docx?|xlsx?|pptx?|jpe?g|png|gif|txt|rtf)$/i, "")
   // leading date in YYYY.MM.DD / YYYY-MM-DD / YYYY_MM_DD form
   const m = name.match(/^(\d{4})[.\-_](\d{1,2})[.\-_](\d{1,2})\s*[-–—.]?\s*/)
   if (!m) return { title: name, filedOn: null }
   const [, y, mo, d] = m
-  const month = mo.padStart(2, "0")
-  const day = d.padStart(2, "0")
-  return { title: name.slice(m[0].length).trim() || name, filedOn: `${y}-${month}-${day}` }
+  return { title: name, filedOn: `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}` }
 }
 
 function text(v: unknown): string {

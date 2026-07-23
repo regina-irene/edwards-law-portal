@@ -1,9 +1,9 @@
 import { parsePleadingName } from "@/lib/pleadings"
 
 describe("parsePleadingName", () => {
-  it("pulls the filing date and cleans the title", () => {
+  it("keeps the full name (incl. leading date and case tag) and parses the filing date", () => {
     expect(parsePleadingName("2019.08.19 Final Decree of Divorce (Lindholm).pdf")).toEqual({
-      title: "Final Decree of Divorce",
+      title: "2019.08.19 Final Decree of Divorce (Lindholm)",
       filedOn: "2019-08-19",
     })
   })
@@ -12,9 +12,9 @@ describe("parsePleadingName", () => {
     expect(parsePleadingName("2026.5.8 LOA RIE May 2026 (Leslie).pdf").filedOn).toBe("2026-05-08")
   })
 
-  it("keeps a leading parenthetical note in the title", () => {
+  it("strips only the file extension", () => {
     const r = parsePleadingName("2025.03.03 (not filed copy) H's Response to W's Motion to Compel.pdf")
-    expect(r.title).toBe("(not filed copy) H's Response to W's Motion to Compel")
+    expect(r.title).toBe("2025.03.03 (not filed copy) H's Response to W's Motion to Compel")
     expect(r.filedOn).toBe("2025-03-03")
   })
 
