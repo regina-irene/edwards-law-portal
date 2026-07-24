@@ -44,7 +44,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
     Resend({
       apiKey: process.env.RESEND_API_KEY,
-      from: process.env.EMAIL_FROM ?? "portal@edwardslaw.com",
+      from: process.env.EMAIL_FROM ?? "Edwards Family Law <portal@edwardsfamilylaw.com>",
       async sendVerificationRequest({ identifier, url }) {
         await sendMagicLinkEmail({ to: identifier, url })
       },

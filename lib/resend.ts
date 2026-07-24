@@ -16,7 +16,7 @@ function getClient() {
 // Welcome / portal invite — sent from the admin client list.
 export async function sendInviteEmail(opts: { to: string; firstName: string }): Promise<void> {
   const resend = getClient()
-  const FROM = process.env.EMAIL_FROM ?? "portal@edwardslaw.com"
+  const FROM = process.env.EMAIL_FROM ?? "Edwards Family Law <portal@edwardsfamilylaw.com>"
   const PORTAL_URL = process.env.AUTH_URL ?? "https://edwards-law-portal.vercel.app"
 
   const greeting = opts.firstName ? `Dear ${opts.firstName},` : "Hello,"
@@ -57,7 +57,7 @@ Edwards Family Law`
 // Auth.js calls this from the Resend provider's sendVerificationRequest.
 export async function sendMagicLinkEmail(opts: { to: string; url: string }): Promise<void> {
   const resend = getClient()
-  const FROM = process.env.EMAIL_FROM ?? "portal@edwardslaw.com"
+  const FROM = process.env.EMAIL_FROM ?? "Edwards Family Law <portal@edwardsfamilylaw.com>"
 
   const body = `Hello,
 
@@ -83,7 +83,7 @@ Edwards Family Law`
 // Deliberately generic: for confidentiality the message text stays in the portal.
 export async function sendNewMessageEmail(opts: { to: string; firstName: string }): Promise<void> {
   const resend = getClient()
-  const FROM = process.env.EMAIL_FROM ?? "portal@edwardslaw.com"
+  const FROM = process.env.EMAIL_FROM ?? "Edwards Family Law <portal@edwardsfamilylaw.com>"
   const PORTAL_URL = process.env.AUTH_URL ?? "https://edwards-law-portal.vercel.app"
 
   const greeting = opts.firstName ? `Dear ${opts.firstName},` : "Hello,"
@@ -95,7 +95,7 @@ For your privacy, the message itself can only be read in your client portal:
 
   ${PORTAL_URL}/messages
 
-Sign in with Google using this email address to read and reply.
+Sign in using this email address to read and reply — with Google, or by requesting a sign-in link on the login page.
 
 Warm regards,
 Edwards Family Law`
@@ -111,7 +111,7 @@ Edwards Family Law`
 export async function sendReminderEmail(opts: ReminderEmailOptions): Promise<void> {
   const { to, clientName, taskName, dueDate, overdue } = opts
   const resend = getClient()
-  const FROM = process.env.EMAIL_FROM ?? "portal@edwardslaw.com"
+  const FROM = process.env.EMAIL_FROM ?? "Edwards Family Law <portal@edwardsfamilylaw.com>"
   const PORTAL_URL = process.env.AUTH_URL ?? "https://portal.edwardslaw.com"
 
   const subject = overdue
