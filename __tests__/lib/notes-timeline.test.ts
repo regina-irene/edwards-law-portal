@@ -13,9 +13,10 @@ describe("mergeTimeline", () => {
     expect(items.map((i) => i.type)).toEqual(["note", "event", "note"])
   })
   it("breaks timestamp ties deterministically (id descending)", () => {
-    const a = mergeTimeline([note("n1", "2026-07-10T10:00:00Z")], [event("e9", "2026-07-10T10:00:00Z")])
-    const b = mergeTimeline([note("n1", "2026-07-10T10:00:00Z")], [event("e9", "2026-07-10T10:00:00Z")])
-    expect(a.map((i) => i.type)).toEqual(b.map((i) => i.type))
+    // Comparator sorts descending by id: idb.localeCompare(ida). "n1" > "e9"
+    // lexicographically, so the note sorts before the event.
+    const items = mergeTimeline([note("n1", "2026-07-10T10:00:00Z")], [event("e9", "2026-07-10T10:00:00Z")])
+    expect(items.map((i) => i.type)).toEqual(["note", "event"])
   })
   it("handles empty inputs", () => {
     expect(mergeTimeline([], [])).toEqual([])

@@ -17,7 +17,7 @@ function fmt(at: string): string {
   })
 }
 
-export default function NotesTimeline({ clientId, initialItems }: { clientId: string; initialItems: TimelineItem[] }) {
+export default function NotesTimeline({ clientId, initialItems, loadError = false }: { clientId: string; initialItems: TimelineItem[]; loadError?: boolean }) {
   const [items, setItems] = useState<TimelineItem[]>(initialItems)
   const [draft, setDraft] = useState("")
   const [saving, setSaving] = useState(false)
@@ -28,7 +28,9 @@ export default function NotesTimeline({ clientId, initialItems }: { clientId: st
   const [error, setError] = useState("")
 
   async function save() {
-    if (!draft.replace(/<[^>]*>/g, "").trim()) return
+    const hasText = Boolean(draft.replace(/<[^>]*>/g, "").trim())
+    const hasImage = /<img\b/i.test(draft)
+    if (!hasText && !hasImage) { setError("Write something (or add an image) before saving.") ; return }
     setSaving(true)
     setError("")
     const res = await fetch("/api/admin/notes", {
@@ -103,7 +105,11 @@ export default function NotesTimeline({ clientId, initialItems }: { clientId: st
         </button>
       </div>
 
-      {paged.length === 0 && (
+      {loadError && (
+        <p className="text-sm text-red-600 bg-white rounded-xl border border-red-200 p-4">Notes couldn&apos;t be loaded right now — refresh to try again. (New notes may not appear below.)</p>
+      )}
+
+      {!loadError && paged.length === 0 && (
         <p className="text-sm text-gray-500 bg-white rounded-xl border border-gray-200 p-6">No notes yet — write the first one.</p>
       )}
 

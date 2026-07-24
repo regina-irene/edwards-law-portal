@@ -1,22 +1,28 @@
 // app/(admin)/admin/notes/[clientId]/page.tsx — one client's Field Notes
 // timeline: manual notes merged with live portal events, newest first.
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import PageTitle from "@/components/ui/PageTitle"
 import PrintButton from "@/components/ui/PrintButton"
 import NotesTimeline from "@/components/notes/NotesTimeline"
 import { fetchAllClientsRaw, clientDisplayLabel } from "@/lib/airtable"
 import { getClientLabels } from "@/lib/client-labels"
-import { listNotes } from "@/lib/notes"
+import { requireAdmin } from "@/lib/admin"
+import { listNotes, type ClientNote } from "@/lib/notes"
 import { fetchClientEvents, mergeTimeline } from "@/lib/notes-timeline"
 
 export const dynamic = "force-dynamic"
 
 export default async function ClientFieldNotes({ params }: { params: Promise<{ clientId: string }> }) {
+  const check = await requireAdmin()
+  if (check.status !== "ok") redirect("/login")
+
   const { clientId } = await params
   const cid = decodeURIComponent(clientId)
 
+  let notesFailed = false
   const [notes, events, clients, labels] = await Promise.all([
-    listNotes(cid).catch(() => []),
+    listNotes(cid).catch(() => { notesFailed = true; return [] as ClientNote[] }),
     fetchClientEvents(cid),
     fetchAllClientsRaw().catch(() => []),
     getClientLabels().catch(() => ({}) as Record<string, string>),
@@ -38,7 +44,7 @@ export default async function ClientFieldNotes({ params }: { params: Promise<{ c
           </span>
         }
       />
-      <NotesTimeline clientId={cid} initialItems={items} />
+      <NotesTimeline clientId={cid} initialItems={items} loadError={notesFailed} />
     </div>
   )
 }
