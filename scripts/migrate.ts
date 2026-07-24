@@ -39,6 +39,15 @@ export const MIGRATION_SQL = `
     PRIMARY KEY (identifier, token)
   );
 
+  -- Sign-in activity shown on the admin dashboard (link emailed / signed in)
+  CREATE TABLE IF NOT EXISTS auth_activity (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    kind TEXT NOT NULL CHECK (kind IN ('link_sent','sign_in')),
+    email TEXT NOT NULL,
+    provider TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+
   -- @auth/pg-adapter actually uses the SINGULAR name (magic-link sign-in);
   -- the plural table above predates it and sits unused.
   CREATE TABLE IF NOT EXISTS verification_token (

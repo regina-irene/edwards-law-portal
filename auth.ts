@@ -47,9 +47,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       from: process.env.EMAIL_FROM ?? "Edwards Family Law <portal@edwardsfamilylaw.com>",
       async sendVerificationRequest({ identifier, url }) {
         await sendMagicLinkEmail({ to: identifier, url })
+        await sql`INSERT INTO auth_activity (kind, email, provider) VALUES ('link_sent', ${identifier.toLowerCase()}, 'resend')`.catch(() => {})
       },
     }),
   ],
+  events: {
+    // Every successful sign-in (Google or email link) lands on the admin
+    // dashboard's Recent activity. Fail-soft: logging must never block login.
+    async signIn({ user, account }) {
+      if (!user?.email) return
+      await sql`INSERT INTO auth_activity (kind, email, provider) VALUES ('sign_in', ${user.email.toLowerCase()}, ${account?.provider ?? null})`.catch(() => {})
+    },
+  },
   callbacks: {
     ...authConfig.callbacks,
     async signIn({ user, account, email }) {

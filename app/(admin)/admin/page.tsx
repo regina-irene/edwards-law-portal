@@ -37,6 +37,7 @@ export default async function AdminHome() {
         UNION ALL SELECT 'message', id::text, client_id, body, 'firm', created_at FROM messages
         UNION ALL SELECT 'upload', id::text, client_id, file_name, 'client', created_at FROM task_attachments WHERE scope='client_task'
         UNION ALL SELECT 'form', id::text, client_id, form_key, 'client', updated_at FROM form_responses
+        UNION ALL SELECT kind, id::text, email, COALESCE(provider, ''), 'system', created_at FROM auth_activity
       ) a
       WHERE a.id NOT IN (SELECT event_id FROM dismissed_activity)
       ORDER BY created_at DESC LIMIT 15
@@ -46,17 +47,39 @@ export default async function AdminHome() {
   const labelById = new Map(clients.map((c) => [String(c.clientId), labels[String(c.clientId)] || clientDisplayLabel(c.name)]))
   const nameFor = (id: string) => labelById.get(id) || "A client"
 
+  // auth_activity rows carry an EMAIL in the client_id slot — map it back to
+  // the client where possible; otherwise show the raw address (e.g. Regina's).
+  const AUTH_KINDS = new Set(["link_sent", "sign_in"])
+  const emailToId = new Map(
+    clients.filter((c) => c.email && c.clientId).map((c) => [String(c.email).toLowerCase(), String(c.clientId)])
+  )
+  const clientIdOf = (a: any): string | null =>
+    AUTH_KINDS.has(a.kind) ? emailToId.get(String(a.client_id).toLowerCase()) ?? null : String(a.client_id)
+  const displayName = (a: any): string => {
+    if (AUTH_KINDS.has(a.kind)) {
+      const cid = clientIdOf(a)
+      return cid ? nameFor(cid) : String(a.client_id)
+    }
+    return nameFor(a.client_id)
+  }
+
   const describe = (a: any): string => {
     if (a.kind === "chat") return a.sender === "firm" ? "— you sent a message" : "sent a message"
     if (a.kind === "message") return "— you sent a message"
     if (a.kind === "upload") return `uploaded ${a.detail}`
     if (a.kind === "form") return `updated the ${String(a.detail).replace(/-/g, " ")} form`
+    if (a.kind === "link_sent") return "was emailed a sign-in link"
+    if (a.kind === "sign_in") return `signed in${a.detail === "google" ? " with Google" : a.detail === "resend" ? " via email link" : ""}`
     return "activity"
   }
 
   // Where clicking an activity row takes you: messages → that conversation;
-  // uploads & form updates → that client's record page.
+  // uploads & form updates → that client's record page; sign-ins → Field Notes.
   const hrefFor = (a: any): string => {
+    if (AUTH_KINDS.has(a.kind)) {
+      const cid = clientIdOf(a)
+      return cid ? `/admin/notes/${encodeURIComponent(cid)}` : "/admin"
+    }
     const id = encodeURIComponent(String(a.client_id))
     if (a.kind === "chat" || a.kind === "message") return `/admin/messages?c=${id}`
     return `/admin/clients/${id}/pages`
@@ -136,11 +159,11 @@ export default async function AdminHome() {
               <li key={a.id} className="flex items-center gap-3 px-5 py-3 group hover:bg-[#FBF8F3] transition-colors">
                 <Link href={hrefFor(a)} className="flex items-center gap-3 min-w-0 flex-1">
                   <span className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0" style={{ background: "#F0E7DA" }}>
-                    {a.kind === "chat" || a.kind === "message" ? "💬" : a.kind === "upload" ? "📎" : "📝"}
+                    {a.kind === "chat" || a.kind === "message" ? "💬" : a.kind === "upload" ? "📎" : a.kind === "link_sent" || a.kind === "sign_in" ? "🔑" : "📝"}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-gray-800 truncate group-hover:text-gray-900">
-                      <span className="font-semibold text-gray-900">{nameFor(a.client_id)}</span>{" "}
+                      <span className="font-semibold text-gray-900">{displayName(a)}</span>{" "}
                       {describe(a)}
                     </p>
                   </div>
