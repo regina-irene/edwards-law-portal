@@ -2,22 +2,10 @@
 import { sql } from "@/lib/db"
 import { fetchAllClientsRaw, clientDisplayLabel } from "@/lib/airtable"
 import { getClientLabels } from "@/lib/client-labels"
-import { dismissActivity } from "./actions"
 import Link from "next/link"
 import PageTitle from "@/components/ui/PageTitle"
 import { taglineFor } from "@/lib/taglines"
-
-function relTime(d: string | Date): string {
-  const diff = Date.now() - new Date(d).getTime()
-  const m = Math.floor(diff / 60000)
-  if (m < 1) return "just now"
-  if (m < 60) return `${m}m ago`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
-  const days = Math.floor(h / 24)
-  if (days < 7) return `${days}d ago`
-  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-}
+import ActivityFeed from "@/components/admin/ActivityFeed"
 
 const num = (r: any) => parseInt(r?.rows?.[0]?.count ?? "0", 10) || 0
 
@@ -40,7 +28,7 @@ export default async function AdminHome() {
         UNION ALL SELECT kind, id::text, email, COALESCE(provider, ''), 'system', created_at FROM auth_activity
       ) a
       WHERE a.id NOT IN (SELECT event_id FROM dismissed_activity)
-      ORDER BY created_at DESC LIMIT 15
+      ORDER BY created_at DESC LIMIT 500
     `.catch(() => ({ rows: [] as any[] })),
   ])
 
@@ -148,34 +136,19 @@ export default async function AdminHome() {
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="serif text-base font-semibold text-gray-900">Recent activity</h2>
-          <span className="text-xs text-gray-400">Latest 12</span>
+          <h2 className="serif text-base font-semibold text-gray-900">Activity</h2>
+          <span className="text-xs text-gray-400">{activity.rows.length === 500 ? "Latest 500" : `${activity.rows.length} total`}</span>
         </div>
-        {activity.rows.length === 0 ? (
-          <div className="px-5 py-12 text-center text-sm text-gray-400">No recent client activity yet.</div>
-        ) : (
-          <ul className="divide-y divide-gray-100">
-            {activity.rows.map((a) => (
-              <li key={a.id} className="flex items-center gap-3 px-5 py-3 group hover:bg-[#FBF8F3] transition-colors">
-                <Link href={hrefFor(a)} className="flex items-center gap-3 min-w-0 flex-1">
-                  <span className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0" style={{ background: "#F0E7DA" }}>
-                    {a.kind === "chat" || a.kind === "message" ? "💬" : a.kind === "upload" ? "📎" : a.kind === "link_sent" || a.kind === "sign_in" ? "🔑" : "📝"}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-gray-800 truncate group-hover:text-gray-900">
-                      <span className="font-semibold text-gray-900">{displayName(a)}</span>{" "}
-                      {describe(a)}
-                    </p>
-                  </div>
-                </Link>
-                <span className="text-xs text-gray-400 tabular-nums flex-shrink-0">{relTime(a.created_at)}</span>
-                <form action={dismissActivity.bind(null, a.id)} className="flex-shrink-0">
-                  <button type="submit" title="Clear" className="text-gray-300 hover:text-red-600 text-sm">✕</button>
-                </form>
-              </li>
-            ))}
-          </ul>
-        )}
+        <ActivityFeed
+          items={activity.rows.map((a) => ({
+            id: String(a.id),
+            kind: String(a.kind),
+            name: displayName(a),
+            text: describe(a),
+            href: hrefFor(a),
+            at: new Date(a.created_at).toISOString(),
+          }))}
+        />
       </div>
     </div>
   )
