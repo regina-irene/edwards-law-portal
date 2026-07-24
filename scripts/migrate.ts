@@ -39,6 +39,15 @@ export const MIGRATION_SQL = `
     PRIMARY KEY (identifier, token)
   );
 
+  -- @auth/pg-adapter actually uses the SINGULAR name (magic-link sign-in);
+  -- the plural table above predates it and sits unused.
+  CREATE TABLE IF NOT EXISTS verification_token (
+    identifier TEXT NOT NULL,
+    expires TIMESTAMPTZ NOT NULL,
+    token TEXT NOT NULL,
+    PRIMARY KEY (identifier, token)
+  );
+
   -- Portal-specific tables
   CREATE TABLE IF NOT EXISTS messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
