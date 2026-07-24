@@ -33,8 +33,10 @@ Welcome! Edwards Family Law has set up a secure client portal for your case. It'
 HOW TO LOG IN
 
   1. Go to ${PORTAL_URL}
-  2. Click "Sign in with Google"
-  3. Sign in with THIS email address: ${opts.to}
+  2. Sign in either way:
+     - "Sign in with Google" (if this email is a Google account), OR
+     - type your email and click "Email me a sign-in link" — then open the link we send you
+  3. Always use THIS email address: ${opts.to}
 
 That's it — no password to create. Just be sure to use this exact email address, since it's the one connected to your case.
 
@@ -47,6 +49,31 @@ Edwards Family Law`
     from: FROM,
     to: opts.to,
     subject: "Welcome to your Edwards Family Law client portal",
+    text: body,
+  })
+}
+
+// Magic-link sign-in email — the passwordless alternative to Google sign-in.
+// Auth.js calls this from the Resend provider's sendVerificationRequest.
+export async function sendMagicLinkEmail(opts: { to: string; url: string }): Promise<void> {
+  const resend = getClient()
+  const FROM = process.env.EMAIL_FROM ?? "portal@edwardslaw.com"
+
+  const body = `Hello,
+
+Click the link below to sign in to your Edwards Family Law client portal:
+
+${opts.url}
+
+This link works once and expires in 24 hours. If you didn't request it, you can safely ignore this email.
+
+Warm regards,
+Edwards Family Law`
+
+  await resend.emails.send({
+    from: FROM,
+    to: opts.to,
+    subject: "Your sign-in link — Edwards Family Law",
     text: body,
   })
 }

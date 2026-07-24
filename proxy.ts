@@ -1,5 +1,10 @@
-import { auth } from "@/auth"
+import NextAuth from "next-auth"
+import authConfig from "@/auth.config"
 import { NextResponse } from "next/server"
+
+// Lightweight auth for the proxy: reads the JWT session cookie only — no
+// adapter, no providers, none of auth.ts's heavier imports in this bundle.
+const { auth } = NextAuth(authConfig)
 
 const PROTECTED_PATHS = [
   "/dashboard",

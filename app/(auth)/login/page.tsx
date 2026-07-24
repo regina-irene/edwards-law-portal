@@ -7,6 +7,7 @@ import { useState, Suspense } from "react"
 function LoginForm() {
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
   const searchParams = useSearchParams()
   const verify = searchParams.get("verify")
 
@@ -15,7 +16,9 @@ function LoginForm() {
       <div className="text-center">
         <h2 className="text-xl font-semibold mb-2">Check your email</h2>
         <p className="text-gray-600">
-          A sign-in link has been sent to your email address.
+          We just sent you a sign-in link. Open the email and click the link to
+          enter your portal. (Check your spam folder if you don&apos;t see it —
+          the link expires in 24 hours.)
         </p>
       </div>
     )
@@ -49,8 +52,14 @@ function LoginForm() {
         onSubmit={async (e) => {
           e.preventDefault()
           setLoading(true)
-          await signIn("resend", { email, callbackUrl: "/dashboard" })
+          setError("")
+          const res = await signIn("resend", { email, callbackUrl: "/dashboard", redirect: false })
           setLoading(false)
+          if (res?.error) {
+            setError("That email isn't connected to a portal account. Use the email address our office has on file, or contact us for help.")
+            return
+          }
+          window.location.href = "/login?verify=1"
         }}
         className="space-y-3"
       >
@@ -60,15 +69,20 @@ function LoginForm() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="your@email.com"
           required
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
           type="submit"
           disabled={loading}
-          className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          className="w-full px-4 py-3 text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
+          style={{ background: "#1b2d45" }}
         >
-          {loading ? "Sending..." : "Send Magic Link"}
+          {loading ? "Sending…" : "Email me a sign-in link"}
         </button>
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        <p className="text-xs text-gray-500 text-center">
+          No password needed — we&apos;ll email you a secure one-time link.
+        </p>
       </form>
     </div>
   )

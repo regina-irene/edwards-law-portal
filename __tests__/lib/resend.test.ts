@@ -1,5 +1,5 @@
 // __tests__/lib/resend.test.ts
-import { sendReminderEmail, sendNewMessageEmail } from "@/lib/resend"
+import { sendReminderEmail, sendNewMessageEmail, sendMagicLinkEmail } from "@/lib/resend"
 
 const mockSend = jest.fn().mockResolvedValue({ data: { id: "email-id-123" }, error: null })
 
@@ -90,6 +90,30 @@ describe("sendNewMessageEmail", () => {
 
     expect(instance.emails.send).toHaveBeenCalledWith(
       expect.objectContaining({ text: expect.stringContaining("Hello,") })
+    )
+  })
+})
+
+describe("sendMagicLinkEmail", () => {
+  beforeEach(() => {
+    process.env.RESEND_API_KEY = "test-key"
+    process.env.EMAIL_FROM = "portal@edwardslaw.com"
+    mockSend.mockClear()
+  })
+
+  it("sends the sign-in link to the requested address", async () => {
+    const { Resend } = require("resend")
+    const instance = new Resend()
+
+    await sendMagicLinkEmail({ to: "client@aol.com", url: "https://clients.edwardsfamilylaw.com/api/auth/callback/resend?token=abc" })
+
+    expect(instance.emails.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "client@aol.com",
+        from: "portal@edwardslaw.com",
+        subject: "Your sign-in link — Edwards Family Law",
+        text: expect.stringContaining("https://clients.edwardsfamilylaw.com/api/auth/callback/resend?token=abc"),
+      })
     )
   })
 })
