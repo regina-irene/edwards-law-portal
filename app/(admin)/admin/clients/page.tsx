@@ -107,6 +107,10 @@ export default async function ClientsPage() {
                     </a>
                   )}
                   <InviteButton email={c.email} firstName={(c.name.split("|")[1] ?? "").trim()} />
+                  <Link href={`/admin/notes/${encodeURIComponent(c.id)}`} className={actionCls} title="Open this client's Field Notes">
+                    <span className="text-2xl leading-none">📝</span>
+                    <span className="text-[11px] font-medium text-gray-600">Notes</span>
+                  </Link>
                   <Link href={`/admin/messages?c=${encodeURIComponent(c.id)}`} className={actionCls} title="Open this conversation in the Message Center">
                     <span className="text-2xl leading-none">💬</span>
                     <span className="text-[11px] font-medium text-gray-600">Messages</span>

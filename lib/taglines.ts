@@ -13,6 +13,7 @@ const TAGLINES: Record<string, string> = {
   "admin:dashboard": "The whole practice, at a glance",
   "admin:clients": "Every client, one list",
   "admin:tasks": "Templates, assignments, progress",
+  "admin:notes": "Your private case log — clients never see this",
   "admin:messages": "Every client conversation",
   "admin:pages": "What clients see on every page",
   "admin:settings": "Pages, navigation, and defaults",
