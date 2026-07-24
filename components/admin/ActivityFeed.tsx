@@ -48,7 +48,8 @@ export default function ActivityFeed({ items }: { items: ActivityItem[] }) {
   const [shown, setShown] = useState(PAGE)
 
   const clientNames = [...new Set(items.map((i) => i.name))].sort((a, b) => a.localeCompare(b))
-  const byClient = client ? items.filter((i) => i.name === client) : items
+  const q = client.trim().toLowerCase()
+  const byClient = q ? items.filter((i) => i.name.toLowerCase().includes(q)) : items
   const kinds = FILTERS.find((f) => f.key === filter)?.kinds ?? null
   const filtered = kinds ? byClient.filter((i) => kinds.includes(i.kind)) : byClient
   const paged = filtered.slice(0, shown)
@@ -69,14 +70,23 @@ export default function ActivityFeed({ items }: { items: ActivityItem[] }) {
             {f.label} <span className={filter === f.key ? "opacity-70" : "text-gray-400"}>{countFor(f)}</span>
           </button>
         ))}
-        <select
-          value={client}
-          onChange={(e) => { setClient(e.target.value); setShown(PAGE) }}
-          className="ml-auto px-2.5 py-1 rounded-lg text-xs font-medium border border-gray-300 bg-white text-gray-700"
-        >
-          <option value="">All clients</option>
-          {clientNames.map((n) => <option key={n} value={n}>{n}</option>)}
-        </select>
+        <span className="ml-auto flex items-center gap-1">
+          <input
+            list="activity-clients"
+            value={client}
+            onChange={(e) => { setClient(e.target.value); setShown(PAGE) }}
+            placeholder="All clients — type to filter"
+            className="w-48 px-2.5 py-1 rounded-lg text-xs font-medium border border-gray-300 bg-white text-gray-900"
+          />
+          <datalist id="activity-clients">
+            {clientNames.map((n) => <option key={n} value={n} />)}
+          </datalist>
+          {client && (
+            <button type="button" title="Clear" onClick={() => { setClient(""); setShown(PAGE) }} className="text-gray-400 hover:text-gray-700 text-sm px-1">
+              ✕
+            </button>
+          )}
+        </span>
       </div>
 
       {paged.length === 0 ? (
