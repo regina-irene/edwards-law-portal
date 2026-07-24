@@ -44,13 +44,16 @@ function relTime(d: string): string {
 
 export default function ActivityFeed({ items }: { items: ActivityItem[] }) {
   const [filter, setFilter] = useState("all")
+  const [client, setClient] = useState("")
   const [shown, setShown] = useState(PAGE)
 
+  const clientNames = [...new Set(items.map((i) => i.name))].sort((a, b) => a.localeCompare(b))
+  const byClient = client ? items.filter((i) => i.name === client) : items
   const kinds = FILTERS.find((f) => f.key === filter)?.kinds ?? null
-  const filtered = kinds ? items.filter((i) => kinds.includes(i.kind)) : items
+  const filtered = kinds ? byClient.filter((i) => kinds.includes(i.kind)) : byClient
   const paged = filtered.slice(0, shown)
   const countFor = (f: (typeof FILTERS)[number]) =>
-    f.kinds ? items.filter((i) => f.kinds!.includes(i.kind)).length : items.length
+    f.kinds ? byClient.filter((i) => f.kinds!.includes(i.kind)).length : byClient.length
 
   return (
     <div>
@@ -66,6 +69,14 @@ export default function ActivityFeed({ items }: { items: ActivityItem[] }) {
             {f.label} <span className={filter === f.key ? "opacity-70" : "text-gray-400"}>{countFor(f)}</span>
           </button>
         ))}
+        <select
+          value={client}
+          onChange={(e) => { setClient(e.target.value); setShown(PAGE) }}
+          className="ml-auto px-2.5 py-1 rounded-lg text-xs font-medium border border-gray-300 bg-white text-gray-700"
+        >
+          <option value="">All clients</option>
+          {clientNames.map((n) => <option key={n} value={n}>{n}</option>)}
+        </select>
       </div>
 
       {paged.length === 0 ? (
