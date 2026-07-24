@@ -26,6 +26,7 @@ export default async function AdminHome() {
         UNION ALL SELECT 'upload', id::text, client_id, file_name, 'client', created_at FROM task_attachments WHERE scope='client_task'
         UNION ALL SELECT 'form', id::text, client_id, form_key, 'client', updated_at FROM form_responses
         UNION ALL SELECT kind, id::text, email, COALESCE(provider, ''), 'system', created_at FROM auth_activity
+        UNION ALL SELECT 'note', id::text, client_id, body_text, 'firm', created_at FROM client_notes
       ) a
       WHERE a.id NOT IN (SELECT event_id FROM dismissed_activity)
       ORDER BY created_at DESC LIMIT 500
@@ -58,6 +59,10 @@ export default async function AdminHome() {
     if (a.kind === "form") return `updated the ${String(a.detail).replace(/-/g, " ")} form`
     if (a.kind === "link_sent") return "was emailed a sign-in link"
     if (a.kind === "sign_in") return `signed in${a.detail === "google" ? " with Google" : a.detail === "resend" ? " via email link" : ""}`
+    if (a.kind === "note") {
+      const snippet = String(a.detail ?? "").slice(0, 60)
+      return `— you wrote a field note${snippet ? `: “${snippet}${String(a.detail).length > 60 ? "…" : ""}”` : ""}`
+    }
     return "activity"
   }
 
@@ -70,6 +75,7 @@ export default async function AdminHome() {
     }
     const id = encodeURIComponent(String(a.client_id))
     if (a.kind === "chat" || a.kind === "message") return `/admin/messages?c=${id}`
+    if (a.kind === "note") return `/admin/notes/${id}`
     return `/admin/clients/${id}/pages`
   }
 

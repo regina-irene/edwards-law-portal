@@ -21,10 +21,11 @@ const FILTERS: { key: string; label: string; kinds: string[] | null }[] = [
   { key: "uploads", label: "📎 Uploads", kinds: ["upload"] },
   { key: "forms", label: "📝 Forms", kinds: ["form"] },
   { key: "signins", label: "🔑 Sign-ins", kinds: ["link_sent", "sign_in"] },
+  { key: "notes", label: "📌 Field Notes", kinds: ["note"] },
 ]
 
 const ICON: Record<string, string> = {
-  chat: "💬", message: "💬", upload: "📎", form: "📝", link_sent: "🔑", sign_in: "🔑",
+  chat: "💬", message: "💬", upload: "📎", form: "📝", link_sent: "🔑", sign_in: "🔑", note: "📌",
 }
 
 const PAGE = 25
