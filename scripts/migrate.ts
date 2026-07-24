@@ -252,6 +252,18 @@ export const MIGRATION_SQL = `
   -- how a firm message was delivered: null=portal only, notification=text alert sent, full=message texted
   ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS sms_status TEXT;
   ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS email_status TEXT;
+
+  -- Field Notes (2026-07-24): admin-only per-client case log
+  CREATE TABLE IF NOT EXISTS client_notes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id TEXT NOT NULL,
+    body TEXT NOT NULL,
+    body_text TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ
+  );
+  CREATE INDEX IF NOT EXISTS client_notes_client_idx ON client_notes (client_id, created_at DESC);
+  ALTER TABLE client_tasks ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
 `
 
 async function migrate(): Promise<void> {

@@ -65,7 +65,8 @@ export async function PATCH(req: Request) {
   try {
     const result = await sql`
       UPDATE client_tasks
-      SET status = ${status as string}
+      SET status = ${status as string},
+          completed_at = CASE WHEN ${status as string} = 'done' THEN NOW() ELSE NULL END
       WHERE id = ${id} AND client_id = ${String(client.clientId)}
       RETURNING id, status
     `
