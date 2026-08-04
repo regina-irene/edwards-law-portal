@@ -19,6 +19,9 @@ export interface PleadingDoc {
   fileType: string
   link: string
   notes: string
+  /** Subfolder the file sits in ("TPO", "FV matter"), else null for top-level
+   *  filings. Shown as a tag and used to tint the row. */
+  folder: string | null
 }
 
 // "2019.08.19 Final Decree of Divorce (Lindholm).pdf"
@@ -27,22 +30,27 @@ export interface PleadingDoc {
 // but drops the file extension and the short trailing case tag. The date is
 // also parsed out for the Date column, sorting, and Recent Filings.
 // Files that live in a subfolder of the Drive folder come across with the
-// folder in front of the name ("FV matter/2026.05.04 FILED - …pdf"), so strip
-// any folder path first — otherwise the leading date never matches and the row
-// falls back to the sync date instead of the date on the document.
-export function parsePleadingName(raw: string): { title: string; filedOn: string | null } {
-  const name = raw
-    .trim()
-    .split(/[/\\]/)
-    .pop()!
-    .trim()
+// folder in front of the name ("TPO/2026.05.04 FILED - …pdf"), so strip any
+// folder path first — otherwise the leading date never matches and the row
+// falls back to the sync date instead of the date on the document. The folder
+// itself comes back too ("TPO"), for the tag and row color on the table.
+export function parsePleadingName(raw: string): {
+  title: string
+  filedOn: string | null
+  folder: string | null
+} {
+  const segments = raw.trim().split(/[/\\]/).map((s) => s.trim()).filter(Boolean)
+  const parent = segments.length > 1 ? segments[segments.length - 2] : ""
+  // "Pleadings/…" in some bases is the table's own folder, not a subfolder
+  const folder = parent && parent.toLowerCase() !== "pleadings" ? parent : null
+  const name = (segments.pop() ?? "")
     .replace(/\.(pdf|docx?|xlsx?|pptx?|jpe?g|png|gif|txt|rtf)$/i, "")
     .replace(/\s*\([^()]{1,25}\)\s*$/, "")
   // leading date in YYYY.MM.DD / YYYY-MM-DD / YYYY_MM_DD form
   const m = name.match(/^(\d{4})[.\-_](\d{1,2})[.\-_](\d{1,2})\s*[-–—.]?\s*/)
-  if (!m) return { title: name, filedOn: null }
+  if (!m) return { title: name, filedOn: null, folder }
   const [, y, mo, d] = m
-  return { title: name, filedOn: `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}` }
+  return { title: name, filedOn: `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`, folder }
 }
 
 function text(v: unknown): string {
@@ -68,19 +76,33 @@ export async function getPleadings(clientBaseId: string): Promise<PleadingDoc[] 
       offset = data.offset
     } while (offset)
 
+    const rawNameOf = (f: Record<string, unknown>) =>
+      text(f["Name of File"]) || text(f["Name"]) || text(f["File Path"]) || ""
+
+    // Which folder is the table's own (top-level) one? Whatever the files that
+    // carry no folder path in their name sit in — anything else is a subfolder.
+    const rootFolders = new Set(
+      records
+        .filter((r) => !/[/\\]/.test(rawNameOf(r.fields)))
+        .map((r) => text(r.fields["Parent Folder"]).toLowerCase())
+        .filter(Boolean)
+    )
+
     const docs = records
       .map((r) => {
         const f = r.fields
-        const rawName =
-          text(f["Name of File"]) ||
-          text(f["Name"]) ||
-          text(f["File Path"]) ||
-          ""
-        const { title, filedOn } = parsePleadingName(rawName)
+        const rawName = rawNameOf(f)
+        const { title, filedOn, folder } = parsePleadingName(rawName)
+        const parentFolder = text(f["Parent Folder"])
         return {
           id: r.id,
           title,
           filedOn,
+          // the name usually carries the path; fall back to the synced
+          // "Parent Folder" for bases that sync bare file names
+          folder:
+            folder ??
+            (parentFolder && !rootFolders.has(parentFolder.toLowerCase()) ? parentFolder : null),
           created: text(f["Created"]) || null,
           filedBy: text(f["Filed by:"]) || text(f["Filed by"]) || text(f["Filed By"]),
           fileType: text(typeof f["File Type"] === "string" ? f["File Type"] : "") ||

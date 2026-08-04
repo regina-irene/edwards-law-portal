@@ -5,10 +5,16 @@
 
 import { useMemo, useState } from "react"
 import type { PleadingDoc } from "@/lib/pleadings"
-import { filedByColor } from "@/lib/airtable-colors"
+import { filedByColor, folderColor } from "@/lib/airtable-colors"
 
 function shortDate(d: string): string {
   return new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+}
+
+// soften a chip color into a row wash so the text stays easy to read
+function tint(hex: string, alpha = 0.5): string {
+  const n = parseInt(hex.replace("#", ""), 16)
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`
 }
 
 type SortKey = "filedOn" | "title" | "filedBy" | "notes"
@@ -85,10 +91,40 @@ export default function PleadingsTable({ docs }: { docs: PleadingDoc[] }) {
             // the Date column is always the date at the start of the file name;
             // a name with no date shows nothing rather than the sync date
             const dateLabel = d.filedOn ? shortDate(d.filedOn) : "—"
+            // filings kept in a subfolder ("TPO") are tagged and washed in that
+            // folder's color so they stand apart from the main docket
+            const fc = d.folder ? folderColor(d.folder) : null
             return (
-              <tr key={d.id} className="align-top hover:bg-gray-50/70">
+              <tr
+                key={d.id}
+                className={`align-top ${fc ? "" : "hover:bg-gray-50/70"}`}
+                style={
+                  fc
+                    ? {
+                        background: tint(fc.bg),
+                        WebkitPrintColorAdjust: "exact",
+                        printColorAdjust: "exact",
+                      }
+                    : undefined
+                }
+              >
                 <td className="px-4 py-3 whitespace-nowrap font-semibold text-gray-700">{dateLabel}</td>
-                <td className="px-4 py-3 font-medium text-gray-900 min-w-[14rem] max-w-md break-words">{d.title}</td>
+                <td className="px-4 py-3 font-medium text-gray-900 min-w-[14rem] max-w-md break-words">
+                  {d.title}
+                  {d.folder && fc && (
+                    <span
+                      className="ml-2 align-middle text-[11px] font-semibold px-2 py-0.5 rounded-full border border-black/5 whitespace-nowrap"
+                      style={{
+                        background: fc.bg,
+                        color: fc.text,
+                        WebkitPrintColorAdjust: "exact",
+                        printColorAdjust: "exact",
+                      }}
+                    >
+                      {d.folder}
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   {d.filedBy ? (
                     <span

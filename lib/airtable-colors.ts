@@ -194,6 +194,27 @@ export function filedByColor(name: string): ChipColor {
   return GRAY
 }
 
+// Pleadings that live in a Drive subfolder ("TPO", "FV matter") get a tag and a
+// tinted row. Folder names are free-form per client, so pick a stable color from
+// a light rotation by hashing the name — the same folder is always the same color.
+const FOLDER_ROTATION = [
+  "purpleLight2",
+  "tealLight2",
+  "orangeLight2",
+  "blueLight2",
+  "pinkLight2",
+  "greenLight2",
+  "yellowLight2",
+  "cyanLight2",
+]
+
+export function folderColor(name: string): ChipColor {
+  const key = name.trim().toLowerCase()
+  let hash = 0
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0
+  return fromName(FOLDER_ROTATION[hash % FOLDER_ROTATION.length])
+}
+
 export function judgeColor(name: string): ChipColor {
   const match = JUDGE_PREFIX.find(([prefix]) => name.startsWith(prefix))
   return fromName(match?.[1])
