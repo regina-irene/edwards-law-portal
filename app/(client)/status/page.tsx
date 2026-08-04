@@ -40,7 +40,7 @@ export default async function StatusPage() {
   // pleadings come back newest-first; surface the last 3 filings in Case Details
   const recentFilings = (pleadings ?? []).slice(0, 3).map((p) => ({
     title: p.title,
-    date: p.filedOn ?? (p.created ? p.created.slice(0, 10) : null),
+    date: p.filedOn, // date on the document only — never the Drive-sync date
     filedBy: p.filedBy,
     link: p.link,
   }))

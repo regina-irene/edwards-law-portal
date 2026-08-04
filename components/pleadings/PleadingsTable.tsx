@@ -82,11 +82,9 @@ export default function PleadingsTable({ docs }: { docs: PleadingDoc[] }) {
         </thead>
         <tbody className="divide-y divide-gray-100">
           {sorted.map((d) => {
-            const dateLabel = d.filedOn
-              ? shortDate(d.filedOn)
-              : d.created
-                ? shortDate(d.created.slice(0, 10))
-                : "—"
+            // the Date column is always the date at the start of the file name;
+            // a name with no date shows nothing rather than the sync date
+            const dateLabel = d.filedOn ? shortDate(d.filedOn) : "—"
             return (
               <tr key={d.id} className="align-top hover:bg-gray-50/70">
                 <td className="px-4 py-3 whitespace-nowrap font-semibold text-gray-700">{dateLabel}</td>

@@ -11,7 +11,9 @@ export interface PleadingDoc {
   title: string
   /** Filing date parsed from the file name ("2019.08.19 Final Decree…"), else null */
   filedOn: string | null
-  /** Record created datetime — fallback ordering when no filing date in the name */
+  /** Record created datetime — used only to order rows whose name has no date.
+   *  Never shown as the filing date: it is the Drive-sync time, not the date on
+   *  the document. */
   created: string | null
   filedBy: string
   fileType: string
@@ -24,8 +26,15 @@ export interface PleadingDoc {
 // The Document column keeps the leading date in the name (Regina, 2026-07-23)
 // but drops the file extension and the short trailing case tag. The date is
 // also parsed out for the Date column, sorting, and Recent Filings.
+// Files that live in a subfolder of the Drive folder come across with the
+// folder in front of the name ("FV matter/2026.05.04 FILED - …pdf"), so strip
+// any folder path first — otherwise the leading date never matches and the row
+// falls back to the sync date instead of the date on the document.
 export function parsePleadingName(raw: string): { title: string; filedOn: string | null } {
   const name = raw
+    .trim()
+    .split(/[/\\]/)
+    .pop()!
     .trim()
     .replace(/\.(pdf|docx?|xlsx?|pptx?|jpe?g|png|gif|txt|rtf)$/i, "")
     .replace(/\s*\([^()]{1,25}\)\s*$/, "")
@@ -65,7 +74,7 @@ export async function getPleadings(clientBaseId: string): Promise<PleadingDoc[] 
         const rawName =
           text(f["Name of File"]) ||
           text(f["Name"]) ||
-          text(f["File Path"]).split("/").pop()?.trim() ||
+          text(f["File Path"]) ||
           ""
         const { title, filedOn } = parsePleadingName(rawName)
         return {
@@ -80,7 +89,9 @@ export async function getPleadings(clientBaseId: string): Promise<PleadingDoc[] 
           notes: text(f["Notes"]),
         }
       })
-      .filter((d) => d.title)
+      // the subfolder itself syncs in as a row ("FV matter", File Type "folder") —
+      // it isn't a filing, and its files are listed individually
+      .filter((d) => d.title && d.fileType.toLowerCase() !== "folder")
 
     // newest filing first; rows without a parsed date sort by record creation
     docs.sort((a, b) => {

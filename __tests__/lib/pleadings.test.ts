@@ -18,6 +18,19 @@ describe("parsePleadingName", () => {
     expect(r.filedOn).toBe("2025-03-03")
   })
 
+  it("takes the date from the file name when the file sits in a subfolder", () => {
+    const r = parsePleadingName(
+      "FV matter/2026.05.04 FILED - FV Protective Order - granted, D taken into custody (Banks, Alecia).pdf"
+    )
+    expect(r.title).toBe("2026.05.04 FILED - FV Protective Order - granted, D taken into custody")
+    expect(r.filedOn).toBe("2026-05-04")
+  })
+
+  it("handles nested subfolders and backslash paths", () => {
+    expect(parsePleadingName("FV matter/Orders/2026.04.09 FILED - TPO.pdf").filedOn).toBe("2026-04-09")
+    expect(parsePleadingName("FV matter\\2026.04.09 FILED - TPO.pdf").filedOn).toBe("2026-04-09")
+  })
+
   it("handles names with no leading date", () => {
     expect(parsePleadingName("Standing Order.pdf")).toEqual({ title: "Standing Order", filedOn: null })
   })
