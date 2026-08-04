@@ -71,7 +71,7 @@ export default function PleadingsTable({ docs }: { docs: PleadingDoc[] }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-200">
-            {COLUMNS.map((c) => (
+            {COLUMNS.flatMap((c, i) => [
               <th
                 key={c.key}
                 onClick={() => clickHeader(c.key)}
@@ -81,9 +81,10 @@ export default function PleadingsTable({ docs }: { docs: PleadingDoc[] }) {
                 <span className="inline-block w-3 text-gray-400">
                   {sortKey === c.key ? (asc ? " ↑" : " ↓") : ""}
                 </span>
-              </th>
-            ))}
-            <th className="px-4 py-3" />
+              </th>,
+              // the "View file" button sits right after Date, before Document
+              ...(i === 0 ? [<th key="view-file" className="px-4 py-3" />] : []),
+            ])}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -109,6 +110,19 @@ export default function PleadingsTable({ docs }: { docs: PleadingDoc[] }) {
                 }
               >
                 <td className="px-4 py-3 whitespace-nowrap font-semibold text-gray-700">{dateLabel}</td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {d.link && (
+                    <a
+                      href={d.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-semibold px-3.5 py-1.5 rounded-lg text-white hover:opacity-90 transition-opacity inline-block print:hidden"
+                      style={{ background: "#1b2d45" }}
+                    >
+                      View file
+                    </a>
+                  )}
+                </td>
                 <td className="px-4 py-3 font-medium text-gray-900 min-w-[14rem] max-w-md break-words">
                   {d.title}
                   {d.folder && fc && (
@@ -138,19 +152,6 @@ export default function PleadingsTable({ docs }: { docs: PleadingDoc[] }) {
                   )}
                 </td>
                 <td className="px-4 py-3 text-gray-600 max-w-[16rem] break-words whitespace-pre-wrap">{d.notes || ""}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-right">
-                  {d.link && (
-                    <a
-                      href={d.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm font-semibold px-3.5 py-1.5 rounded-lg text-white hover:opacity-90 transition-opacity inline-block print:hidden"
-                      style={{ background: "#1b2d45" }}
-                    >
-                      View file
-                    </a>
-                  )}
-                </td>
               </tr>
             )
           })}
