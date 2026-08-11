@@ -11,14 +11,15 @@ jest.mock("@/components/ui/RichTextEditor", () => ({
 }))
 
 const items: TimelineItem[] = [
-  { type: "note", at: "2026-07-24T10:00:00Z", note: { id: "n1", body: "<p>Strategy call</p>", created_at: "2026-07-24T10:00:00Z", updated_at: null } },
+  { type: "note", at: "2026-07-24T10:00:00Z", note: { id: "n1", body: "<p>Strategy call</p>", created_at: "2026-07-24T10:00:00Z", updated_at: null, author_name: "Regina", author_email: "regina@x.com" } },
+  { type: "note", at: "2026-07-22T10:00:00Z", note: { id: "n2", body: "<p>Filed answer</p>", created_at: "2026-07-22T10:00:00Z", updated_at: null, author_name: "Paralegal Pat", author_email: "pat@x.com" } },
   { type: "event", at: "2026-07-23T10:00:00Z", event: { id: "e1", kind: "upload", at: "2026-07-23T10:00:00Z", sender: "client", detail: "Client uploaded W2.pdf" } },
 ]
 
 describe("NotesTimeline", () => {
   it("renders notes and events", () => {
     render(<NotesTimeline clientId="rec1" initialItems={items} />)
-    expect(screen.getByTestId("view")).toHaveTextContent("Strategy call")
+    expect(screen.getAllByTestId("view")[0]).toHaveTextContent("Strategy call")
     expect(screen.getByText(/Client uploaded W2.pdf/)).toBeInTheDocument()
   })
 
@@ -26,6 +27,21 @@ describe("NotesTimeline", () => {
     render(<NotesTimeline clientId="rec1" initialItems={items} />)
     fireEvent.click(screen.getByRole("button", { name: /just my notes/i }))
     expect(screen.queryByText(/Client uploaded W2.pdf/)).not.toBeInTheDocument()
-    expect(screen.getByTestId("view")).toBeInTheDocument()
+    expect(screen.getAllByTestId("view")).toHaveLength(2)
+  })
+
+  it("shows who wrote each note", () => {
+    render(<NotesTimeline clientId="rec1" initialItems={items} />)
+    expect(screen.getAllByText(/· Regina/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/· Paralegal Pat/).length).toBeGreaterThan(0)
+  })
+
+  it("'Written by' keeps only that person's notes", () => {
+    render(<NotesTimeline clientId="rec1" initialItems={items} />)
+    fireEvent.change(screen.getByLabelText(/written by/i), { target: { value: "Regina" } })
+    const views = screen.getAllByTestId("view")
+    expect(views).toHaveLength(1)
+    expect(views[0]).toHaveTextContent("Strategy call")
+    expect(screen.queryByText(/Client uploaded W2.pdf/)).not.toBeInTheDocument()
   })
 })

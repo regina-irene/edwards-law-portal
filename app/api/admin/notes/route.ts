@@ -4,16 +4,18 @@ import { NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin"
 import { listNotes, createNote, updateNote, deleteNote } from "@/lib/notes"
 
-async function gate() {
+// Returns a NextResponse when access is denied, otherwise the signed-in admin
+// (whose name is stamped on any note they write).
+async function gate(): Promise<NextResponse | { email: string; name: string }> {
   const check = await requireAdmin()
   if (check.status === "unauthenticated") return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   if (check.status === "forbidden") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-  return null
+  return { email: check.email, name: check.name }
 }
 
 export async function GET(req: Request) {
-  const denied = await gate()
-  if (denied) return denied
+  const admin = await gate()
+  if (admin instanceof NextResponse) return admin
   const clientId = new URL(req.url).searchParams.get("clientId")
   if (!clientId) return NextResponse.json({ error: "clientId required" }, { status: 400 })
   try {
@@ -24,22 +26,22 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const denied = await gate()
-  if (denied) return denied
+  const admin = await gate()
+  if (admin instanceof NextResponse) return admin
   const parsed = await req.json().catch(() => null)
   const clientId = typeof parsed?.clientId === "string" ? parsed.clientId : ""
   const body = typeof parsed?.body === "string" ? parsed.body : ""
   if (!clientId || !body.trim()) return NextResponse.json({ error: "clientId and body required" }, { status: 400 })
   try {
-    return NextResponse.json({ note: await createNote(clientId, body) }, { status: 201 })
+    return NextResponse.json({ note: await createNote(clientId, body, admin) }, { status: 201 })
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 
 export async function PATCH(req: Request) {
-  const denied = await gate()
-  if (denied) return denied
+  const admin = await gate()
+  if (admin instanceof NextResponse) return admin
   const parsed = await req.json().catch(() => null)
   const id = typeof parsed?.id === "string" ? parsed.id : ""
   const body = typeof parsed?.body === "string" ? parsed.body : ""
@@ -54,8 +56,8 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const denied = await gate()
-  if (denied) return denied
+  const admin = await gate()
+  if (admin instanceof NextResponse) return admin
   const id = new URL(req.url).searchParams.get("id")
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 })
   try {

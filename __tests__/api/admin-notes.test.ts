@@ -33,7 +33,7 @@ describe("/api/admin/notes", () => {
   })
 
   it("GET lists notes for a client", async () => {
-    mockAdmin.mockResolvedValueOnce({ status: "ok", email: "a@b.c" })
+    mockAdmin.mockResolvedValueOnce({ status: "ok", email: "a@b.c", name: "Ada" })
     mockList.mockResolvedValueOnce([{ id: "n1", body: "<p>x</p>", created_at: "2026-07-24", updated_at: null }])
     const res = await GET(new Request("http://x/api/admin/notes?clientId=rec1"))
     expect(res.status).toBe(200)
@@ -41,18 +41,18 @@ describe("/api/admin/notes", () => {
   })
 
   it("POST creates a note", async () => {
-    mockAdmin.mockResolvedValueOnce({ status: "ok", email: "a@b.c" })
+    mockAdmin.mockResolvedValueOnce({ status: "ok", email: "a@b.c", name: "Ada" })
     mockCreate.mockResolvedValueOnce({ id: "n1", body: "<p>x</p>", created_at: "2026-07-24", updated_at: null })
     const res = await POST(new Request("http://x/api/admin/notes", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ clientId: "rec1", body: "<p>x</p>" }),
     }))
     expect(res.status).toBe(201)
-    expect(mockCreate).toHaveBeenCalledWith("rec1", "<p>x</p>")
+    expect(mockCreate).toHaveBeenCalledWith("rec1", "<p>x</p>", { email: "a@b.c", name: "Ada" })
   })
 
   it("POST rejects empty body", async () => {
-    mockAdmin.mockResolvedValueOnce({ status: "ok", email: "a@b.c" })
+    mockAdmin.mockResolvedValueOnce({ status: "ok", email: "a@b.c", name: "Ada" })
     const res = await POST(new Request("http://x/api/admin/notes", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ clientId: "rec1", body: "   " }),
@@ -61,7 +61,7 @@ describe("/api/admin/notes", () => {
   })
 
   it("PATCH updates a note", async () => {
-    mockAdmin.mockResolvedValueOnce({ status: "ok", email: "a@b.c" })
+    mockAdmin.mockResolvedValueOnce({ status: "ok", email: "a@b.c", name: "Ada" })
     mockUpdate.mockResolvedValueOnce({ id: "n1", body: "<p>y</p>", created_at: "2026-07-24", updated_at: "2026-07-24" })
     const res = await PATCH(new Request("http://x/api/admin/notes", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
@@ -72,7 +72,7 @@ describe("/api/admin/notes", () => {
   })
 
   it("DELETE returns 404 when note not found", async () => {
-    mockAdmin.mockResolvedValueOnce({ status: "ok", email: "a@b.c" })
+    mockAdmin.mockResolvedValueOnce({ status: "ok", email: "a@b.c", name: "Ada" })
     mockDelete.mockResolvedValueOnce(false)
     const res = await DELETE(new Request("http://x/api/admin/notes?id=n9", { method: "DELETE" }))
     expect(res.status).toBe(404)

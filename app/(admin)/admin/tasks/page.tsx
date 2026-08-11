@@ -43,6 +43,23 @@ interface Attachment {
   size: number | null
 }
 
+// due_date is a DATE column, so treat it as a plain calendar day — never run it
+// through the browser's timezone, which would shift it a day.
+function dueInputValue(due: string | null): string {
+  return due ? String(due).slice(0, 10) : ""
+}
+
+function fmtDue(due: string): string {
+  const [y, m, d] = String(due).slice(0, 10).split("-")
+  return y && m && d ? `${Number(m)}/${Number(d)}/${y}` : String(due)
+}
+
+function matches(query: string, ...fields: (string | null | undefined)[]): boolean {
+  const q = query.trim().toLowerCase()
+  if (!q) return true
+  return fields.some((f) => (f ?? "").toLowerCase().includes(q))
+}
+
 function TagBadge({ tag }: { tag: string }) {
   return (
     <span className="inline-flex items-center gap-1 text-xs text-gray-500 whitespace-nowrap">
@@ -84,6 +101,12 @@ export default function AdminTasksPage() {
 
   // new stage state
   const [newStageName, setNewStageName] = useState("")
+
+  // search across assigned tasks and the task board
+  const [search, setSearch] = useState("")
+  // separate filter for the long assign picker, so searching there never
+  // disturbs what you've already checked
+  const [pickerFilter, setPickerFilter] = useState("")
 
   const [assignClientId, setAssignClientId] = useState("")
   const [assignTemplateIds, setAssignTemplateIds] = useState<string[]>([])
@@ -245,6 +268,16 @@ export default function AdminTasksPage() {
     setAssignTemplateIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
   }
 
+  async function setTaskDueDate(id: string, dueDate: string) {
+    const res = await fetch("/api/admin/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId: id, dueDate }),
+    })
+    if (res.ok) load()
+    else alert("Couldn't change the due date — try again.")
+  }
+
   async function deleteTask(id: string) {
     await fetch("/api/admin/tasks", {
       method: "DELETE",
@@ -256,10 +289,21 @@ export default function AdminTasksPage() {
 
   if (loading) return <p className="text-gray-400 text-sm">Loading...</p>
 
-  const stageGroups = groupByStage(templates)
   const clientLabelOf = (id: string) => clientList.find((c) => c.id === id)?.label ?? id
+
+  // The search box narrows both lists below: assigned tasks (also by client
+  // name) and the task board.
+  const stageGroups = groupByStage(templates)
+  const boardGroups = stageGroups
+    .map((g) => ({ ...g, tasks: g.tasks.filter((t) => matches(search, t.title, t.tag, t.stage)) }))
+    .filter((g) => !search.trim() || g.tasks.length > 0)
+  const pickerGroups = stageGroups
+    .map((g) => ({ ...g, tasks: g.tasks.filter((t) => matches(pickerFilter, t.title, t.tag, t.stage)) }))
+    .filter((g) => g.tasks.length > 0)
+
+  const visibleTasks = tasks.filter((t) => matches(search, t.title, t.stage, t.tag, clientLabelOf(t.client_id)))
   const taskGroupsByClient = Object.entries(
-    tasks.reduce<Record<string, ClientTask[]>>((acc, t) => {
+    visibleTasks.reduce<Record<string, ClientTask[]>>((acc, t) => {
       ;(acc[t.client_id] ??= []).push(t)
       return acc
     }, {})
@@ -282,6 +326,24 @@ export default function AdminTasksPage() {
           </form>
         }
       />
+
+      {/* One search box for finding a task, whether it's assigned or on the board */}
+      <div className="relative max-w-md">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search tasks by name, client, stage or tag…"
+          className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        {search.trim() && (
+          <p className="mt-1.5 text-xs text-gray-400">
+            {visibleTasks.length} assigned {visibleTasks.length === 1 ? "task" : "tasks"} and{" "}
+            {boardGroups.reduce((n, g) => n + g.tasks.length, 0)} on the board match “{search.trim()}”.{" "}
+            <button type="button" onClick={() => setSearch("")} className="underline hover:text-gray-600">Clear</button>
+          </p>
+        )}
+      </div>
 
       {/* Assign to client — up top, it's the most-used action */}
       <section className="space-y-4 bg-white rounded-xl border border-gray-200 p-5">
@@ -314,8 +376,18 @@ export default function AdminTasksPage() {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs text-gray-500">Tasks (check one or more)</label>
+            <input
+              type="search"
+              value={pickerFilter}
+              onChange={(e) => setPickerFilter(e.target.value)}
+              placeholder="Find a task to assign…"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-sm"
+            />
             <div className="border border-gray-300 rounded-lg max-h-56 overflow-y-auto divide-y divide-gray-100">
-              {stageGroups.map((g) => (
+              {pickerFilter.trim() && pickerGroups.length === 0 && (
+                <p className="px-3 py-2 text-sm text-gray-400">No tasks match “{pickerFilter.trim()}”.</p>
+              )}
+              {pickerGroups.map((g) => (
                 <div key={g.stage}>
                   <p className="px-3 py-1.5 bg-gray-50 text-xs font-semibold text-gray-500 sticky top-0">{g.stage}</p>
                   {g.tasks.map((t) => (
@@ -341,20 +413,35 @@ export default function AdminTasksPage() {
         <h2 className="text-lg font-semibold text-gray-800">Assigned Tasks</h2>
         {tasks.length === 0 ? (
           <p className="text-sm text-gray-400">No tasks assigned yet.</p>
+        ) : visibleTasks.length === 0 ? (
+          <p className="text-sm text-gray-400">No assigned tasks match “{search.trim()}”.</p>
         ) : (
           taskGroupsByClient.map(([clientId, list]) => (
             <div key={clientId} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 text-sm font-semibold text-gray-700">{clientLabelOf(clientId)}</div>
               <ul className="divide-y divide-gray-100">
                 {list.map((t) => (
-                  <li key={t.id} className="flex items-center justify-between px-4 py-3 gap-3">
+                  <li key={t.id} className="flex items-center justify-between px-4 py-3 gap-3 flex-wrap">
                     <div className="min-w-0">
                       <p className="text-sm text-gray-800">{t.title}</p>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {t.stage ?? "—"}{t.due_date ? ` · Due ${new Date(t.due_date).toLocaleDateString()}` : ""}
+                        {t.stage ?? "—"}{t.due_date ? ` · Due ${fmtDue(t.due_date)}` : " · No due date"}
                       </p>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
+                      {/* Due dates are changeable any time after assigning */}
+                      <label className="flex items-center gap-1.5 text-xs text-gray-500">
+                        Due
+                        <input
+                          type="date"
+                          value={dueInputValue(t.due_date)}
+                          onChange={(e) => setTaskDueDate(t.id, e.target.value)}
+                          className="px-2 py-1 border border-gray-300 rounded-lg text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </label>
+                      {t.due_date && (
+                        <button onClick={() => setTaskDueDate(t.id, "")} className="text-xs text-gray-400 hover:text-gray-700 hover:underline">Clear</button>
+                      )}
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${t.status === "done" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>{t.status}</span>
                       <button onClick={() => deleteTask(t.id)} className="text-xs text-red-500 hover:text-red-700">Remove</button>
                     </div>
@@ -370,8 +457,10 @@ export default function AdminTasksPage() {
       <section className="space-y-4">
         {stageGroups.length === 0 ? (
           <p className="text-sm text-gray-400">No tasks yet.</p>
+        ) : boardGroups.length === 0 ? (
+          <p className="text-sm text-gray-400">No tasks on the board match “{search.trim()}”.</p>
         ) : (
-          stageGroups.map((group) => (
+          boardGroups.map((group) => (
             <div key={group.stage} className="rounded-xl border border-gray-200 overflow-hidden bg-white">
               <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-200 gap-3">
                 {editingStage === group.stage ? (

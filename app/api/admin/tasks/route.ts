@@ -130,7 +130,7 @@ export async function PATCH(req: Request) {
   const check = await requireAdmin()
   if (check.status !== "ok") return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  let id: unknown, title: unknown, tag: unknown, oldStage: unknown, newStage: unknown, notes: unknown, formKey: unknown, embedUrl: unknown
+  let id: unknown, title: unknown, tag: unknown, oldStage: unknown, newStage: unknown, notes: unknown, formKey: unknown, embedUrl: unknown, taskId: unknown, dueDate: unknown
   try {
     const parsed = await req.json()
     id = parsed?.id
@@ -141,8 +141,28 @@ export async function PATCH(req: Request) {
     notes = parsed?.notes
     formKey = parsed?.formKey
     embedUrl = parsed?.embedUrl
+    taskId = parsed?.taskId
+    dueDate = parsed?.dueDate
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
+  }
+
+  // Change (or clear) the due date on a task already assigned to a client.
+  if (typeof taskId === "string" && taskId && dueDate !== undefined) {
+    const due = typeof dueDate === "string" && dueDate.trim() ? dueDate.trim() : null
+    if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) {
+      return NextResponse.json({ error: "dueDate must be YYYY-MM-DD" }, { status: 400 })
+    }
+    try {
+      const result = await sql`
+        UPDATE client_tasks SET due_date = ${due} WHERE id = ${taskId}
+        RETURNING id, client_id, title, description, status, due_date, stage, tag, stage_order, sort_order, created_at
+      `
+      if (result.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 })
+      return NextResponse.json({ task: result.rows[0] })
+    } catch {
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
   }
 
   // Link/unlink a FileFlow form to a task (independent of title edits)

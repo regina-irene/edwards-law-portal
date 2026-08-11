@@ -22,6 +22,7 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
   const [draft, setDraft] = useState("")
   const [saving, setSaving] = useState(false)
   const [notesOnly, setNotesOnly] = useState(false)
+  const [author, setAuthor] = useState("")
   const [shown, setShown] = useState(PAGE)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState("")
@@ -64,7 +65,16 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
     setItems(items.filter((i) => !(i.type === "note" && i.note.id === id)))
   }
 
-  const visible = notesOnly ? items.filter((i) => i.type === "note") : items
+  // Everyone who wrote a note on this client, for the "written by" menu.
+  const authors = Array.from(
+    new Set(items.flatMap((i) => (i.type === "note" && i.note.author_name ? [i.note.author_name] : []))),
+  ).sort((a, b) => a.localeCompare(b))
+
+  // Picking a person implies "just my notes" — portal events have no author.
+  const visible = items.filter((i) => {
+    if (author) return i.type === "note" && i.note.author_name === author
+    return notesOnly ? i.type === "note" : true
+  })
   const paged = visible.slice(0, shown)
 
   return (
@@ -103,6 +113,21 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
         >
           Just my notes
         </button>
+        {authors.length > 0 && (
+          <label className="ml-auto flex items-center gap-2 text-xs text-gray-500">
+            Written by
+            <select
+              value={author}
+              onChange={(e) => { setAuthor(e.target.value); setShown(PAGE) }}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white border border-gray-300 text-gray-700"
+            >
+              <option value="">Anyone</option>
+              {authors.map((a) => (
+                <option key={a} value={a}>{a}</option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
 
       {loadError && (
@@ -119,7 +144,9 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
             <div key={item.note.id} className="bg-white rounded-xl border border-gray-200 p-4" style={{ borderLeft: "4px solid #1b2d45" }}>
               <div className="flex items-center justify-between gap-3 mb-1.5">
                 <p className="text-xs font-semibold" style={{ color: "#1b2d45" }}>
-                  📌 {fmt(item.at)}{item.note.updated_at && <span className="font-normal text-gray-400"> · edited</span>}
+                  📌 {fmt(item.at)}
+                  {item.note.author_name && <span className="font-normal text-gray-500"> · {item.note.author_name}</span>}
+                  {item.note.updated_at && <span className="font-normal text-gray-400"> · edited</span>}
                 </p>
                 <span className="flex gap-2 print:hidden">
                   <button type="button" className="text-xs text-gray-400 hover:text-gray-700 underline" onClick={() => { setEditingId(item.note.id); setEditDraft(item.note.body) }}>Edit</button>

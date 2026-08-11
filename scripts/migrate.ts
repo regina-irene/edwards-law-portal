@@ -281,6 +281,9 @@ export const MIGRATION_SQL = `
     updated_at TIMESTAMPTZ
   );
   CREATE INDEX IF NOT EXISTS client_notes_client_idx ON client_notes (client_id, created_at DESC);
+  -- who wrote the note (2026-08-11); older notes have no author recorded
+  ALTER TABLE client_notes ADD COLUMN IF NOT EXISTS author_email TEXT;
+  ALTER TABLE client_notes ADD COLUMN IF NOT EXISTS author_name TEXT;
   ALTER TABLE client_tasks ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
 `
 

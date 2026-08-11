@@ -1,7 +1,7 @@
 import { mergeTimeline, type TimelineEvent } from "@/lib/notes-timeline"
 import type { ClientNote } from "@/lib/notes"
 
-const note = (id: string, at: string): ClientNote => ({ id, body: "<p>n</p>", created_at: at, updated_at: null })
+const note = (id: string, at: string): ClientNote => ({ id, body: "<p>n</p>", created_at: at, updated_at: null, author_name: "Regina", author_email: "regina@x.com" })
 const event = (id: string, at: string): TimelineEvent => ({ id, kind: "chat", at, sender: "client", smsStatus: null, detail: "sent a message" })
 
 describe("mergeTimeline", () => {
