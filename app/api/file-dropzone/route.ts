@@ -1,7 +1,6 @@
 // Client: upload a dropped file to the firm's Google Drive folder.
 import { getPortalClient } from "@/lib/portal-client"
-import { sql } from "@/lib/db"
-import { uploadToDrive, ensureFolderPath } from "@/lib/google-drive"
+import { deliverClientUpload, driveConfigured } from "@/lib/client-uploads"
 import { NextResponse } from "next/server"
 
 export const runtime = "nodejs"
@@ -19,38 +18,29 @@ export async function POST(req: Request) {
   const rawPath = (typeof form?.get("relativePath") === "string" ? (form!.get("relativePath") as string) : "") || file.name
   const segments = rawPath.split("/").map((s) => s.trim()).filter(Boolean)
   const baseName = segments.pop() || file.name
-  const clientPrefix = client.name ? client.name + " — " : ""
 
-  const folderId = process.env.MESSAGE_DOCS_DRIVE_FOLDER_ID || process.env.ROOT_DRIVE_FOLDER_ID || ""
   if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
     return NextResponse.json({ error: "File uploads aren't connected yet. Please email your documents for now." }, { status: 503 })
   }
-  if (!folderId) {
+  if (!driveConfigured()) {
     return NextResponse.json({ error: "File uploads aren't set up yet." }, { status: 503 })
   }
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer())
-    let targetFolder = folderId
-    let name: string
-    if (segments.length) {
-      // Recreate the dropped folder structure in Drive. Prefix the top folder with the
-      // client's name so the firm knows who sent it; files inside keep their own names.
-      const pathSegments = [clientPrefix + segments[0], ...segments.slice(1)]
-      targetFolder = await ensureFolderPath(folderId, pathSegments)
-      name = baseName
-    } else {
-      // Loose file: prefix the file name with the client's name (existing behaviour).
-      name = `${clientPrefix}${baseName}`
-    }
-    const result = await uploadToDrive(buffer, name, file.type, targetFolder)
-    await sql`
-      INSERT INTO dropzone_files (file_name, pathname, url, drive_status, uploaded_by)
-      VALUES (${name}, ${"drive:" + (result.id ?? "")}, ${result.link ?? ""}, 'delivered', ${String(client.clientId)})
-    `.catch(() => {})
-    return NextResponse.json({ ok: true, link: result.link ?? null })
-  } catch (e: any) {
-    console.error("[file-dropzone client] drive upload failed:", e?.message)
+    // Everything lands in the client's own folder; a dropped folder keeps its
+    // structure underneath it.
+    const { delivered, link } = await deliverClientUpload({
+      clientId: String(client.clientId),
+      fileName: baseName,
+      buffer,
+      mimeType: file.type,
+      subPath: segments,
+    })
+    if (!delivered) return NextResponse.json({ error: "Upload failed. Please try again." }, { status: 500 })
+    return NextResponse.json({ ok: true, link })
+  } catch (e) {
+    console.error("[file-dropzone client] drive upload failed:", e instanceof Error ? e.message : e)
     return NextResponse.json({ error: "Upload failed. Please try again." }, { status: 500 })
   }
 }

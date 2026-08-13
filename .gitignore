@@ -42,3 +42,6 @@ screencapture-*.pdf
 
 # brainstorming mockups
 .superpowers/
+
+# pulled production env (never commit)
+.env.pulled

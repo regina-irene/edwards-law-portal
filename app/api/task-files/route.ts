@@ -3,8 +3,11 @@ import { auth } from "@/auth"
 import { requireAdmin } from "@/lib/admin"
 import { getClientByEmail } from "@/lib/airtable"
 import { sql } from "@/lib/db"
+import { deliverClientUpload } from "@/lib/client-uploads"
 import { put } from "@vercel/blob"
 import { NextResponse } from "next/server"
+
+export const runtime = "nodejs"
 
 const MAX_BYTES = 25 * 1024 * 1024 // 25MB
 
@@ -26,6 +29,8 @@ export async function POST(req: Request) {
   // Authorize the uploader
   let actorEmail: string
   let clientId: string | null = null
+  // Only files the CLIENT sends in are copied to the firm's Drive folder.
+  let isClientUpload = false
   const adminCheck = await requireAdmin()
   if (adminCheck.status === "ok") {
     actorEmail = adminCheck.email
@@ -45,16 +50,26 @@ export async function POST(req: Request) {
     if (r.rows.length === 0) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     actorEmail = session.user.email
     clientId = cid
+    isClientUpload = true
   }
 
   try {
     const safeName = file.name.replace(/[^\w.\-]+/g, "_") || "file"
-    const blob = await put(`tasks/${scope}/${refId}/${safeName}`, file, { access: "private" })
+    // Read the bytes once: the portal copy and the Drive copy share them.
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const blob = await put(`tasks/${scope}/${refId}/${safeName}`, buffer, {
+      access: "private",
+      contentType: file.type || undefined,
+    })
     const ins = await sql`
       INSERT INTO task_attachments (scope, ref_id, client_id, file_name, pathname, url, content_type, size, uploaded_by)
       VALUES (${scope}, ${refId}, ${clientId}, ${file.name}, ${blob.pathname}, ${blob.url}, ${file.type || null}, ${file.size}, ${actorEmail})
       RETURNING id, scope, ref_id, file_name, content_type, size, created_at
     `
+    // Deliver to the firm's Drive folder. Fail-soft — the portal copy is saved.
+    if (isClientUpload && clientId) {
+      await deliverClientUpload({ clientId, fileName: file.name, buffer, mimeType: file.type })
+    }
     return NextResponse.json({ attachment: ins.rows[0] }, { status: 201 })
   } catch (e) {
     console.error("[task-files] upload failed:", e)

@@ -2,8 +2,11 @@
 import { requireAdmin } from "@/lib/admin"
 import { getPortalClient } from "@/lib/portal-client"
 import { sql } from "@/lib/db"
+import { deliverClientUpload } from "@/lib/client-uploads"
 import { put } from "@vercel/blob"
 import { NextResponse } from "next/server"
+
+export const runtime = "nodejs"
 
 const MAX = 25 * 1024 * 1024
 
@@ -22,22 +25,34 @@ export async function POST(req: Request) {
   const messageClientId = msg.rows[0].client_id as string
 
   // Authorize: admin (any) or the client who owns this conversation.
+  // Only the client's own attachments are copied to the firm's Drive folder.
   const admin = await requireAdmin()
+  let isClientUpload = false
   if (admin.status !== "ok") {
     const client = await getPortalClient()
     if (!client?.clientId || String(client.clientId) !== messageClientId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
+    isClientUpload = true
   }
 
   try {
     const safe = file.name.replace(/[^\w.\-]+/g, "_") || "file"
-    const blob = await put(`messages/${messageId}/${safe}`, file, { access: "private" })
+    // Read the bytes once: the portal copy and the Drive copy share them.
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const blob = await put(`messages/${messageId}/${safe}`, buffer, {
+      access: "private",
+      contentType: file.type || undefined,
+    })
     const ins = await sql`
       INSERT INTO message_attachments (message_id, client_id, file_name, pathname, url, content_type, size)
       VALUES (${messageId}, ${messageClientId}, ${file.name}, ${blob.pathname}, ${blob.url}, ${file.type || null}, ${file.size})
       RETURNING id, file_name
     `
+    // Deliver to the firm's Drive folder. Fail-soft — the portal copy is saved.
+    if (isClientUpload) {
+      await deliverClientUpload({ clientId: messageClientId, fileName: file.name, buffer, mimeType: file.type })
+    }
     return NextResponse.json({ attachment: ins.rows[0] }, { status: 201 })
   } catch (e) {
     console.error("[message-files] upload failed:", e)
