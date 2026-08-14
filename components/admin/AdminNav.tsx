@@ -10,6 +10,7 @@ const ITEMS = [
   { href: "/admin/messages", label: "Messages", icon: "✉️", match: (p: string) => p.startsWith("/admin/messages") || p.startsWith("/admin/chat") },
   { href: "/admin/tasks", label: "Tasks", icon: "✅", match: (p: string) => p.startsWith("/admin/tasks") },
   { href: "/admin/notes", label: "Field Notes", icon: "📝", match: (p: string) => p.startsWith("/admin/notes") },
+  { href: "/admin/forms", label: "Forms", icon: "📋", match: (p: string) => p.startsWith("/admin/forms") },
   { href: "/admin/pages", label: "Pages", icon: "📄", match: (p: string) => p.startsWith("/admin/pages") },
   { href: "/admin/settings", label: "Settings", icon: "⚙️", match: (p: string) => p.startsWith("/admin/settings") },
 ]

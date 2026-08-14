@@ -1,7 +1,12 @@
-// Client-facing intake form: read the FileFlow form definition + this client's
-// saved answers, and save answers (stored in THIS portal, not FileFlow).
+// Client-facing intake form: read the form definition + this client's saved
+// answers, and save answers (stored in THIS portal, not FileFlow).
+//
+// Forms built in the portal's builder take precedence; a key that isn't one of
+// those falls back to FileFlow, so tasks linked before the builder existed
+// keep working.
 import { getPortalClient } from "@/lib/portal-client"
 import { getForm } from "@/lib/fileflow"
+import { getPortalForm } from "@/lib/portal-forms"
 import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
 
@@ -11,7 +16,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ formKey
   const { formKey } = await params
 
   try {
-    const form = await getForm(formKey)
+    const portal = await getPortalForm(formKey).catch(() => null)
+    const form = portal ? portal.definition : await getForm(formKey)
     if (!form) return NextResponse.json({ error: "Form not found" }, { status: 404 })
 
     const cid = String(client.clientId)

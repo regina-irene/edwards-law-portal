@@ -297,6 +297,20 @@ export const MIGRATION_SQL = `
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
   CREATE INDEX IF NOT EXISTS file_views_client_idx ON file_views (client_id, created_at DESC);
+
+  -- Forms built in the portal (2026-08-14). The definition is the same shape
+  -- FileFlow returns, so the client-side filler renders either without change.
+  CREATE TABLE IF NOT EXISTS portal_forms (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    key TEXT NOT NULL UNIQUE,
+    label TEXT NOT NULL,
+    description TEXT,
+    definition JSONB NOT NULL,
+    source TEXT,
+    archived BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
   ALTER TABLE client_tasks ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
 `
 
