@@ -33,6 +33,8 @@ export default function FormFill({ formKey }: { formKey: string }) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Required questions still waiting on an answer, flagged after a save.
+  const [missing, setMissing] = useState<string[]>([])
 
   useEffect(() => {
     fetch(`/api/forms/${encodeURIComponent(formKey)}`)
@@ -50,6 +52,12 @@ export default function FormFill({ formKey }: { formKey: string }) {
     setSaved(false)
   }
 
+  // A required question must be answered — a checkbox must be ticked, anything
+  // else must be non-empty.
+  function isAnswered(field: FormField, value: string): boolean {
+    return field.type === "checkbox" ? value === "true" : (value ?? "").trim() !== ""
+  }
+
   async function save() {
     setSaving(true)
     setError(null)
@@ -59,8 +67,17 @@ export default function FormFill({ formKey }: { formKey: string }) {
       body: JSON.stringify({ values }),
     })
     setSaving(false)
-    if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 2500) }
-    else setError("Could not save. Please try again.")
+    if (!res.ok) { setError("Could not save. Please try again."); return }
+
+    // Progress is always saved first — a long form is too much work to lose —
+    // then anything still required is flagged rather than silently accepted.
+    const unanswered = (form?.sections ?? [])
+      .flatMap((s) => s.fields)
+      .filter((f) => f.required && !isAnswered(f, values[f.fieldKey] ?? ""))
+      .map((f) => f.fieldKey)
+    setMissing(unanswered)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2500)
   }
 
   if (loading) return <p className="text-sm text-gray-400">Loading form…</p>
@@ -78,7 +95,13 @@ export default function FormFill({ formKey }: { formKey: string }) {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {section.fields.map((f) => (
-              <Field key={f.id} field={f} value={values[f.fieldKey] ?? ""} onChange={(v) => set(f.fieldKey, v)} />
+              <Field
+                key={f.id}
+                field={f}
+                value={values[f.fieldKey] ?? ""}
+                onChange={(v) => set(f.fieldKey, v)}
+                flagged={missing.includes(f.fieldKey)}
+              />
             ))}
           </div>
         </div>
@@ -87,19 +110,40 @@ export default function FormFill({ formKey }: { formKey: string }) {
         <button onClick={save} disabled={saving} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50">
           {saving ? "Saving…" : "Save answers"}
         </button>
-        {saved && <span className="text-xs text-green-600 font-medium">Saved ✓</span>}
+        {saved && missing.length === 0 && <span className="text-xs text-green-600 font-medium">Saved ✓</span>}
         {error && <span className="text-xs text-red-500">{error}</span>}
       </div>
+
+      {missing.length > 0 && (
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          Your answers are saved. {missing.length} required {missing.length === 1 ? "question still needs" : "questions still need"} an
+          answer — they&apos;re marked in red above. You can come back and finish any time.
+        </p>
+      )}
     </div>
   )
 }
 
-function Field({ field, value, onChange }: { field: FormField; value: string; onChange: (v: string) => void }) {
+function Field({
+  field,
+  value,
+  onChange,
+  flagged = false,
+}: {
+  field: FormField
+  value: string
+  onChange: (v: string) => void
+  // True when this required question was left blank at the last save.
+  flagged?: boolean
+}) {
   const full = field.width !== "half"
-  const base = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+  const base = `w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+    flagged ? "border-red-400 bg-red-50" : "border-gray-300"
+  }`
   const label = (
-    <label className="block text-xs font-medium text-gray-600 mb-1">
+    <label className={`block text-xs font-medium mb-1 ${flagged ? "text-red-700" : "text-gray-600"}`}>
       {field.label}{field.required && <span className="text-red-500"> *</span>}
+      {flagged && <span className="ml-1 font-normal">— needs an answer</span>}
     </label>
   )
 
@@ -127,9 +171,10 @@ function Field({ field, value, onChange }: { field: FormField; value: string; on
   } else if (field.type === "checkbox") {
     return (
       <div className={full ? "sm:col-span-2" : ""}>
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className={`flex items-center gap-2 text-sm ${flagged ? "text-red-700" : "text-gray-700"}`}>
           <input type="checkbox" checked={value === "true"} onChange={(e) => onChange(e.target.checked ? "true" : "false")} />
           {field.label}{field.required && <span className="text-red-500"> *</span>}
+          {flagged && <span className="font-normal">— needs an answer</span>}
         </label>
         {field.helpText && <p className="text-xs text-gray-400 mt-0.5">{field.helpText}</p>}
       </div>

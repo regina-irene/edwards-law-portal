@@ -139,6 +139,22 @@ export default function FormBuilder({
     })
   }
 
+  // Bulk required toggles: marking 65 questions one at a time is a chore, and
+  // most forms want either everything mandatory or almost nothing.
+  function setAllRequired(required: boolean) {
+    setDraft((d) =>
+      d ? { ...d, sections: d.sections.map((s) => ({ ...s, fields: s.fields.map((f) => ({ ...f, required })) })) } : d
+    )
+  }
+
+  function setSectionRequired(si: number, required: boolean) {
+    setDraft((d) =>
+      d
+        ? { ...d, sections: d.sections.map((s, i) => (i === si ? { ...s, fields: s.fields.map((f) => ({ ...f, required })) } : s)) }
+        : d
+    )
+  }
+
   function removeSection(si: number, title: string, count: number) {
     if (!window.confirm(`Delete the “${title}” section and its ${count} ${count === 1 ? "question" : "questions"}?`)) return
     setDraft((d) => (d ? { ...d, sections: d.sections.filter((_, i) => i !== si) } : d))
@@ -186,6 +202,7 @@ export default function FormBuilder({
   }
 
   const totalFields = draft?.sections.reduce((n, s) => n + s.fields.length, 0) ?? 0
+  const requiredCount = draft?.sections.reduce((n, s) => n + s.fields.filter((f) => f.required).length, 0) ?? 0
 
   return (
     <div className="space-y-5">
@@ -284,6 +301,32 @@ export default function FormBuilder({
             </span>
           </div>
 
+          <div className="flex items-center gap-3 flex-wrap bg-white rounded-xl border border-gray-200 px-4 py-2.5">
+            <span className="text-xs font-semibold text-gray-500">
+              Required: {requiredCount} of {totalFields}
+            </span>
+            <button
+              type="button"
+              onClick={() => setAllRequired(true)}
+              disabled={requiredCount === totalFields}
+              className="text-sm text-blue-600 hover:underline disabled:text-gray-300 disabled:no-underline"
+            >
+              Make every question required
+            </button>
+            <span className="text-gray-300" aria-hidden="true">·</span>
+            <button
+              type="button"
+              onClick={() => setAllRequired(false)}
+              disabled={requiredCount === 0}
+              className="text-sm text-blue-600 hover:underline disabled:text-gray-300 disabled:no-underline"
+            >
+              Make none required
+            </button>
+            <span className="ml-auto text-xs text-gray-400">
+              A required question is flagged in red to the client until they answer it.
+            </span>
+          </div>
+
           {draft.sections.map((section, si) => (
             <div key={si} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200 space-y-1.5">
@@ -309,6 +352,28 @@ export default function FormBuilder({
                   placeholder="Instructions under the heading (optional)"
                   className="w-full text-xs text-gray-600 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1 py-0.5"
                 />
+                <p className="flex items-center gap-2 text-[11px] text-gray-400 px-1">
+                  <span>
+                    {section.fields.filter((f) => f.required).length} of {section.fields.length} required in this section
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSectionRequired(si, true)}
+                    disabled={section.fields.every((f) => f.required)}
+                    className="text-blue-600 hover:underline disabled:text-gray-300 disabled:no-underline"
+                  >
+                    all
+                  </button>
+                  <span className="text-gray-300" aria-hidden="true">·</span>
+                  <button
+                    type="button"
+                    onClick={() => setSectionRequired(si, false)}
+                    disabled={section.fields.every((f) => !f.required)}
+                    className="text-blue-600 hover:underline disabled:text-gray-300 disabled:no-underline"
+                  >
+                    none
+                  </button>
+                </p>
               </div>
               <ul className="divide-y divide-gray-100">
                 {section.fields.map((field, fi) => (
