@@ -92,6 +92,12 @@ export async function latestNoteByClient(): Promise<Map<string, { snippet: strin
 }
 
 // Everyone who has ever written a note — the options for the "written by" filter.
+// How many notes exist in total, so the log can say what it isn't showing.
+export async function countNotes(): Promise<number> {
+  const r = await sql`SELECT COUNT(*)::int AS n FROM client_notes`
+  return Number(r.rows[0]?.n ?? 0)
+}
+
 export async function listNoteAuthors(): Promise<string[]> {
   const r = await sql`
     SELECT DISTINCT author_name FROM client_notes
@@ -109,19 +115,21 @@ export interface NoteSearchHit {
   author_name: string | null
 }
 
-// Text search, author, and case filters — any combination. An empty query
-// with a filter simply lists everything matching that filter.
-export async function searchNotes(q: string, author = "", clientId = ""): Promise<NoteSearchHit[]> {
+// The running log: every note across every case, newest first. Text, author
+// and case filters are all optional — with none of them this is simply the
+// whole log, which is what the Field Notes hub shows.
+export async function searchNotes(q: string, author = "", clientId = "", limit = 50): Promise<NoteSearchHit[]> {
   const text = q.trim()
   const who = author.trim()
   const forCase = clientId.trim()
+  const cap = Math.min(Math.max(Math.trunc(limit) || 50, 1), 500)
   const r = await sql`
     SELECT id, client_id, body_text, created_at, author_name FROM client_notes
     WHERE (${text} = '' OR body_text ILIKE ${"%" + text + "%"})
       AND (${who} = '' OR author_name = ${who})
       AND (${forCase} = '' OR client_id = ${forCase})
     ORDER BY created_at DESC
-    LIMIT 50
+    LIMIT ${cap}
   `
   return r.rows.map((row) => {
     const body = String(row.body_text ?? "")
