@@ -4,6 +4,7 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import PageTitle from "@/components/ui/PageTitle"
+import NotesClientList from "@/components/notes/NotesClientList"
 import { taglineFor } from "@/lib/taglines"
 import { fetchAllClientsRaw, clientDisplayLabel } from "@/lib/airtable"
 import { getClientLabels } from "@/lib/client-labels"
@@ -16,13 +17,14 @@ function fmtDate(d: string): string {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" })
 }
 
-export default async function FieldNotesHub({ searchParams }: { searchParams: Promise<{ q?: string; author?: string }> }) {
+export default async function FieldNotesHub({ searchParams }: { searchParams: Promise<{ q?: string; author?: string; case?: string }> }) {
   const check = await requireAdmin()
   if (check.status !== "ok") redirect("/login")
 
-  const { q, author } = await searchParams
+  const { q, author, case: caseId } = await searchParams
   const query = (q ?? "").trim()
   const writer = (author ?? "").trim()
+  const forCase = (caseId ?? "").trim()
 
   let notesFailed = false
   const [clients, labels, latest, authors, results] = await Promise.all([
@@ -30,7 +32,7 @@ export default async function FieldNotesHub({ searchParams }: { searchParams: Pr
     getClientLabels().catch(() => ({}) as Record<string, string>),
     latestNoteByClient().catch(() => { notesFailed = true; return new Map<string, { snippet: string; created_at: string; author_name: string | null }>() }),
     listNoteAuthors().catch(() => [] as string[]),
-    query || writer ? searchNotes(query, writer).catch(() => []) : Promise.resolve([]),
+    query || writer || forCase ? searchNotes(query, writer, forCase).catch(() => []) : Promise.resolve([]),
   ])
 
   const labelOf = (id: string, fallbackName?: string) =>
@@ -65,16 +67,30 @@ export default async function FieldNotesHub({ searchParams }: { searchParams: Pr
             ))}
           </select>
         )}
+        <select
+          name="case"
+          defaultValue={forCase}
+          className="px-3 py-2.5 text-sm bg-white border border-gray-300 rounded-xl text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[14rem]"
+        >
+          <option value="">Any case</option>
+          {rows.map((r) => (
+            <option key={r.id} value={r.id}>{r.label}</option>
+          ))}
+        </select>
         <button type="submit" className="px-4 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90" style={{ background: "#1b2d45" }}>
           Search
         </button>
+        {(query || writer || forCase) && (
+          <Link href="/admin/notes" className="text-sm text-gray-400 hover:text-gray-700 underline">Clear</Link>
+        )}
       </form>
 
-      {(query || writer) && (
+      {(query || writer || forCase) && (
         <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
           <p className="section-label">
             {query ? `Search results for “${query}”` : "All notes"}
             {writer && ` written by ${writer}`}
+            {forCase && ` on ${rows.find((r) => r.id === forCase)?.label ?? "this case"}`}
           </p>
           {results.length === 0 && <p className="text-sm text-gray-500">No notes match.</p>}
           {results.map((r) => (
@@ -91,25 +107,19 @@ export default async function FieldNotesHub({ searchParams }: { searchParams: Pr
 
       {notesFailed && <p className="text-sm text-red-600">Latest-note previews couldn&apos;t be loaded right now.</p>}
 
-      <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
-        {rows.map((r) => {
+      <NotesClientList
+        notesFailed={notesFailed}
+        rows={rows.map((r) => {
           const note = latest.get(r.id)
-          return (
-            <Link key={r.id} href={`/admin/notes/${encodeURIComponent(r.id)}`} className="flex items-baseline justify-between gap-4 px-5 py-3.5 hover:bg-gray-50">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-900">{r.label}</p>
-                <p className="text-sm text-gray-500 truncate">{notesFailed ? "" : note ? note.snippet : "No notes yet"}</p>
-              </div>
-              {note && (
-                <span className="shrink-0 text-xs text-gray-400">
-                  {fmtDate(note.created_at)}{note.author_name && ` · ${note.author_name}`}
-                </span>
-              )}
-            </Link>
-          )
+          return {
+            id: r.id,
+            label: r.label,
+            snippet: note?.snippet ?? "",
+            date: note ? fmtDate(note.created_at) : "",
+            author: note?.author_name ?? null,
+          }
         })}
-        {rows.length === 0 && <p className="px-5 py-6 text-sm text-gray-500">No clients found (Airtable may be unreachable) — try again shortly.</p>}
-      </div>
+      />
     </div>
   )
 }

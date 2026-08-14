@@ -109,15 +109,17 @@ export interface NoteSearchHit {
   author_name: string | null
 }
 
-// Text search, author filter, or both. An empty query with an author simply
-// lists everything that person has written.
-export async function searchNotes(q: string, author = ""): Promise<NoteSearchHit[]> {
+// Text search, author, and case filters — any combination. An empty query
+// with a filter simply lists everything matching that filter.
+export async function searchNotes(q: string, author = "", clientId = ""): Promise<NoteSearchHit[]> {
   const text = q.trim()
   const who = author.trim()
+  const forCase = clientId.trim()
   const r = await sql`
     SELECT id, client_id, body_text, created_at, author_name FROM client_notes
     WHERE (${text} = '' OR body_text ILIKE ${"%" + text + "%"})
       AND (${who} = '' OR author_name = ${who})
+      AND (${forCase} = '' OR client_id = ${forCase})
     ORDER BY created_at DESC
     LIMIT 50
   `

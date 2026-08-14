@@ -9,7 +9,7 @@ import { fetchAllClientsRaw, clientDisplayLabel } from "@/lib/airtable"
 import { getClientLabels } from "@/lib/client-labels"
 import { requireAdmin } from "@/lib/admin"
 import { listNotes, type ClientNote } from "@/lib/notes"
-import { fetchClientEvents, mergeTimeline } from "@/lib/notes-timeline"
+import { fetchClientEvents, mergeTimeline, clientProseName } from "@/lib/notes-timeline"
 
 export const dynamic = "force-dynamic"
 
@@ -21,15 +21,18 @@ export default async function ClientFieldNotes({ params }: { params: Promise<{ c
   const cid = decodeURIComponent(clientId)
 
   let notesFailed = false
-  const [notes, events, clients, labels] = await Promise.all([
+  const [notes, clients, labels] = await Promise.all([
     listNotes(cid).catch(() => { notesFailed = true; return [] as ClientNote[] }),
-    fetchClientEvents(cid),
     fetchAllClientsRaw().catch(() => []),
     getClientLabels().catch(() => ({}) as Record<string, string>),
   ])
 
   const client = clients.find((c) => String(c.clientId) === cid)
   const label = labels[cid] || (client ? clientDisplayLabel(client.name) : cid)
+  // Entries read "Client Cleon Grey uploaded …" — the person, not a role. The
+  // Airtable name reads best in prose; fall back to whatever label we have.
+  const proseName = clientProseName(client?.name) || labels[cid] || ""
+  const events = await fetchClientEvents(cid, proseName)
   const items = mergeTimeline(notes, events)
 
   return (

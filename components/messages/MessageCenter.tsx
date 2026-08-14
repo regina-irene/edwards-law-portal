@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
+import { collectDroppedFiles, dragHasFiles } from "@/lib/drop-files"
+
+const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
 
 interface Conversation {
   id: string
@@ -43,6 +46,9 @@ export default function MessageCenter() {
   const [body, setBody] = useState("")
   const [sending, setSending] = useState(false)
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [dropActive, setDropActive] = useState(false)
+  const [fileNotice, setFileNotice] = useState<string | null>(null)
+  const [attachProgress, setAttachProgress] = useState<string | null>(null)
   const [alsoText, setAlsoText] = useState(false)
   const [smsNotice, setSmsNotice] = useState<string | null>(null)
   const [watchOn, setWatchOn] = useState(false)
@@ -81,6 +87,38 @@ export default function MessageCenter() {
   }
   const threadRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  // dragenter/dragleave also fire for child elements; counting keeps the
+  // overlay from flickering as the pointer crosses bubbles.
+  const dragDepth = useRef(0)
+
+  // Attach files from a drop or the paperclip, holding back anything too big
+  // for the server so it fails here with an explanation instead of silently
+  // on send.
+  const attachFiles = useCallback((incoming: File[]) => {
+    if (incoming.length === 0) return
+    const tooBig = incoming.filter((f) => f.size > MAX_ATTACHMENT_BYTES)
+    const ok = incoming.filter((f) => f.size <= MAX_ATTACHMENT_BYTES)
+    if (ok.length) setPendingFiles((p) => [...p, ...ok])
+    setFileNotice(
+      tooBig.length
+        ? `Too big to attach (25 MB max): ${tooBig.map((f) => f.name).join(", ")}`
+        : null
+    )
+  }, [])
+
+  // A file dropped anywhere else on the page would make the browser navigate
+  // away and lose the half-typed reply — swallow those drops while open.
+  useEffect(() => {
+    const swallow = (e: DragEvent) => {
+      if (dragHasFiles(e.dataTransfer)) e.preventDefault()
+    }
+    window.addEventListener("dragover", swallow)
+    window.addEventListener("drop", swallow)
+    return () => {
+      window.removeEventListener("dragover", swallow)
+      window.removeEventListener("drop", swallow)
+    }
+  }, [])
 
   const loadConvos = useCallback(async () => {
     const r = await fetch("/api/admin/conversations")
@@ -136,12 +174,20 @@ export default function MessageCenter() {
         }
         setSmsNotice(parts.join("  ·  "))
       }
-      for (const f of pendingFiles) {
+      // Attachments upload one at a time against the saved message; report any
+      // that don't make it rather than dropping them quietly.
+      const failed: string[] = []
+      for (let i = 0; i < pendingFiles.length; i++) {
+        const f = pendingFiles[i]
+        setAttachProgress(pendingFiles.length > 1 ? `Attaching ${i + 1} of ${pendingFiles.length}…` : `Attaching ${f.name}…`)
         const fd = new FormData()
         fd.append("file", f)
         fd.append("messageId", d.message.id)
-        await fetch("/api/message-files", { method: "POST", body: fd })
+        const up = await fetch("/api/message-files", { method: "POST", body: fd }).catch(() => null)
+        if (!up?.ok) failed.push(f.name)
       }
+      setAttachProgress(null)
+      setFileNotice(failed.length ? `Couldn't attach: ${failed.join(", ")}` : null)
       setBody("")
       setPendingFiles([])
       setAlsoText(false)
@@ -206,8 +252,42 @@ export default function MessageCenter() {
         </div>
       </div>
 
-      {/* Thread */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Thread — drop files anywhere over it to attach them to the reply */}
+      <div
+        className="flex-1 flex flex-col min-w-0 relative"
+        onDragEnter={(e) => {
+          if (!active || !dragHasFiles(e.dataTransfer)) return
+          e.preventDefault()
+          dragDepth.current += 1
+          setDropActive(true)
+        }}
+        onDragOver={(e) => {
+          if (!active || !dragHasFiles(e.dataTransfer)) return
+          e.preventDefault()
+          e.dataTransfer.dropEffect = "copy"
+        }}
+        onDragLeave={() => {
+          dragDepth.current = Math.max(0, dragDepth.current - 1)
+          if (dragDepth.current === 0) setDropActive(false)
+        }}
+        onDrop={async (e) => {
+          if (!active || !dragHasFiles(e.dataTransfer)) return
+          e.preventDefault()
+          dragDepth.current = 0
+          setDropActive(false)
+          const dropped = await collectDroppedFiles(e.dataTransfer)
+          attachFiles(dropped.map((d) => d.file))
+        }}
+      >
+        {dropActive && active && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none" style={{ background: "rgba(27,45,69,0.10)" }}>
+            <div className="rounded-2xl border-2 border-dashed bg-white/95 px-8 py-6 text-center shadow-sm" style={{ borderColor: "#1B2D45" }}>
+              <div className="text-3xl mb-1">📎</div>
+              <p className="text-sm font-semibold text-gray-900">Drop to attach to {active.name}</p>
+              <p className="text-xs text-gray-500 mt-0.5">You can drop several files at once — they send with your next message.</p>
+            </div>
+          </div>
+        )}
         {!active ? (
           <div className="flex-1 flex items-center justify-center text-sm text-gray-400">Select a conversation to read and reply.</div>
         ) : (
@@ -266,20 +346,32 @@ export default function MessageCenter() {
 
             <div className="border-t border-gray-200 p-3 bg-white">
               {pendingFiles.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {pendingFiles.map((f, i) => (
-                    <span key={i} className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
-                      📎 {f.name}
-                      <button onClick={() => setPendingFiles((p) => p.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-600">✕</button>
-                    </span>
-                  ))}
+                <div className="mb-2">
+                  <div className="flex items-center justify-between gap-3 mb-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                      {pendingFiles.length} {pendingFiles.length === 1 ? "file" : "files"} ready to send
+                    </p>
+                    <button onClick={() => setPendingFiles([])} className="text-[11px] text-gray-400 hover:text-red-600 underline">Remove all</button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {pendingFiles.map((f, i) => (
+                      <span key={`${f.name}-${i}`} className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
+                        📎 {f.name}
+                        <button onClick={() => setPendingFiles((p) => p.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-600">✕</button>
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
+              {fileNotice && <p className="mb-2 text-xs text-amber-700">{fileNotice}</p>}
               <div className="flex items-end gap-2">
-                <button type="button" onClick={() => fileRef.current?.click()} title="Attach files" className="px-2 py-2 text-gray-500 hover:text-gray-800 text-lg">📎</button>
-                <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length) setPendingFiles((p) => [...p, ...fs]); e.target.value = "" }} />
-                <textarea value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() } }} rows={1} placeholder="Send a message…" className="flex-1 resize-none px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32" />
+                <button type="button" onClick={() => fileRef.current?.click()} title="Attach files — or drag them onto the conversation" className="px-2 py-2 text-gray-500 hover:text-gray-800 text-lg">📎</button>
+                <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { attachFiles(Array.from(e.target.files ?? [])); e.target.value = "" }} />
+                <textarea value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() } }} rows={1} placeholder="Send a message… or drag files here to attach" className="flex-1 resize-none px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32" />
                 <button onClick={send} disabled={(!body.trim() && pendingFiles.length === 0) || sending} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 disabled:opacity-50">{sending ? "…" : "Send"}</button>
+              </div>
+              <div className="min-h-[1rem]">
+                {attachProgress && <p className="text-xs text-gray-500 mt-1">{attachProgress}</p>}
               </div>
               <div className="flex items-center justify-between gap-3 mt-1.5">
                 <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer select-none" title="Sends the message body as an SMS (requires SMS Reminders checked on the Clients board)">

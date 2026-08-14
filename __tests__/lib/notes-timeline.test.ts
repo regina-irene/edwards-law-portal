@@ -1,4 +1,4 @@
-import { mergeTimeline, type TimelineEvent } from "@/lib/notes-timeline"
+import { mergeTimeline, clientProseName, clientActor, type TimelineEvent } from "@/lib/notes-timeline"
 import type { ClientNote } from "@/lib/notes"
 
 const note = (id: string, at: string): ClientNote => ({ id, body: "<p>n</p>", created_at: at, updated_at: null, author_name: "Regina", author_email: "regina@x.com" })
@@ -20,5 +20,27 @@ describe("mergeTimeline", () => {
   })
   it("handles empty inputs", () => {
     expect(mergeTimeline([], [])).toEqual([])
+  })
+})
+
+describe("clientProseName", () => {
+  it("reads an Airtable 'Last | First' name as prose", () => {
+    expect(clientProseName("Grey | Cleon")).toBe("Cleon Grey")
+  })
+  it("handles a one-part name", () => {
+    expect(clientProseName("Grey")).toBe("Grey")
+  })
+  it("is empty when there's no name", () => {
+    expect(clientProseName(null)).toBe("")
+  })
+})
+
+describe("clientActor", () => {
+  it("names the client in timeline entries", () => {
+    expect(clientActor("Cleon Grey")).toBe("Client Cleon Grey")
+  })
+  it("falls back to a bare 'Client' when the name is unknown", () => {
+    expect(clientActor("")).toBe("Client")
+    expect(clientActor(undefined)).toBe("Client")
   })
 })

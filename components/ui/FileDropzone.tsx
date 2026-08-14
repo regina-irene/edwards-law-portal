@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useState, useCallback, useEffect } from "react"
+import { collectDroppedFiles } from "@/lib/drop-files"
 
 export interface DropFile {
   file: File
@@ -26,41 +27,6 @@ interface Props {
 }
 
 let counter = 0
-
-type Collected = { file: File; path: string }
-
-// Recursively walk a dropped file/folder entry, collecting files with their relative paths.
-function readEntry(entry: any, parentPath: string, out: Collected[]): Promise<void> {
-  return new Promise((resolve) => {
-    if (!entry) return resolve()
-    if (entry.isFile) {
-      entry.file(
-        (file: File) => { out.push({ file, path: parentPath + file.name }); resolve() },
-        () => resolve()
-      )
-    } else if (entry.isDirectory) {
-      const reader = entry.createReader()
-      const acc: any[] = []
-      const readBatch = () => {
-        reader.readEntries(
-          (entries: any[]) => {
-            if (entries.length === 0) {
-              // readEntries returns in batches; empty batch means we're done.
-              Promise.all(acc.map((c) => readEntry(c, parentPath + entry.name + "/", out))).then(() => resolve())
-            } else {
-              acc.push(...entries)
-              readBatch()
-            }
-          },
-          () => resolve()
-        )
-      }
-      readBatch()
-    } else {
-      resolve()
-    }
-  })
-}
 
 export default function FileDropzone({
   files,
@@ -128,18 +94,8 @@ export default function FileDropzone({
   const onDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     setDragOver(false)
-    const dt = e.dataTransfer
-    const items = dt.items
-    const canTraverse = items && items.length > 0 && typeof (items[0] as any).webkitGetAsEntry === "function"
-    if (canTraverse) {
-      // Capture entries synchronously — dataTransfer is cleared after this handler returns.
-      const entries = Array.from(items).map((it) => (it as any).webkitGetAsEntry()).filter(Boolean)
-      const collected: Collected[] = []
-      await Promise.all(entries.map((en) => readEntry(en, "", collected)))
-      if (collected.length) addItems(collected.map((c) => ({ file: c.file, relativePath: c.path })))
-    } else {
-      addItems(Array.from(dt.files).map((file) => ({ file, relativePath: (file as any).webkitRelativePath || file.name })))
-    }
+    const collected = await collectDroppedFiles(e.dataTransfer)
+    if (collected.length) addItems(collected)
   }
 
   const remove = (id: string) => onChange(files.filter((f) => f.id !== id))
