@@ -11,6 +11,23 @@ import { fetchAllClientsRaw, clientDisplayLabel } from "@/lib/airtable"
 import { getClientLabels } from "@/lib/client-labels"
 import { requireAdmin } from "@/lib/admin"
 import { latestNoteByClient, searchNotes, listNoteAuthors, countNotes, type NoteSearchHit } from "@/lib/notes"
+import { fetchAllEvents, clientProseName, type TimelineEvent } from "@/lib/notes-timeline"
+
+const EVENT_ICONS: Record<string, string> = { chat: "💬", message: "💬", upload: "📎", form: "📋", task: "✅", view: "👁️" }
+
+// What the "Show" filter offers. Field notes are their own kind so the log can
+// be narrowed back to just the written record.
+const KINDS: { key: string; label: string; match: (e: TimelineEvent) => boolean }[] = [
+  { key: "", label: "All activity", match: () => true },
+  { key: "notes", label: "Field notes only", match: () => false },
+  { key: "messages", label: "Messages", match: (e) => e.kind === "chat" || e.kind === "message" },
+  { key: "files", label: "Files", match: (e) => e.kind === "upload" || e.kind === "view" },
+  { key: "forms", label: "Forms & tasks", match: (e) => e.kind === "form" || e.kind === "task" },
+]
+
+type LogRow =
+  | { type: "note"; at: string; clientId: string; key: string; note: NoteSearchHit }
+  | { type: "event"; at: string; clientId: string; key: string; event: TimelineEvent }
 
 export const dynamic = "force-dynamic"
 
@@ -34,31 +51,32 @@ function timeOf(d: string): string {
 export default async function FieldNotesHub({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; author?: string; case?: string; limit?: string }>
+  searchParams: Promise<{ q?: string; author?: string; case?: string; limit?: string; show?: string }>
 }) {
   const check = await requireAdmin()
   if (check.status !== "ok") redirect("/login")
 
-  const { q, author, case: caseId, limit } = await searchParams
+  const { q, author, case: caseId, limit, show } = await searchParams
   const query = (q ?? "").trim()
   const writer = (author ?? "").trim()
   const forCase = (caseId ?? "").trim()
+  const kind = KINDS.some((k) => k.key === (show ?? "")) ? (show ?? "") : ""
   const shown = Math.min(Math.max(Number(limit) || PAGE, PAGE), 500)
 
-  // A failed log read must show an explicit error, never a false "no notes yet",
+  // A failed read must show an explicit error, never a false "nothing here",
   // so carry the outcome rather than flattening it to an empty list.
   const [clients, labels, latest, authors, logResult, total] = await Promise.all([
     fetchAllClientsRaw().catch(() => []),
     getClientLabels().catch(() => ({}) as Record<string, string>),
     latestNoteByClient().catch(() => new Map<string, { snippet: string; created_at: string; author_name: string | null }>()),
     listNoteAuthors().catch(() => [] as string[]),
-    searchNotes(query, writer, forCase, shown)
+    // Notes are capped generously: the merged log is trimmed after sorting.
+    searchNotes(query, writer, forCase, 500)
       .then((rows) => ({ ok: true, rows }))
       .catch(() => ({ ok: false, rows: [] as NoteSearchHit[] })),
     countNotes().catch(() => 0),
   ])
   const notesFailed = !logResult.ok
-  const log = logResult.rows
 
   const labelOf = (id: string, fallbackName?: string) =>
     labels[id] || (fallbackName ? clientDisplayLabel(fallbackName) : "") || id
@@ -72,13 +90,43 @@ export default async function FieldNotesHub({
     }))
     .sort((a, b) => a.label.localeCompare(b.label))
 
-  const filtered = Boolean(query || writer || forCase)
+  const filtered = Boolean(query || writer || forCase || kind)
   const caseLabel = (id: string) => labelOf(id, clients.find((c) => String(c.clientId) === id)?.name)
 
+  // Portal activity across every case. The "written by" filter is about who
+  // wrote a note, so it excludes events; so does "field notes only".
+  const wantsEvents = !writer && kind !== "notes"
+  const nameOf = (id: string) =>
+    clientProseName(clients.find((c) => String(c.clientId) === id)?.name) || labels[id] || ""
+  const events = wantsEvents ? await fetchAllEvents(nameOf).catch(() => [] as TimelineEvent[]) : []
+
+  const kindMatch = KINDS.find((k) => k.key === kind) ?? KINDS[0]
+  const eventRows: LogRow[] = events
+    .filter((e) => e.clientId)
+    .filter((e) => !forCase || e.clientId === forCase)
+    .filter((e) => (kind ? kindMatch.match(e) : true))
+    .filter((e) => !query || e.detail.toLowerCase().includes(query.toLowerCase()) || caseLabel(e.clientId!).toLowerCase().includes(query.toLowerCase()))
+    .map((e) => ({ type: "event" as const, at: e.at, clientId: e.clientId!, key: e.id, event: e }))
+
+  const noteRows: LogRow[] = logResult.rows.map((n) => ({
+    type: "note" as const,
+    at: n.created_at,
+    clientId: n.clientId,
+    key: `note-${n.noteId}`,
+    note: n,
+  }))
+
+  const merged = [...noteRows, ...eventRows]
+    .sort((a, b) => {
+      const t = new Date(b.at).getTime() - new Date(a.at).getTime()
+      return t !== 0 ? t : b.key.localeCompare(a.key)
+    })
+  const log = merged.slice(0, shown)
+
   // Group the log by day so it reads like a log book rather than a flat list.
-  const days: { heading: string; entries: NoteSearchHit[] }[] = []
+  const days: { heading: string; entries: LogRow[] }[] = []
   for (const entry of log) {
-    const heading = dayHeading(entry.created_at)
+    const heading = dayHeading(entry.at)
     const last = days[days.length - 1]
     if (last && last.heading === heading) last.entries.push(entry)
     else days.push({ heading, entries: [entry] })
@@ -88,6 +136,7 @@ export default async function FieldNotesHub({
   if (query) params.set("q", query)
   if (writer) params.set("author", writer)
   if (forCase) params.set("case", forCase)
+  if (kind) params.set("show", kind)
   params.set("limit", String(shown + PAGE))
 
   return (
@@ -114,6 +163,14 @@ export default async function FieldNotesHub({
           </select>
         )}
         <select
+          name="show"
+          defaultValue={kind}
+          aria-label="Show"
+          className="px-3 py-2.5 text-sm bg-white border border-gray-300 rounded-xl text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          {KINDS.map((k) => <option key={k.key} value={k.key}>{k.label}</option>)}
+        </select>
+        <select
           name="case"
           defaultValue={forCase}
           aria-label="Case"
@@ -132,16 +189,16 @@ export default async function FieldNotesHub({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 space-y-3">
-          <div className="flex items-baseline gap-3">
+          <div className="flex items-baseline gap-3 flex-wrap">
             <p className="section-label">
-              {filtered ? "Matching notes" : "Running log — every case"}
+              {filtered ? "Matching activity" : "Running log — every case"}
             </p>
             <span className="text-xs text-gray-400">
-              {filtered
-                ? `${log.length} ${log.length === 1 ? "note" : "notes"}`
-                : `${log.length} of ${total} ${total === 1 ? "note" : "notes"}`}
-              {writer && ` · written by ${writer}`}
+              {log.length} of {merged.length} {merged.length === 1 ? "entry" : "entries"}
+              {!filtered && total > 0 && ` · ${total} ${total === 1 ? "note" : "notes"}`}
+              {writer && ` · notes by ${writer}`}
               {forCase && ` · ${caseLabel(forCase)}`}
+              {kind && ` · ${kindMatch.label.toLowerCase()}`}
             </span>
           </div>
 
@@ -153,7 +210,7 @@ export default async function FieldNotesHub({
 
           {!notesFailed && log.length === 0 && (
             <p className="text-sm text-gray-500 bg-white rounded-xl border border-gray-200 p-6">
-              {filtered ? "No note matches those filters." : "No notes yet — open a case and write the first one."}
+              {filtered ? "Nothing matches those filters." : "No activity yet — open a case and write the first note."}
             </p>
           )}
 
@@ -161,27 +218,48 @@ export default async function FieldNotesHub({
             <div key={day.heading} className="space-y-2">
               <p className="text-[11px] uppercase tracking-wider text-gray-400 pt-1">{day.heading}</p>
               <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
-                {day.entries.map((entry) => (
-                  <Link
-                    key={entry.noteId}
-                    href={`/admin/notes/${encodeURIComponent(entry.clientId)}`}
-                    className="block px-5 py-3.5 hover:bg-gray-50"
-                    style={{ borderLeft: "3px solid transparent" }}
-                  >
-                    <p className="flex items-baseline justify-between gap-3">
-                      <span className="text-sm font-semibold text-gray-900 truncate">{caseLabel(entry.clientId)}</span>
-                      <span className="shrink-0 text-xs text-gray-400">
-                        {timeOf(entry.created_at)}{entry.author_name && ` · ${entry.author_name}`}
-                      </span>
-                    </p>
-                    <p className="text-sm text-gray-600 mt-0.5">{entry.snippet}</p>
-                  </Link>
-                ))}
+                {day.entries.map((entry) =>
+                  entry.type === "note" ? (
+                    // Written notes are the important entries: navy edge, like
+                    // the per-case timeline.
+                    <Link
+                      key={entry.key}
+                      href={`/admin/notes/${encodeURIComponent(entry.clientId)}`}
+                      className="block px-5 py-3.5 hover:bg-gray-50"
+                      style={{ borderLeft: "3px solid #1b2d45" }}
+                    >
+                      <p className="flex items-baseline justify-between gap-3">
+                        <span className="text-sm font-semibold text-gray-900 truncate">📌 {caseLabel(entry.clientId)}</span>
+                        <span className="shrink-0 text-xs text-gray-400">
+                          {timeOf(entry.at)}{entry.note.author_name && ` · ${entry.note.author_name}`}
+                        </span>
+                      </p>
+                      <p className="text-sm text-gray-600 mt-0.5">{entry.note.snippet}</p>
+                    </Link>
+                  ) : (
+                    <div key={entry.key} className="px-5 py-2.5 hover:bg-gray-50" style={{ borderLeft: "3px solid transparent" }}>
+                      <p className="flex items-baseline justify-between gap-3">
+                        <Link href={`/admin/notes/${encodeURIComponent(entry.clientId)}`} className="text-sm font-semibold text-gray-700 truncate hover:underline">
+                          {EVENT_ICONS[entry.event.kind] ?? "•"} {caseLabel(entry.clientId)}
+                        </Link>
+                        <span className="shrink-0 text-xs text-gray-400">{timeOf(entry.at)}</span>
+                      </p>
+                      <p className="text-[13px] text-gray-600 mt-0.5">
+                        {entry.event.detail}
+                        {entry.event.href && (
+                          <a href={entry.event.href} target="_blank" rel="noreferrer" className="ml-2 text-blue-600 underline hover:text-blue-800">
+                            {entry.event.linkLabel ?? "Open file"}
+                          </a>
+                        )}
+                      </p>
+                    </div>
+                  )
+                )}
               </div>
             </div>
           ))}
 
-          {log.length >= shown && (
+          {merged.length > log.length && (
             <Link href={`/admin/notes?${params.toString()}`} className="inline-block text-sm underline text-gray-600 hover:text-gray-900">
               Show older notes
             </Link>
