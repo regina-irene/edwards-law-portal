@@ -71,6 +71,38 @@ export async function POST(req: Request) {
     }
   }
 
+  // Copy a task (with its linked form, embed and notes) into another stage,
+  // instead of retyping it there.
+  if (action === "copy_template") {
+    const sourceId = typeof templateId === "string" ? templateId : ""
+    const toStage = typeof stage === "string" && stage.trim() ? stage.trim() : ""
+    if (!sourceId || !toStage) return NextResponse.json({ error: "templateId and stage required" }, { status: 400 })
+    try {
+      const src = await sql`
+        SELECT title, description, tag, notes, form_key, embed_url FROM task_templates WHERE id = ${sourceId}
+      `
+      if (src.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 })
+      const t = src.rows[0]
+      // Land at the end of the target stage, reusing that stage's order.
+      const ord = await sql`
+        SELECT
+          COALESCE(MAX(stage_order), (SELECT COALESCE(MAX(stage_order) + 1, 0) FROM task_templates)) AS stage_order,
+          COALESCE(MAX(sort_order) + 1, 0) AS sort_order
+        FROM task_templates WHERE stage = ${toStage}
+      `
+      const result = await sql`
+        INSERT INTO task_templates (title, description, stage, tag, notes, form_key, embed_url, stage_order, sort_order)
+        VALUES (${t.title}, ${t.description}, ${toStage}, ${t.tag}, ${t.notes}, ${t.form_key}, ${t.embed_url},
+                ${ord.rows[0]?.stage_order ?? 0}, ${ord.rows[0]?.sort_order ?? 0})
+        RETURNING id, title, stage
+      `
+      return NextResponse.json({ template: result.rows[0] }, { status: 201 })
+    } catch (e) {
+      console.error("[admin/tasks] copy failed:", e)
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
+  }
+
   if (action === "assign") {
     if (typeof clientId !== "string" || !clientId) {
       return NextResponse.json({ error: "clientId required" }, { status: 400 })
@@ -130,10 +162,11 @@ export async function PATCH(req: Request) {
   const check = await requireAdmin()
   if (check.status !== "ok") return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  let id: unknown, title: unknown, tag: unknown, oldStage: unknown, newStage: unknown, notes: unknown, formKey: unknown, embedUrl: unknown, taskId: unknown, dueDate: unknown, status: unknown
+  let id: unknown, title: unknown, tag: unknown, oldStage: unknown, newStage: unknown, notes: unknown, formKey: unknown, embedUrl: unknown, taskId: unknown, dueDate: unknown, status: unknown, moveToStage: unknown
   try {
     const parsed = await req.json()
     status = parsed?.status
+    moveToStage = parsed?.moveToStage
     id = parsed?.id
     title = parsed?.title
     tag = parsed?.tag
@@ -207,6 +240,31 @@ export async function PATCH(req: Request) {
       await sql`UPDATE task_templates SET embed_url = ${url} WHERE id = ${id}`
       return NextResponse.json({ ok: true })
     } catch {
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
+  }
+
+  // Move a task to another stage: it keeps its title, tag, notes and linked
+  // form, and lands at the end of the stage it moves to.
+  if (typeof id === "string" && id && typeof moveToStage === "string" && moveToStage.trim()) {
+    const toStage = moveToStage.trim()
+    try {
+      const ord = await sql`
+        SELECT
+          COALESCE(MAX(stage_order), (SELECT COALESCE(MAX(stage_order) + 1, 0) FROM task_templates)) AS stage_order,
+          COALESCE(MAX(sort_order) + 1, 0) AS sort_order
+        FROM task_templates WHERE stage = ${toStage}
+      `
+      const result = await sql`
+        UPDATE task_templates
+        SET stage = ${toStage}, stage_order = ${ord.rows[0]?.stage_order ?? 0}, sort_order = ${ord.rows[0]?.sort_order ?? 0}
+        WHERE id = ${id}
+        RETURNING id, title, stage
+      `
+      if (result.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 })
+      return NextResponse.json({ template: result.rows[0] })
+    } catch (e) {
+      console.error("[admin/tasks] move failed:", e)
       return NextResponse.json({ error: "Internal server error" }, { status: 500 })
     }
   }

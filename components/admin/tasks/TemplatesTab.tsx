@@ -38,6 +38,12 @@ export default function TemplatesTab({
   const [editingStage, setEditingStage] = useState<string | null>(null)
   const [stageDraft, setStageDraft] = useState("")
 
+  // Which row's "move or copy to another stage" control is open, and where it
+  // is pointed.
+  const [movingId, setMovingId] = useState<string | null>(null)
+  const [moveTarget, setMoveTarget] = useState("")
+  const [moveBusy, setMoveBusy] = useState(false)
+
   const [openTaskId, setOpenTaskId] = useState<string | null>(null)
   const [notesDraft, setNotesDraft] = useState("")
   const [savingNotes, setSavingNotes] = useState(false)
@@ -96,6 +102,23 @@ export default function TemplatesTab({
   async function saveTaskEdit(id: string) {
     if (!editTitle.trim()) return
     if (await post({ id, title: editTitle, tag: editTag || undefined }, "PATCH")) setEditingTaskId(null)
+  }
+
+  // Move keeps one copy and re-files it; copy leaves the original where it is.
+  // Either way the task carries its tag, notes and linked form.
+  async function moveOrCopy(templateId: string, toStage: string, copy: boolean) {
+    if (!toStage) return
+    setMoveBusy(true)
+    const ok = copy
+      ? await post({ action: "copy_template", templateId, stage: toStage })
+      : await post({ id: templateId, moveToStage: toStage }, "PATCH")
+    setMoveBusy(false)
+    if (ok) {
+      setMovingId(null)
+      setMoveTarget("")
+      // Open the destination so the task is visible where it landed.
+      setOpenStages((prev) => (prev.includes(toStage) ? prev : [...prev, toStage]))
+    }
   }
 
   async function saveStageRename(oldStage: string) {
@@ -240,7 +263,7 @@ export default function TemplatesTab({
               <div id={panelId}>
                 <ul className="divide-y divide-gray-100">
                   {group.tasks.map((t) => (
-                    <li key={t.id} className="flex items-center gap-3 px-4 py-2 odd:bg-white even:bg-gray-50/40 hover:bg-blue-50/40 transition-colors">
+                    <li key={t.id} className="flex items-center gap-3 flex-wrap px-4 py-2 odd:bg-white even:bg-gray-50/40 hover:bg-blue-50/40 transition-colors">
                       {editingTaskId === t.id ? (
                         <div className="flex items-center gap-2 flex-1 flex-wrap">
                           <input
@@ -283,11 +306,61 @@ export default function TemplatesTab({
                             <IconButton label={`Rename ${t.title}`} onClick={() => { setEditingTaskId(t.id); setEditTitle(t.title); setEditTag(t.tag ?? "") }}>
                               ✏️
                             </IconButton>
+                            <IconButton
+                              label={`Move or copy ${t.title} to another stage`}
+                              active={movingId === t.id}
+                              onClick={() => {
+                                if (movingId === t.id) { setMovingId(null); return }
+                                setMovingId(t.id)
+                                setMoveTarget("")
+                              }}
+                            >
+                              ⇄
+                            </IconButton>
                             <IconButton label={`Delete ${t.title}`} danger onClick={() => confirmDeleteTask(t)}>
                               🗑️
                             </IconButton>
                           </span>
                         </>
+                      )}
+                      {movingId === t.id && (
+                        <div className="basis-full flex items-center gap-2 flex-wrap pt-2 mt-1 border-t border-gray-100">
+                          <label htmlFor={`move-${t.id}`} className="text-xs text-gray-500">Send to</label>
+                          <select
+                            id={`move-${t.id}`}
+                            autoFocus
+                            value={moveTarget}
+                            onChange={(e) => setMoveTarget(e.target.value)}
+                            className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-900"
+                          >
+                            <option value="">Choose a stage…</option>
+                            {groups
+                              .map((g) => g.stage)
+                              .filter((s) => s !== group.stage)
+                              .map((s) => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => moveOrCopy(t.id, moveTarget, false)}
+                            disabled={!moveTarget || moveBusy}
+                            className="px-3 py-1.5 rounded-lg text-white text-xs font-semibold disabled:bg-gray-300"
+                            style={moveTarget && !moveBusy ? { background: "#1b2d45" } : undefined}
+                          >
+                            {moveBusy ? "Working…" : "Move here"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveOrCopy(t.id, moveTarget, true)}
+                            disabled={!moveTarget || moveBusy}
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-gray-300 text-gray-700 disabled:text-gray-300 disabled:border-gray-200"
+                          >
+                            Copy here
+                          </button>
+                          <button type="button" onClick={() => setMovingId(null)} className="text-xs text-gray-400 hover:underline">Cancel</button>
+                          <span className="text-[11px] text-gray-400">
+                            Move re-files this task; copy leaves it here too. Either way it keeps its tag, notes and linked form.
+                          </span>
+                        </div>
                       )}
                     </li>
                   ))}
