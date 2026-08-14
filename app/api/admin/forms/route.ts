@@ -8,6 +8,7 @@ import {
   uniqueKey,
   normalizeDefinition,
   countFields,
+  listStages,
 } from "@/lib/portal-forms"
 import { listForms, getForm } from "@/lib/fileflow"
 import { NextResponse } from "next/server"
@@ -37,6 +38,7 @@ export async function GET(req: Request) {
           key: form.key,
           label: form.label,
           description: form.description,
+          stage: form.stage,
           sections: form.definition.sections,
         },
       })
@@ -47,12 +49,14 @@ export async function GET(req: Request) {
   }
 
   try {
-    const forms = await listPortalForms()
+    const [forms, stages] = await Promise.all([listPortalForms(), listStages()])
     return NextResponse.json({
+      stages,
       forms: forms.map((f) => ({
         key: f.key,
         label: f.label,
         description: f.description,
+        stage: f.stage,
         source: f.source,
         updated_at: f.updated_at,
         fieldCount: countFields(f.definition),
@@ -123,7 +127,16 @@ export async function POST(req: Request) {
     if (definition.sections.length === 0) {
       return NextResponse.json({ error: "A form needs at least one question." }, { status: 400 })
     }
-    const saved = await savePortalForm({ key, label, description: definition.description, definition, source: typeof body?.source === "string" ? body.source : null })
+    // An empty stage means standalone — a form that sits outside every stage.
+    const stage = typeof body?.stage === "string" && body.stage.trim() ? body.stage.trim() : null
+    const saved = await savePortalForm({
+      key,
+      label,
+      description: definition.description,
+      definition,
+      stage,
+      source: typeof body?.source === "string" ? body.source : null,
+    })
     return NextResponse.json({ form: { key: saved.key, label: saved.label, fieldCount: countFields(saved.definition) } }, { status: 201 })
   } catch (e) {
     console.error("[admin/forms] save failed:", e)

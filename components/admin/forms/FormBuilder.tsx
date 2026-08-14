@@ -26,6 +26,8 @@ export interface Draft {
   key: string
   label: string
   description: string | null
+  // Which stage of the case this form belongs to; null = standalone.
+  stage?: string | null
   sections: DraftSection[]
 }
 
@@ -44,15 +46,19 @@ const TYPE_LABELS: Record<string, string> = {
 
 export default function FormBuilder({
   initial,
+  stages,
   onSaved,
   onCancel,
 }: {
   initial?: Draft | null
+  // The stages on the task board — a form is filed under one, or stands alone.
+  stages: string[]
   onSaved: (label: string) => void
   onCancel: () => void
 }) {
   const [mode, setMode] = useState<"pdf" | "text">("pdf")
   const [label, setLabel] = useState(initial?.label ?? "")
+  const [stage, setStage] = useState(initial?.stage ?? "")
   const [pasted, setPasted] = useState("")
   const [file, setFile] = useState<File | null>(null)
   const [draft, setDraft] = useState<Draft | null>(initial ?? null)
@@ -192,6 +198,7 @@ export default function FormBuilder({
         key: draft.key || undefined,
         label: label.trim(),
         description: draft.description,
+        stage: stage || null,
         sections: draft.sections,
       }),
     }).catch(() => null)
@@ -217,15 +224,30 @@ export default function FormBuilder({
           </p>
         )}
 
-        <div className="flex flex-col gap-1 max-w-md">
-          <label htmlFor="form-label" className="text-xs font-semibold text-gray-500">Form name</label>
-          <input
-            id="form-label"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="e.g. Client Information Worksheet"
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+        <div className="flex flex-wrap gap-4 items-end">
+          <div className="flex flex-col gap-1 flex-1 min-w-[16rem]">
+            <label htmlFor="form-label" className="text-xs font-semibold text-gray-500">Form name</label>
+            <input
+              id="form-label"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="e.g. Client Information Worksheet"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="form-stage" className="text-xs font-semibold text-gray-500">Stage</label>
+            <select
+              id="form-stage"
+              value={stage}
+              onChange={(e) => setStage(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Standalone — no stage</option>
+              {stages.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <span className="text-[11px] text-gray-400">The same stages as your task board</span>
+          </div>
         </div>
 
         {!initial && (

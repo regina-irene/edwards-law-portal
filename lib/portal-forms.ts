@@ -45,6 +45,8 @@ export interface PortalForm {
   key: string
   label: string
   description: string | null
+  // The case stage this form belongs to; null = standalone.
+  stage: string | null
   definition: FormDefinition
   source: string | null
   updated_at: string
@@ -52,7 +54,7 @@ export interface PortalForm {
 
 export async function listPortalForms(): Promise<PortalForm[]> {
   const r = await sql`
-    SELECT key, label, description, definition, source, updated_at
+    SELECT key, label, description, definition, source, stage, updated_at
     FROM portal_forms WHERE archived = FALSE ORDER BY label ASC
   `
   return r.rows.map(toPortalForm)
@@ -60,7 +62,7 @@ export async function listPortalForms(): Promise<PortalForm[]> {
 
 export async function getPortalForm(key: string): Promise<PortalForm | null> {
   const r = await sql`
-    SELECT key, label, description, definition, source, updated_at
+    SELECT key, label, description, definition, source, stage, updated_at
     FROM portal_forms WHERE key = ${key} AND archived = FALSE LIMIT 1
   `
   return r.rows[0] ? toPortalForm(r.rows[0]) : null
@@ -72,9 +74,25 @@ function toPortalForm(row: Record<string, unknown>): PortalForm {
     key: String(row.key),
     label: String(row.label),
     description: row.description ? String(row.description) : null,
+    stage: row.stage ? String(row.stage) : null,
     definition,
     source: row.source ? String(row.source) : null,
     updated_at: String(row.updated_at),
+  }
+}
+
+// The stages a form can be filed under: exactly the ones on the task board, so
+// the two screens never drift. Stages Regina adds there appear here too.
+export async function listStages(): Promise<string[]> {
+  try {
+    const r = await sql`
+      SELECT stage, MIN(stage_order) AS ord FROM task_templates
+      WHERE stage IS NOT NULL AND stage <> ''
+      GROUP BY stage ORDER BY MIN(stage_order), stage
+    `
+    return r.rows.map((row) => String(row.stage))
+  } catch {
+    return []
   }
 }
 
@@ -98,17 +116,19 @@ export async function savePortalForm(form: {
   description?: string | null
   definition: FormDefinition
   source?: string | null
+  stage?: string | null
 }): Promise<PortalForm> {
   const r = await sql`
-    INSERT INTO portal_forms (key, label, description, definition, source, updated_at)
-    VALUES (${form.key}, ${form.label}, ${form.description ?? null}, ${JSON.stringify(form.definition)}, ${form.source ?? null}, NOW())
+    INSERT INTO portal_forms (key, label, description, definition, source, stage, updated_at)
+    VALUES (${form.key}, ${form.label}, ${form.description ?? null}, ${JSON.stringify(form.definition)}, ${form.source ?? null}, ${form.stage ?? null}, NOW())
     ON CONFLICT (key) DO UPDATE SET
       label = EXCLUDED.label,
       description = EXCLUDED.description,
       definition = EXCLUDED.definition,
+      stage = EXCLUDED.stage,
       archived = FALSE,
       updated_at = NOW()
-    RETURNING key, label, description, definition, source, updated_at
+    RETURNING key, label, description, definition, source, stage, updated_at
   `
   return toPortalForm(r.rows[0])
 }

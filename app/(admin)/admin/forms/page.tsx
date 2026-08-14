@@ -11,11 +11,14 @@ interface FormRow {
   key: string
   label: string
   description: string | null
+  stage: string | null
   source: string | null
   updated_at: string
   fieldCount: number
   sections: number
 }
+
+const STANDALONE = "Standalone — not in a stage"
 
 function fmt(d: string): string {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" })
@@ -23,6 +26,7 @@ function fmt(d: string): string {
 
 export default function AdminFormsPage() {
   const [forms, setForms] = useState<FormRow[]>([])
+  const [stages, setStages] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [building, setBuilding] = useState(false)
   const [editing, setEditing] = useState<Draft | null>(null)
@@ -36,6 +40,7 @@ export default function AdminFormsPage() {
     if (res?.ok) {
       const d = await res.json()
       setForms(d.forms ?? [])
+      setStages(d.stages ?? [])
       setError(null)
     } else {
       setError("Couldn't load your forms.")
@@ -121,11 +126,13 @@ export default function AdminFormsPage() {
         <FormBuilder
           key={editing.key}
           initial={editing}
+          stages={stages}
           onSaved={(label) => { setEditing(null); setNotice(`Saved your changes to “${label}”.`); load() }}
           onCancel={() => setEditing(null)}
         />
       ) : building ? (
         <FormBuilder
+          stages={stages}
           onSaved={(label) => { setBuilding(false); setNotice(`Saved “${label}”. Link it to a task from the Tasks screen.`); load() }}
           onCancel={() => setBuilding(false)}
         />
@@ -140,8 +147,23 @@ export default function AdminFormsPage() {
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
-          {forms.map((f) => (
+        // Grouped in task-board order, with anything standalone last.
+        [...stages, STANDALONE]
+          .map((stage) => ({
+            stage,
+            rows: forms.filter((f) => (stage === STANDALONE ? !f.stage : f.stage === stage)),
+          }))
+          .filter((g) => g.rows.length > 0)
+          .map((group) => (
+            <div key={group.stage} className="space-y-2">
+              <p className="section-label">
+                {group.stage}
+                <span className="ml-2 font-normal text-gray-400">
+                  {group.rows.length} {group.rows.length === 1 ? "form" : "forms"}
+                </span>
+              </p>
+              <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+          {group.rows.map((f) => (
             <div key={f.key} className="flex items-baseline justify-between gap-4 px-5 py-3.5">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-gray-900">
@@ -170,7 +192,9 @@ export default function AdminFormsPage() {
               </span>
             </div>
           ))}
-        </div>
+              </div>
+            </div>
+          ))
       )}
 
       {!building && forms.length > 0 && (

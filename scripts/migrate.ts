@@ -311,6 +311,9 @@ export const MIGRATION_SQL = `
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
+  -- Which stage of the case a form belongs to, matching the task board's
+  -- stages. NULL means a standalone form that sits outside every stage.
+  ALTER TABLE portal_forms ADD COLUMN IF NOT EXISTS stage TEXT;
   ALTER TABLE client_tasks ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
 `
 
