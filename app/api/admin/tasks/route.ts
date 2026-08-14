@@ -130,9 +130,10 @@ export async function PATCH(req: Request) {
   const check = await requireAdmin()
   if (check.status !== "ok") return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  let id: unknown, title: unknown, tag: unknown, oldStage: unknown, newStage: unknown, notes: unknown, formKey: unknown, embedUrl: unknown, taskId: unknown, dueDate: unknown
+  let id: unknown, title: unknown, tag: unknown, oldStage: unknown, newStage: unknown, notes: unknown, formKey: unknown, embedUrl: unknown, taskId: unknown, dueDate: unknown, status: unknown
   try {
     const parsed = await req.json()
+    status = parsed?.status
     id = parsed?.id
     title = parsed?.title
     tag = parsed?.tag
@@ -145,6 +146,28 @@ export async function PATCH(req: Request) {
     dueDate = parsed?.dueDate
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
+  }
+
+  // Mark an assigned task done (or reopen it) from the admin side. Mirrors the
+  // client's own PATCH /api/tasks so completed_at stays consistent — Field
+  // Notes reads that column for its "task completed" entries.
+  if (typeof taskId === "string" && taskId && typeof status === "string") {
+    if (!["pending", "done"].includes(status)) {
+      return NextResponse.json({ error: "status must be pending or done" }, { status: 400 })
+    }
+    try {
+      const result = await sql`
+        UPDATE client_tasks
+        SET status = ${status},
+            completed_at = CASE WHEN ${status} = 'done' THEN NOW() ELSE NULL END
+        WHERE id = ${taskId}
+        RETURNING id, client_id, title, description, status, due_date, stage, tag, stage_order, sort_order, created_at
+      `
+      if (result.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 })
+      return NextResponse.json({ task: result.rows[0] })
+    } catch {
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
   }
 
   // Change (or clear) the due date on a task already assigned to a client.
