@@ -216,6 +216,9 @@ export default function AssignTab({
                           type="checkbox"
                           checked={selectedTemplates.includes(t.id)}
                           onChange={() => toggleTemplate(t.id)}
+                          // Named explicitly: the wrapping label alone left these
+                          // announcing as just "on" to a screen reader.
+                          aria-label={t.title}
                           className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
                         <span className="flex-1 min-w-0 truncate">{t.title}</span>
