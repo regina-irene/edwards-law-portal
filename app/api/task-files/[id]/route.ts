@@ -3,6 +3,7 @@ import { auth } from "@/auth"
 import { requireAdmin } from "@/lib/admin"
 import { getClientByEmail } from "@/lib/airtable"
 import { sql } from "@/lib/db"
+import { recordFileView } from "@/lib/file-views"
 import { get, del } from "@vercel/blob"
 import { NextResponse } from "next/server"
 
@@ -24,12 +25,18 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!att) return new NextResponse("Not found", { status: 404 })
 
   let allowed = false
+  let viewerRole: "client" | "firm" = "client"
+  let viewerEmail: string | null = null
+  let viewerClientId: string | null = null
   const adminCheck = await requireAdmin()
   if (adminCheck.status === "ok") {
     allowed = true
+    viewerRole = "firm"
+    viewerEmail = adminCheck.email
   } else {
     const cid = await clientIdForRequest()
     if (cid) {
+      viewerClientId = cid
       if (att.scope === "client_task") {
         allowed = att.client_id === cid
       } else if (att.scope === "template") {
@@ -42,6 +49,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const result = await get(att.pathname, { access: "private" })
   if (!result || result.statusCode !== 200) return new NextResponse("Not found", { status: 404 })
+
+  // Log the open only once the file is really being served.
+  await recordFileView({
+    scope: "task",
+    fileId: id,
+    clientId: viewerRole === "firm" ? (att.client_id ? String(att.client_id) : null) : viewerClientId,
+    viewerEmail,
+    viewerRole,
+  })
 
   return new NextResponse(result.stream, {
     headers: {

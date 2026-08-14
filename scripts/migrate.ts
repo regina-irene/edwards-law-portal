@@ -284,6 +284,19 @@ export const MIGRATION_SQL = `
   -- who wrote the note (2026-08-11); older notes have no author recorded
   ALTER TABLE client_notes ADD COLUMN IF NOT EXISTS author_email TEXT;
   ALTER TABLE client_notes ADD COLUMN IF NOT EXISTS author_name TEXT;
+
+  -- File opens (2026-08-14): one row per time an attachment is streamed, so
+  -- Field Notes can show that a client actually opened a document.
+  CREATE TABLE IF NOT EXISTS file_views (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    scope TEXT NOT NULL CHECK (scope IN ('task','message')),
+    file_id TEXT NOT NULL,
+    client_id TEXT,
+    viewer_email TEXT,
+    viewer_role TEXT NOT NULL CHECK (viewer_role IN ('client','firm')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS file_views_client_idx ON file_views (client_id, created_at DESC);
   ALTER TABLE client_tasks ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
 `
 

@@ -7,7 +7,7 @@ import { RichTextEditor, RichTextView } from "@/components/ui/RichTextEditor"
 import type { TimelineItem } from "@/lib/notes-timeline"
 import type { ClientNote } from "@/lib/notes"
 
-const EVENT_ICONS: Record<string, string> = { chat: "💬", message: "💬", upload: "📎", form: "📋", task: "✅" }
+const EVENT_ICONS: Record<string, string> = { chat: "💬", message: "💬", upload: "📎", form: "📋", task: "✅", view: "👁️" }
 const PAGE = 200
 
 function fmt(at: string): string {

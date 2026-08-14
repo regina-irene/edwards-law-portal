@@ -7,7 +7,7 @@ import type { ClientNote } from "@/lib/notes"
 
 export interface TimelineEvent {
   id: string
-  kind: "chat" | "message" | "upload" | "form" | "task"
+  kind: "chat" | "message" | "upload" | "form" | "task" | "view"
   at: string
   sender?: "client" | "firm"
   smsStatus?: string | null
@@ -57,7 +57,7 @@ const PER_SOURCE_LIMIT = 500
 export async function fetchClientEvents(clientId: string, clientName?: string): Promise<TimelineEvent[]> {
   const cid = String(clientId)
   const who = clientActor(clientName)
-  const [chat, legacy, taskFiles, firmTaskFiles, msgFiles, driveFiles, forms, doneTasks] = await Promise.all([
+  const [chat, legacy, taskFiles, firmTaskFiles, msgFiles, driveFiles, taskViews, msgViews, forms, doneTasks] = await Promise.all([
     sql`SELECT id, sender, body, sms_status, created_at FROM chat_messages
         WHERE client_id = ${cid} ORDER BY created_at DESC LIMIT ${PER_SOURCE_LIMIT}`.catch(() => ({ rows: [] as any[] })),
     sql`SELECT id, body, created_at FROM messages
@@ -88,6 +88,20 @@ export async function fetchClientEvents(clientId: string, clientName?: string): 
     sql`SELECT id, file_name, drive_status, url, created_at FROM dropzone_files
         WHERE uploaded_by = ${cid}
         ORDER BY created_at DESC LIMIT ${PER_SOURCE_LIMIT}`.catch(() => ({ rows: [] as any[] })),
+    // The client opening a document, grouped per file per day so a client who
+    // opens the same PDF five times reads as one entry, not five.
+    sql`SELECT fv.file_id, ta.file_name, COUNT(*)::int AS opens, MAX(fv.created_at) AS last_at,
+               to_char(MAX(fv.created_at) AT TIME ZONE 'America/New_York', 'YYYY-MM-DD') AS day
+        FROM file_views fv JOIN task_attachments ta ON ta.id::text = fv.file_id
+        WHERE fv.client_id = ${cid} AND fv.viewer_role = 'client' AND fv.scope = 'task'
+        GROUP BY fv.file_id, ta.file_name, (fv.created_at AT TIME ZONE 'America/New_York')::date
+        ORDER BY MAX(fv.created_at) DESC LIMIT ${PER_SOURCE_LIMIT}`.catch(() => ({ rows: [] as any[] })),
+    sql`SELECT fv.file_id, ma.file_name, COUNT(*)::int AS opens, MAX(fv.created_at) AS last_at,
+               to_char(MAX(fv.created_at) AT TIME ZONE 'America/New_York', 'YYYY-MM-DD') AS day
+        FROM file_views fv JOIN message_attachments ma ON ma.id::text = fv.file_id
+        WHERE fv.client_id = ${cid} AND fv.viewer_role = 'client' AND fv.scope = 'message'
+        GROUP BY fv.file_id, ma.file_name, (fv.created_at AT TIME ZONE 'America/New_York')::date
+        ORDER BY MAX(fv.created_at) DESC LIMIT ${PER_SOURCE_LIMIT}`.catch(() => ({ rows: [] as any[] })),
     sql`SELECT form_key, MAX(updated_at) AS updated_at, COUNT(*) AS answers
         FROM form_responses WHERE client_id = ${cid}
         GROUP BY form_key ORDER BY MAX(updated_at) DESC`.catch(() => ({ rows: [] as any[] })),
@@ -168,6 +182,22 @@ export async function fetchClientEvents(clientId: string, clientName?: string): 
       linkLabel: "Open in Drive",
     })
   }
+  const pushViews = (rows: any[], scope: "task" | "message") => {
+    for (const v of rows) {
+      const opens = Number(v.opens ?? 1)
+      events.push({
+        id: `view-${scope}-${v.file_id}-${v.day}`,
+        kind: "view",
+        at: String(v.last_at),
+        sender: "client",
+        detail: `${who} opened ${v.file_name}${opens > 1 ? ` (${opens} times that day)` : ""}`,
+        href: scope === "task" ? `/api/task-files/${v.file_id}` : `/api/message-files/${v.file_id}`,
+        linkLabel: "Open file",
+      })
+    }
+  }
+  pushViews(taskViews.rows, "task")
+  pushViews(msgViews.rows, "message")
   for (const f of forms.rows) {
     events.push({ id: `form-${f.form_key}`, kind: "form", at: String(f.updated_at), sender: "client", detail: `${who} updated the ${String(f.form_key).replace(/-/g, " ")} form (${f.answers} answers)` })
   }
