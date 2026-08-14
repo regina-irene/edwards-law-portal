@@ -22,9 +22,30 @@ async function gate() {
   return null
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const denied = await gate()
   if (denied) return denied
+
+  // ?key=… returns the whole form so the builder can reopen it for editing.
+  const key = new URL(req.url).searchParams.get("key")
+  if (key) {
+    try {
+      const form = await getPortalForm(key)
+      if (!form) return NextResponse.json({ error: "Not found" }, { status: 404 })
+      return NextResponse.json({
+        form: {
+          key: form.key,
+          label: form.label,
+          description: form.description,
+          sections: form.definition.sections,
+        },
+      })
+    } catch (e) {
+      console.error("[admin/forms] read failed:", e)
+      return NextResponse.json({ error: "Could not open that form." }, { status: 500 })
+    }
+  }
+
   try {
     const forms = await listPortalForms()
     return NextResponse.json({

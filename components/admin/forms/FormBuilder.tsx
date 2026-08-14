@@ -7,8 +7,11 @@ import { FIELD_TYPES } from "@/lib/portal-forms"
 
 interface DraftField {
   label: string
+  // Carried through edits untouched: it's what a client's saved answer is
+  // filed under, so changing it would orphan answers already given.
   fieldKey: string
   type: string
+  placeholder?: string | null
   helpText: string | null
   required: boolean
   width: string | null
@@ -109,6 +112,38 @@ export default function FormBuilder({
     })
   }
 
+  // Order is what a client reads top to bottom, so it has to be changeable.
+  function moveField(si: number, fi: number, by: -1 | 1) {
+    setDraft((d) => {
+      if (!d) return d
+      const sections = d.sections.map((s, i) => {
+        if (i !== si) return s
+        const to = fi + by
+        if (to < 0 || to >= s.fields.length) return s
+        const fields = [...s.fields]
+        ;[fields[fi], fields[to]] = [fields[to], fields[fi]]
+        return { ...s, fields }
+      })
+      return { ...d, sections }
+    })
+  }
+
+  function moveSection(si: number, by: -1 | 1) {
+    setDraft((d) => {
+      if (!d) return d
+      const to = si + by
+      if (to < 0 || to >= d.sections.length) return d
+      const sections = [...d.sections]
+      ;[sections[si], sections[to]] = [sections[to], sections[si]]
+      return { ...d, sections }
+    })
+  }
+
+  function removeSection(si: number, title: string, count: number) {
+    if (!window.confirm(`Delete the “${title}” section and its ${count} ${count === 1 ? "question" : "questions"}?`)) return
+    setDraft((d) => (d ? { ...d, sections: d.sections.filter((_, i) => i !== si) } : d))
+  }
+
   function addField(si: number) {
     setDraft((d) => {
       if (!d) return d
@@ -158,6 +193,12 @@ export default function FormBuilder({
         <h2 className="serif text-lg font-semibold text-gray-900">
           {initial ? "Edit form" : "Build a form"}
         </h2>
+        {initial && (
+          <p className="text-xs text-gray-500">
+            Editing the live form. Rewording a question keeps the answers clients have already given against it;
+            deleting one hides it from the form but leaves those answers in place.
+          </p>
+        )}
 
         <div className="flex flex-col gap-1 max-w-md">
           <label htmlFor="form-label" className="text-xs font-semibold text-gray-500">Form name</label>
@@ -245,14 +286,28 @@ export default function FormBuilder({
 
           {draft.sections.map((section, si) => (
             <div key={si} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
+              <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <input
+                    value={section.title}
+                    onChange={(e) =>
+                      setDraft((d) => (d ? { ...d, sections: d.sections.map((s, i) => (i === si ? { ...s, title: e.target.value } : s)) } : d))
+                    }
+                    aria-label={`Section ${si + 1} name`}
+                    className="serif text-base font-semibold text-gray-900 bg-transparent flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1"
+                  />
+                  <button type="button" onClick={() => moveSection(si, -1)} disabled={si === 0} aria-label="Move section up" title="Move section up" className="px-1.5 text-gray-400 hover:text-gray-800 disabled:opacity-30">↑</button>
+                  <button type="button" onClick={() => moveSection(si, 1)} disabled={si === draft.sections.length - 1} aria-label="Move section down" title="Move section down" className="px-1.5 text-gray-400 hover:text-gray-800 disabled:opacity-30">↓</button>
+                  <button type="button" onClick={() => removeSection(si, section.title, section.fields.length)} aria-label="Delete section" title="Delete section" className="px-1.5 text-gray-400 hover:text-red-600">🗑️</button>
+                </div>
                 <input
-                  value={section.title}
+                  value={section.description ?? ""}
                   onChange={(e) =>
-                    setDraft((d) => (d ? { ...d, sections: d.sections.map((s, i) => (i === si ? { ...s, title: e.target.value } : s)) } : d))
+                    setDraft((d) => (d ? { ...d, sections: d.sections.map((s, i) => (i === si ? { ...s, description: e.target.value || null } : s)) } : d))
                   }
-                  aria-label={`Section ${si + 1} name`}
-                  className="serif text-base font-semibold text-gray-900 bg-transparent w-full focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1"
+                  aria-label={`Section ${si + 1} instructions`}
+                  placeholder="Instructions under the heading (optional)"
+                  className="w-full text-xs text-gray-600 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1 py-0.5"
                 />
               </div>
               <ul className="divide-y divide-gray-100">
@@ -282,14 +337,19 @@ export default function FormBuilder({
                         />
                         Required
                       </label>
-                      <button
-                        type="button"
-                        onClick={() => removeField(si, fi)}
-                        aria-label={`Remove ${field.label}`}
-                        className="px-2 py-2 text-gray-400 hover:text-red-600"
-                      >
-                        ✕
-                      </button>
+                      <span className="flex items-center">
+                        <button type="button" onClick={() => moveField(si, fi, -1)} disabled={fi === 0} aria-label={`Move ${field.label} up`} title="Move up" className="px-1.5 py-2 text-gray-400 hover:text-gray-800 disabled:opacity-30">↑</button>
+                        <button type="button" onClick={() => moveField(si, fi, 1)} disabled={fi === section.fields.length - 1} aria-label={`Move ${field.label} down`} title="Move down" className="px-1.5 py-2 text-gray-400 hover:text-gray-800 disabled:opacity-30">↓</button>
+                        <button
+                          type="button"
+                          onClick={() => removeField(si, fi)}
+                          aria-label={`Remove ${field.label}`}
+                          title="Remove question"
+                          className="px-2 py-2 text-gray-400 hover:text-red-600"
+                        >
+                          ✕
+                        </button>
+                      </span>
                     </div>
                     {(field.type === "select" || field.type === "radio") && (
                       <input
@@ -308,7 +368,33 @@ export default function FormBuilder({
                         className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-900"
                       />
                     )}
-                    {field.helpText && <p className="text-xs text-gray-400">{field.helpText}</p>}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <input
+                        value={field.helpText ?? ""}
+                        onChange={(e) => editField(si, fi, { helpText: e.target.value || null })}
+                        aria-label={`Help text for ${field.label}`}
+                        placeholder="Help text shown under the question (optional)"
+                        className="flex-1 min-w-[14rem] px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-700"
+                      />
+                      {!["checkbox", "select", "radio", "date"].includes(field.type) && (
+                        <input
+                          value={field.placeholder ?? ""}
+                          onChange={(e) => editField(si, fi, { placeholder: e.target.value || null })}
+                          aria-label={`Example answer for ${field.label}`}
+                          placeholder="Example answer (optional)"
+                          className="w-48 px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-700"
+                        />
+                      )}
+                      <label className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <input
+                          type="checkbox"
+                          checked={field.width === "half"}
+                          onChange={(e) => editField(si, fi, { width: e.target.checked ? "half" : "full" })}
+                          className="w-3.5 h-3.5 rounded border-gray-300"
+                        />
+                        Half width
+                      </label>
+                    </div>
                   </li>
                 ))}
               </ul>

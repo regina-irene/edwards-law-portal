@@ -145,7 +145,14 @@ export function normalizeDefinition(
   const out: FormSection[] = sections.map((section, si) => {
     const fields: FormField[] = (section.fields ?? []).map((f, fi) => {
       const type = f.type && isFieldType(f.type) ? f.type : "text"
-      let fieldKey = slugify(f.fieldKey || f.label || `field-${si}-${fi}`, `field-${si}-${fi}`)
+      // An existing key is preserved EXACTLY — it's what a client's saved
+      // answer is filed under (FileFlow's are underscored, e.g.
+      // client_full_name), so re-slugifying it would orphan real answers.
+      // Only a key we're inventing from a label gets slugified.
+      const provided = (f.fieldKey ?? "").trim()
+      let fieldKey = /^[A-Za-z0-9_-]+$/.test(provided)
+        ? provided
+        : slugify(provided || f.label || `field-${si}-${fi}`, `field-${si}-${fi}`)
       while (seen.has(fieldKey)) fieldKey = `${fieldKey}-${fi + 1}`
       seen.add(fieldKey)
       const options =

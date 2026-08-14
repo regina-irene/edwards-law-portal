@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import PageTitle from "@/components/ui/PageTitle"
-import FormBuilder from "@/components/admin/forms/FormBuilder"
+import FormBuilder, { type Draft } from "@/components/admin/forms/FormBuilder"
 
 interface FormRow {
   key: string
@@ -25,6 +25,8 @@ export default function AdminFormsPage() {
   const [forms, setForms] = useState<FormRow[]>([])
   const [loading, setLoading] = useState(true)
   const [building, setBuilding] = useState(false)
+  const [editing, setEditing] = useState<Draft | null>(null)
+  const [opening, setOpening] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
@@ -65,6 +67,17 @@ export default function AdminFormsPage() {
     await load()
   }
 
+  async function openForEditing(key: string) {
+    setOpening(key)
+    setError(null)
+    setNotice(null)
+    const res = await fetch(`/api/admin/forms?key=${encodeURIComponent(key)}`).catch(() => null)
+    setOpening(null)
+    const d = await res?.json().catch(() => null)
+    if (!res?.ok || !d?.form) { setError("Couldn't open that form."); return }
+    setEditing(d.form as Draft)
+  }
+
   async function remove(key: string, label: string) {
     if (!window.confirm(`Remove "${label}"? Clients' saved answers are kept, and any task linked to it stops showing the form.`)) return
     const res = await fetch(`/api/admin/forms?key=${encodeURIComponent(key)}`, { method: "DELETE" }).catch(() => null)
@@ -78,7 +91,7 @@ export default function AdminFormsPage() {
         title="Forms"
         tagline="Build the forms your clients fill in — from a PDF, from pasted text, or from scratch"
         actions={
-          !building ? (
+          !building && !editing ? (
             <span className="flex items-center gap-3">
               <button
                 type="button"
@@ -104,7 +117,14 @@ export default function AdminFormsPage() {
       {notice && <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-2.5">{notice}</p>}
       {error && <p className="text-sm text-red-600 bg-white border border-red-200 rounded-xl px-4 py-2.5">{error}</p>}
 
-      {building ? (
+      {editing ? (
+        <FormBuilder
+          key={editing.key}
+          initial={editing}
+          onSaved={(label) => { setEditing(null); setNotice(`Saved your changes to “${label}”.`); load() }}
+          onCancel={() => setEditing(null)}
+        />
+      ) : building ? (
         <FormBuilder
           onSaved={(label) => { setBuilding(false); setNotice(`Saved “${label}”. Link it to a task from the Tasks screen.`); load() }}
           onCancel={() => setBuilding(false)}
@@ -133,6 +153,14 @@ export default function AdminFormsPage() {
                 </p>
               </div>
               <span className="shrink-0 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => openForEditing(f.key)}
+                  disabled={opening !== null}
+                  className="text-sm text-blue-600 hover:underline disabled:opacity-60"
+                >
+                  {opening === f.key ? "Opening…" : "Edit"}
+                </button>
                 <Link href={`/admin/forms/${encodeURIComponent(f.key)}`} className="text-sm text-blue-600 hover:underline">
                   Answers
                 </Link>
