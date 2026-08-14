@@ -12,6 +12,10 @@ export interface TimelineEvent {
   sender?: "client" | "firm"
   smsStatus?: string | null
   detail: string
+  // Where to open the file this entry is about: a portal download route for
+  // files kept in the portal, or the Google Drive link for files sent there.
+  href?: string
+  linkLabel?: string
 }
 
 // Airtable names read "Last | First"; the timeline says "Client Cleon Grey …"
@@ -81,7 +85,7 @@ export async function fetchClientEvents(clientId: string, clientName?: string): 
         WHERE cm.client_id = ${cid}
         ORDER BY ma.created_at DESC LIMIT ${PER_SOURCE_LIMIT}`.catch(() => ({ rows: [] as any[] })),
     // Files the client sent straight to the firm's Google Drive folder.
-    sql`SELECT id, file_name, drive_status, created_at FROM dropzone_files
+    sql`SELECT id, file_name, drive_status, url, created_at FROM dropzone_files
         WHERE uploaded_by = ${cid}
         ORDER BY created_at DESC LIMIT ${PER_SOURCE_LIMIT}`.catch(() => ({ rows: [] as any[] })),
     sql`SELECT form_key, MAX(updated_at) AS updated_at, COUNT(*) AS answers
@@ -122,6 +126,8 @@ export async function fetchClientEvents(clientId: string, clientName?: string): 
       detail: f.by_firm
         ? `You sent ${f.file_name}${onTask}`
         : `${who} uploaded ${f.file_name}${onTask}`,
+      href: `/api/task-files/${f.id}`,
+      linkLabel: "Open file",
     })
   }
   for (const f of firmTaskFiles.rows) {
@@ -131,6 +137,8 @@ export async function fetchClientEvents(clientId: string, clientName?: string): 
       at: String(f.available_at),
       sender: "firm",
       detail: `You sent ${f.file_name}${f.title ? ` with the task "${f.title}"` : ""}`,
+      href: `/api/task-files/${f.id}`,
+      linkLabel: "Open file",
     })
   }
   for (const f of msgFiles.rows) {
@@ -141,10 +149,13 @@ export async function fetchClientEvents(clientId: string, clientName?: string): 
       at: String(f.created_at),
       sender: firm ? "firm" : "client",
       detail: firm ? `You attached ${f.file_name} to a message` : `${who} attached ${f.file_name} to a message`,
+      href: `/api/message-files/${f.id}`,
+      linkLabel: "Open file",
     })
   }
   for (const f of driveFiles.rows) {
     const failed = String(f.drive_status ?? "") === "failed"
+    const driveLink = String(f.url ?? "")
     events.push({
       id: `drive-${f.id}`,
       kind: "upload",
@@ -153,6 +164,8 @@ export async function fetchClientEvents(clientId: string, clientName?: string): 
       detail: failed
         ? `${who} sent ${f.file_name} — it did not reach the Drive folder`
         : `${who} sent ${f.file_name} to the firm's Drive folder`,
+      href: !failed && driveLink ? driveLink : undefined,
+      linkLabel: "Open in Drive",
     })
   }
   for (const f of forms.rows) {

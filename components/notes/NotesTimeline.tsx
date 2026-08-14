@@ -171,6 +171,16 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
               <p className="text-[13px] text-gray-600 min-w-0">
                 {item.event.detail}
                 <span className="text-gray-400"> · {fmt(item.at)}</span>
+                {item.event.href && (
+                  <a
+                    href={item.event.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="ml-2 text-blue-600 underline hover:text-blue-800 print:hidden"
+                  >
+                    {item.event.linkLabel ?? "Open file"}
+                  </a>
+                )}
               </p>
             </div>
           )

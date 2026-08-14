@@ -45,3 +45,26 @@ describe("NotesTimeline", () => {
     expect(screen.queryByText(/Client uploaded W2.pdf/)).not.toBeInTheDocument()
   })
 })
+
+describe("file links", () => {
+  const withFiles: TimelineItem[] = [
+    { type: "event", at: "2026-08-13T10:00:00Z", event: { id: "e2", kind: "upload", at: "2026-08-13T10:00:00Z", sender: "client", detail: "Client Cleon Grey uploaded W2.pdf", href: "/api/task-files/abc", linkLabel: "Open file" } },
+    { type: "event", at: "2026-08-12T10:00:00Z", event: { id: "e3", kind: "upload", at: "2026-08-12T10:00:00Z", sender: "client", detail: "Client Cleon Grey sent bank.pdf to the firm's Drive folder", href: "https://drive.google.com/file/d/xyz/view", linkLabel: "Open in Drive" } },
+    { type: "event", at: "2026-08-11T10:00:00Z", event: { id: "e4", kind: "chat", at: "2026-08-11T10:00:00Z", sender: "client", detail: "Client Cleon Grey sent a message: \"hi\"" } },
+  ]
+
+  it("links an uploaded file to its download route", () => {
+    render(<NotesTimeline clientId="rec1" initialItems={withFiles} />)
+    expect(screen.getByRole("link", { name: /open file/i })).toHaveAttribute("href", "/api/task-files/abc")
+  })
+
+  it("links a Drive delivery straight to Drive", () => {
+    render(<NotesTimeline clientId="rec1" initialItems={withFiles} />)
+    expect(screen.getByRole("link", { name: /open in drive/i })).toHaveAttribute("href", "https://drive.google.com/file/d/xyz/view")
+  })
+
+  it("leaves entries with no file unlinked", () => {
+    render(<NotesTimeline clientId="rec1" initialItems={withFiles} />)
+    expect(screen.getAllByRole("link")).toHaveLength(2)
+  })
+})
