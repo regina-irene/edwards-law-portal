@@ -5,6 +5,8 @@ import { NextResponse } from "next/server"
 import { getAllClients } from "@/lib/airtable"
 import { sendSms, type SmsResult } from "@/lib/twilio"
 import { sendNewMessageEmail } from "@/lib/resend"
+import { sanitizeNotesHtml } from "@/lib/sanitize"
+import { isHtmlBody, bodyToPlainText, isEmptyRich } from "@/lib/message-format"
 
 export async function GET(req: Request) {
   const check = await requireAdmin()
@@ -58,10 +60,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "clientId and body required" }, { status: 400 })
   }
 
+  // Rich replies arrive as HTML from the formatting-mode composer. Sanitize
+  // before storing — admins are trusted, so this is defense in depth. Plain
+  // bodies are stored exactly as typed, the way they always were.
+  const rich = isHtmlBody(body)
+  const storedBody = rich ? sanitizeNotesHtml(body).trim() : body.trim()
+  if (!storedBody || (rich && isEmptyRich(storedBody))) {
+    return NextResponse.json({ error: "clientId and body required" }, { status: 400 })
+  }
+  // Texts carry no formatting, so the SMS always goes out as plain text.
+  const smsBody = bodyToPlainText(storedBody)
+
   try {
     const result = await sql`
       INSERT INTO chat_messages (client_id, sender, body)
-      VALUES (${clientId}, 'firm', ${body.trim()})
+      VALUES (${clientId}, 'firm', ${storedBody})
       RETURNING id, sender, body, created_at
     `
 
@@ -93,7 +106,7 @@ export async function POST(req: Request) {
         } else {
           const PORTAL_URL = process.env.AUTH_URL ?? "https://edwards-law-portal.vercel.app"
           const text = smsRequested
-            ? `Message from Edwards Family Law:\n\n${body.trim()}\n\nReply in your portal: ${PORTAL_URL}`
+            ? `Message from Edwards Family Law:\n\n${smsBody}\n\nReply in your portal: ${PORTAL_URL}`
             : `You have a new message from Edwards Family Law. Read and reply in your portal: ${PORTAL_URL}`
           sms = await sendSms(client.phone, text)
           if (sms.sent) {

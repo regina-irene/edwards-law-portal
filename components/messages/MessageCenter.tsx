@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
 import { collectDroppedFiles, dragHasFiles } from "@/lib/drop-files"
+import { RichTextEditor } from "@/components/ui/RichTextEditor"
+import MessageBody from "@/components/messages/MessageBody"
+import { bodyToHtml, bodyToPlainText, escapeHtml, isEmptyRich } from "@/lib/message-format"
 
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
 
@@ -36,27 +39,6 @@ function timeOf(d: string) {
 function dayLabel(d: string) {
   return new Date(d).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })
 }
-function escapeHtml(s: string) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-}
-
-// Message bodies are plain text with newlines. Rendering them as real <br>
-// elements (rather than leaning on white-space: pre-wrap alone) is what makes
-// the line breaks survive a copy/paste into Word — Word reads the clipboard's
-// HTML flavor, and pre-wrap newlines don't exist there. (2026-08-18)
-function MessageBody({ body }: { body: string }) {
-  const lines = body.split(/\r?\n/)
-  return (
-    <p className="whitespace-pre-wrap break-words">
-      {lines.map((line, i) => (
-        <span key={i}>
-          {line}
-          {i < lines.length - 1 && <br />}
-        </span>
-      ))}
-    </p>
-  )
-}
 
 export default function MessageCenter() {
   const params = useSearchParams()
@@ -75,6 +57,9 @@ export default function MessageCenter() {
   const [watchOn, setWatchOn] = useState(false)
   const [watchPhone, setWatchPhone] = useState("")
   const [copied, setCopied] = useState(false)
+  // Formatting mode swaps the one-line composer for the full rich-text editor.
+  // Off by default so quick replies stay quick (Enter still sends).
+  const [rich, setRich] = useState(false)
 
   // load the "text me on reply" state for the open conversation
   useEffect(() => {
