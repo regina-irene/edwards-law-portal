@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, use } from "react"
+import MessageBody from "@/components/messages/MessageBody"
 
 interface Msg { id: string; sender: "client" | "firm"; body: string; created_at: string; sms_status?: "notification" | "full" | "inbound" | null }
 
@@ -36,7 +37,9 @@ export default function PrintThread({ params }: { params: Promise<{ clientId: st
           <p style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
             <strong>{m.sender === "firm" ? "Edwards Family Law" : "Client"}</strong> · {new Date(m.created_at).toLocaleString("en-US")} · via {channelOf(m)}
           </p>
-          <p style={{ fontSize: 14, whiteSpace: "pre-wrap", margin: 0 }}>{m.body}</p>
+          <div style={{ fontSize: 14 }}>
+            <MessageBody body={m.body} />
+          </div>
         </div>
       ))}
       {ready && messages.length === 0 && <p>No messages in this conversation.</p>}

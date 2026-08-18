@@ -156,14 +156,21 @@ export default function MessageCenter() {
     if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight
   }, [messages])
 
+  // In formatting mode `body` holds HTML, so "is it empty" needs the rich check.
+  const composerEmpty = rich ? isEmptyRich(body) : !body.trim()
+
   async function send() {
-    if ((!body.trim() && pendingFiles.length === 0) || !selected) return
+    if ((composerEmpty && pendingFiles.length === 0) || !selected) return
     setSending(true)
     setSmsNotice(null)
     const res = await fetch("/api/admin/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clientId: selected, body: body.trim() || "📎 Attachment", sms: alsoText }),
+      body: JSON.stringify({
+        clientId: selected,
+        body: composerEmpty ? "📎 Attachment" : rich ? body : body.trim(),
+        sms: alsoText,
+      }),
     })
     if (res.ok) {
       const d = await res.json()
@@ -215,7 +222,7 @@ export default function MessageCenter() {
 
   function exportTxt() {
     const conv = convos.find((c) => c.id === selected)
-    const lines = messages.map((m) => `[${new Date(m.created_at).toLocaleString("en-US")}] ${m.sender === "firm" ? "Firm" : conv?.name ?? "Client"} (via ${channelOf(m)}): ${m.body}`)
+    const lines = messages.map((m) => `[${new Date(m.created_at).toLocaleString("en-US")}] ${m.sender === "firm" ? "Firm" : conv?.name ?? "Client"} (via ${channelOf(m)}): ${bodyToPlainText(m.body)}`)
     const blob = new Blob([`Conversation with ${conv?.name ?? ""}\n\n${lines.join("\n")}`], { type: "text/plain" })
     const a = document.createElement("a")
     a.href = URL.createObjectURL(blob)
@@ -233,7 +240,7 @@ export default function MessageCenter() {
 
     const plain =
       `Conversation with ${conv?.name ?? ""}\n\n` +
-      messages.map((m) => `[${stamp(m)}] ${who(m)} (via ${channelOf(m)}):\n${m.body}`).join("\n\n")
+      messages.map((m) => `[${stamp(m)}] ${who(m)} (via ${channelOf(m)}):\n${bodyToPlainText(m.body)}`).join("\n\n")
 
     const html =
       `<div style="font-family:Calibri,Arial,sans-serif;font-size:11pt">` +
@@ -244,7 +251,7 @@ export default function MessageCenter() {
             `<p style="margin:0 0 12px">` +
             `<b>${escapeHtml(who(m))}</b> &mdash; ${escapeHtml(stamp(m))} ` +
             `<span style="color:#666">(via ${escapeHtml(channelOf(m))})</span><br>` +
-            escapeHtml(m.body).replace(/\r?\n/g, "<br>") +
+            bodyToHtml(m.body) +
             `</p>`
         )
         .join("") +
@@ -423,17 +430,39 @@ export default function MessageCenter() {
               <div className="flex items-end gap-2">
                 <button type="button" onClick={() => fileRef.current?.click()} title="Attach files — or drag them onto the conversation" className="px-2 py-2 text-gray-500 hover:text-gray-800 text-lg">📎</button>
                 <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { attachFiles(Array.from(e.target.files ?? [])); e.target.value = "" }} />
-                <textarea value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() } }} rows={1} placeholder="Send a message… or drag files here to attach" className="flex-1 resize-none px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32" />
-                <button onClick={send} disabled={(!body.trim() && pendingFiles.length === 0) || sending} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 disabled:opacity-50">{sending ? "…" : "Send"}</button>
+                {rich ? (
+                  <div className="flex-1 min-w-0">
+                    <RichTextEditor value={body} onChange={setBody} />
+                  </div>
+                ) : (
+                  <textarea value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() } }} rows={1} placeholder="Send a message… or drag files here to attach" className="flex-1 resize-none px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32" />
+                )}
+                <button onClick={send} disabled={(composerEmpty && pendingFiles.length === 0) || sending} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 disabled:opacity-50 self-end">{sending ? "…" : "Send"}</button>
               </div>
               <div className="min-h-[1rem]">
                 {attachProgress && <p className="text-xs text-gray-500 mt-1">{attachProgress}</p>}
               </div>
               <div className="flex items-center justify-between gap-3 mt-1.5">
-                <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer select-none" title="Sends the message body as an SMS (requires SMS Reminders checked on the Clients board)">
-                  <input type="checkbox" checked={alsoText} onChange={(e) => setAlsoText(e.target.checked)} className="h-3.5 w-3.5 rounded border-gray-300" />
-                  📱 Also send this message as a text
-                </label>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer select-none" title="Sends the message body as an SMS (requires SMS Reminders checked on the Clients board)">
+                    <input type="checkbox" checked={alsoText} onChange={(e) => setAlsoText(e.target.checked)} className="h-3.5 w-3.5 rounded border-gray-300" />
+                    📱 Also send this message as a text
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Carry the draft across: plain → HTML keeps the line
+                      // breaks, HTML → plain flattens the formatting.
+                      setBody((b) => (b ? (rich ? bodyToPlainText(b) : bodyToHtml(b)) : b))
+                      setRich((r) => !r)
+                    }}
+                    title={rich ? "Back to the quick one-line composer" : "Bold, italics, lists and links"}
+                    className={`text-xs px-2 py-0.5 rounded border transition-colors ${rich ? "bg-blue-50 border-blue-300 text-blue-700 font-semibold" : "border-gray-300 text-gray-500 hover:bg-gray-50"}`}
+                  >
+                    Aa Formatting: {rich ? "ON" : "off"}
+                  </button>
+                  {rich && <span className="text-[11px] text-gray-400">Texts are sent as plain text</span>}
+                </div>
                 {smsNotice && <span className={`text-xs ${smsNotice.includes("not sent") ? "text-amber-700" : "text-green-700"}`}>{smsNotice}</span>}
               </div>
             </div>

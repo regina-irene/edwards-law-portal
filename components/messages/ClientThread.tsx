@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import UploadDocsButton from "@/components/messages/UploadDocsButton"
+import MessageBody from "@/components/messages/MessageBody"
 
 interface Msg { id: string; sender: "client" | "firm"; body: string; created_at: string; sms_status?: "notification" | "full" | "inbound" | null; files?: { id: string; file_name: string }[] }
 
@@ -156,7 +157,7 @@ export default function ClientThread() {
               {showDay && <div className="text-center my-3"><span className="text-[10px] uppercase tracking-wider text-gray-400">{day}</span></div>}
               <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-sm ${mine ? "text-white" : "text-gray-800 bg-white border border-gray-200"}`} style={mine ? { background: "#1B2D45" } : undefined}>
-                  <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                  <MessageBody body={m.body} />
                   {m.files?.map((f) => (
                     <a key={f.id} href={`/api/message-files/${f.id}`} target="_blank" rel="noreferrer" className={`block text-xs mt-1 underline ${mine ? "text-white/90" : "text-blue-600"}`}>📎 {f.file_name}</a>
                   ))}
