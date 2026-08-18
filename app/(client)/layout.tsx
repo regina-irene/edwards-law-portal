@@ -99,7 +99,7 @@ export default async function ClientLayout({ children }: { children: React.React
       <Motif />
       <SchemeDecor scheme={scheme} />
       <div className="flex-1 flex flex-col min-h-0">
-        {scheme.stripe && <div className="h-1.5 shrink-0 print:hidden" style={{ background: scheme.stripe }} />}
+        {scheme.stripe && <div className="h-2.5 shrink-0 print:hidden" style={{ background: scheme.stripe }} />}
         {previewEmail && (
           <div className="bg-amber-100 border-b border-amber-300 text-amber-900 text-sm px-4 py-2 flex items-center justify-center gap-3 print:hidden">
             <span>Admin preview — viewing the portal as <strong>{client.name}</strong></span>

@@ -137,7 +137,9 @@ export default function SchemePicker({
       {suggestions.length > 0 && (
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
           <p className="text-sm text-gray-800">
-            {suggestions.length === 1 ? "This look is in season right now:" : "These looks are in season right now:"}
+            {suggestions.length === 1
+              ? "This look is in season right now:"
+              : "These looks are in season right now — pick whichever suits you, or keep the one you have:"}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {suggestions.map((s) => (
@@ -145,9 +147,12 @@ export default function SchemePicker({
                 key={s.key}
                 type="button"
                 onClick={() => onSchemeChange(s.key)}
-                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 hover:border-gray-500"
+                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-left hover:border-gray-500"
               >
-                {s.titleEmoji} Try {s.name}
+                <span className="block text-sm font-medium text-gray-800">
+                  {s.titleEmoji} Try {s.name}
+                </span>
+                {s.seasonNote && <span className="block text-[11px] text-gray-500">{s.seasonNote}</span>}
               </button>
             ))}
           </div>

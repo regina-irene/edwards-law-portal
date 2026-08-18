@@ -152,9 +152,20 @@ describe("seasonal suggestions", () => {
     expect(isInSeason(SCHEMES.newyear, on(6, 1))).toBe(false)
   })
 
-  it("returns both December looks in December", () => {
-    const keys = getSeasonalSuggestions(on(12, 10)).map((s) => s.key)
-    expect(keys).toEqual(expect.arrayContaining(["christmas", "hanukkah"]))
+  it("offers Christmas, Hanukkah and a non-denominational option in December", () => {
+    for (const day of [1, 10, 25]) {
+      const keys = getSeasonalSuggestions(on(12, day)).map((s) => s.key)
+      expect(keys).toEqual(expect.arrayContaining(["christmas", "hanukkah", "winter"]))
+    }
+    // and the neutral one is labelled as such, so nobody has to guess
+    expect(SCHEMES.winter.seasonNote).toBeTruthy()
+    expect(SCHEMES.christmas.seasonNote).toBeUndefined()
+    expect(SCHEMES.hanukkah.seasonNote).toBeUndefined()
+  })
+
+  it("keeps Winter Frost going after the holidays are over", () => {
+    expect(isInSeason(SCHEMES.winter, on(1, 20))).toBe(true)
+    expect(getSeasonalSuggestions(on(1, 20)).map((s) => s.key)).not.toContain("christmas")
   })
 
   it("suggests nothing in the quiet stretches", () => {

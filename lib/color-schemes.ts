@@ -38,6 +38,9 @@ export interface ColorScheme {
   // When this look is in season, used to surface a gentle suggestion on the
   // Settings page. Seasonal schemes only; nothing is ever applied automatically.
   season?: SeasonWindow
+  // Optional caption on the in-season suggestion, used to mark Winter Frost as
+  // the non-denominational choice next to Christmas and Hanukkah in December.
+  seasonNote?: string
 }
 
 export const DEFAULT_SCHEME_KEY = "navy"
@@ -115,7 +118,10 @@ export const SCHEMES: Record<string, ColorScheme> = {
     watermark: ["❄️", "⛄", "❄️", "🌨️", "❄️", "✨"], titleEmoji: "❄️",
     pageBgGradient: "linear-gradient(160deg,#F4FAFF 0%,#DCE9F5 50%,#B3D0E9 100%)",
     sidebarBgGradient: "linear-gradient(180deg,#0F2740 0%,#2A5078 55%,#4E85B8 100%)",
-    season: { from: [1, 8], to: [2, 1] },
+    // Runs the whole winter, December included, so it always sits alongside
+    // Christmas and Hanukkah as the non-denominational option.
+    season: { from: [12, 1], to: [2, 1] },
+    seasonNote: "No religious imagery",
   },
   football: {
     key: "football", name: "Game Day", blurb: "Turf, yard lines and touchdowns — team-neutral. 🏈",
