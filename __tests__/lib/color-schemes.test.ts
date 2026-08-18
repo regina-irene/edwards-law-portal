@@ -9,9 +9,13 @@ import {
 } from "@/lib/color-schemes"
 
 describe("color schemes", () => {
-  it("has exactly the 8 approved schemes", () => {
+  it("has exactly the 11 approved schemes", () => {
     expect(SCHEME_KEYS.sort()).toEqual(
-      ["burgundy", "football", "halloween", "navy", "plum", "sage", "slate", "winter"].sort()
+      [
+        "burgundy", "football", "halloween", "navy", "plum", "sage", "slate", "winter",
+        // pastel + sunset additions, 2026-08-18
+        "blush", "seafoam", "sunset",
+      ].sort()
     )
   })
 
@@ -44,8 +48,10 @@ describe("color schemes", () => {
       expect(s.watermark.length).toBeGreaterThanOrEqual(4)
       expect(s.titleEmoji).toBeTruthy()
     }
-    for (const key of ["navy", "sage", "burgundy", "slate", "plum"]) {
+    for (const key of ["navy", "sage", "burgundy", "slate", "plum", "blush", "seafoam", "sunset"]) {
       expect(SCHEMES[key].seasonal).toBe(false)
+      expect(SCHEMES[key].stripe).toBeNull()
+      expect(SCHEMES[key].titleEmoji).toBeNull()
     }
   })
 })
