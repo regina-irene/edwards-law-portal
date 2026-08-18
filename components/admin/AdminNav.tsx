@@ -15,12 +15,28 @@ const ITEMS = [
   { href: "/admin/settings", label: "Settings", icon: "⚙️", match: (p: string) => p.startsWith("/admin/settings") },
 ]
 
-export default function AdminNav({ initials }: { initials: string }) {
+export interface AdminNavColors {
+  bg: string
+  activeBg: string
+  activeInk: string
+  ink: string
+  chipBg: string
+  chipInk: string
+  border: string
+}
+
+// Original hardcoded admin colors — used when the layout supplies nothing.
+const DEFAULT_NAV: AdminNavColors = {
+  bg: "#FFFFFF", activeBg: "#1B2D45", activeInk: "#ffffff", ink: "#4b443b",
+  chipBg: "#F0E7DA", chipInk: "#4b443b", border: "#E8DFD2",
+}
+
+export default function AdminNav({ initials, nav = DEFAULT_NAV }: { initials: string; nav?: AdminNavColors }) {
   const pathname = usePathname()
   return (
     <nav
       className="shrink-0 flex flex-col items-center py-4 gap-1.5 border-r"
-      style={{ width: 96, background: "#FFFFFF", borderColor: "#E8DFD2" }}
+      style={{ width: 96, background: nav.bg, borderColor: nav.border }}
       aria-label="Admin navigation"
     >
       <Link href="/admin" className="mb-3" aria-label="Home">
@@ -38,7 +54,7 @@ export default function AdminNav({ initials }: { initials: string }) {
               title={it.label}
               aria-label={it.label}
               className="w-[84px] py-2.5 rounded-xl flex flex-col items-center gap-1.5 transition-colors"
-              style={{ background: active ? "#1B2D45" : "transparent", color: active ? "#fff" : "#4b443b" }}
+              style={{ background: active ? nav.activeBg : "transparent", color: active ? nav.activeInk : nav.ink }}
             >
               <span className="text-[23px] leading-none">{it.icon}</span>
               <span className="text-[11px] font-medium leading-tight">{it.label}</span>
@@ -48,7 +64,7 @@ export default function AdminNav({ initials }: { initials: string }) {
       </div>
 
       <div className="mt-auto flex flex-col items-center gap-2">
-        <div className="w-10 h-10 rounded-full flex items-center justify-center text-[12px] font-semibold" style={{ background: "#F0E7DA", color: "#4b443b" }} title="Signed in">
+        <div className="w-10 h-10 rounded-full flex items-center justify-center text-[12px] font-semibold" style={{ background: nav.chipBg, color: nav.chipInk }} title="Signed in">
           {initials}
         </div>
         <div className="text-[10px]" style={{ color: "#94A3B8" }}>

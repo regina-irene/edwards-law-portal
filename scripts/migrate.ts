@@ -240,6 +240,8 @@ export const MIGRATION_SQL = `
     light_text BOOLEAN NOT NULL DEFAULT false,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
+  -- Gradient mode (2026-08-18): softer gradient version of the chosen scheme.
+  ALTER TABLE client_prefs ADD COLUMN IF NOT EXISTS gradient BOOLEAN NOT NULL DEFAULT false;
 
   -- AI-reformatted calendar event notes (cache; keyed by Airtable event record id)
   CREATE TABLE IF NOT EXISTS event_note_ai (

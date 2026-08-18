@@ -18,6 +18,8 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import PageTitle from "@/components/ui/PageTitle"
 import { taglineFor } from "@/lib/taglines"
+import SchemePicker from "@/components/settings/SchemePicker"
+import { DEFAULT_SCHEME_KEY } from "@/lib/color-schemes"
 
 const BUILTIN_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
@@ -55,6 +57,9 @@ export default function AdminSettingsPage() {
   const [customKeys, setCustomKeys] = useState<Set<string>>(new Set())
   const [newTitle, setNewTitle] = useState("")
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle")
+  const [scheme, setScheme] = useState(DEFAULT_SCHEME_KEY)
+  const [gradient, setGradient] = useState(false)
+  const [themeStatus, setThemeStatus] = useState<"idle" | "saving" | "saved">("idle")
 
   const sensors = useSensors(useSensor(PointerSensor))
 
@@ -75,7 +80,28 @@ export default function AdminSettingsPage() {
     setPages(ordered)
   }
 
-  useEffect(() => { loadAll() }, [])
+  async function loadAppearance() {
+    try {
+      const r = await fetch("/api/admin/appearance").then((res) => res.json())
+      if (typeof r.scheme === "string") setScheme(r.scheme)
+      setGradient(Boolean(r.gradient))
+    } catch {
+      // leave the defaults in place
+    }
+  }
+
+  useEffect(() => { loadAll(); loadAppearance() }, [])
+
+  async function saveAppearance() {
+    setThemeStatus("saving")
+    const res = await fetch("/api/admin/appearance", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scheme, gradient }),
+    })
+    setThemeStatus(res.ok ? "saved" : "idle")
+    if (res.ok) window.location.reload()
+  }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
@@ -105,13 +131,37 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="max-w-md space-y-8">
+    <div className="max-w-3xl space-y-8">
       <div>
         <PageTitle title="Settings" tagline={taglineFor("admin:settings")} />
         <p className="mt-1 text-sm text-gray-500">Add pages, reorder the navigation, and manage the portal.</p>
       </div>
 
       <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-gray-800">Appearance</h2>
+        <p className="text-xs text-gray-500">
+          The look of the admin side. This is firm-wide — everyone on the admin side sees it.
+          Clients pick their own scheme on their Settings page.
+        </p>
+        <SchemePicker
+          scheme={scheme}
+          gradient={gradient}
+          onSchemeChange={setScheme}
+          onGradientChange={setGradient}
+        />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={saveAppearance}
+            disabled={themeStatus === "saving"}
+            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+          >
+            {themeStatus === "saving" ? "Saving..." : "Save appearance"}
+          </button>
+          {themeStatus === "saved" && <span className="text-sm text-green-700 font-medium">Saved! ✓</span>}
+        </div>
+      </section>
+
+      <section className="space-y-3 max-w-md">
         <h2 className="text-sm font-semibold text-gray-800">Add a page</h2>
         <form onSubmit={addPage} className="flex gap-2">
           <input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="New page name (e.g. Resources)" className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -120,7 +170,7 @@ export default function AdminSettingsPage() {
         <p className="text-xs text-gray-400">New pages start blank — edit their content in Global Pages, and turn them on/off per client in each client&apos;s Pages editor.</p>
       </section>
 
-      <section className="space-y-3">
+      <section className="space-y-3 max-w-md">
         <h2 className="text-sm font-semibold text-gray-800">Navigation order</h2>
         <p className="text-xs text-gray-500">Drag to reorder how pages appear in the client portal.</p>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

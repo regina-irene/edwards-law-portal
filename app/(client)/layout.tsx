@@ -8,7 +8,7 @@ import Sidebar from "@/components/nav/Sidebar"
 import Motif from "@/components/ui/Motif"
 import { getClientNav } from "@/lib/portal-pages"
 import { getClientPrefs } from "@/lib/client-prefs"
-import { getScheme } from "@/lib/color-schemes"
+import { resolveScheme } from "@/lib/color-schemes"
 import SchemeDecor from "@/components/ui/SchemeDecor"
 import { getJokeOfTheDay } from "@/lib/joke"
 import { getFirmAnnouncement } from "@/lib/firm-announcement"
@@ -73,7 +73,7 @@ export default async function ClientLayout({ children }: { children: React.React
     getFirmAnnouncement(),
   ])
   const joke = prefs.showJoke ? await getJokeOfTheDay() : null
-  const scheme = getScheme(prefs.scheme)
+  const scheme = resolveScheme(prefs.scheme, prefs.gradient)
 
   const today = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" })
   // Airtable names are "Last | First" — greet the client by first name only

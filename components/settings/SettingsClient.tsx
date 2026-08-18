@@ -1,11 +1,11 @@
 "use client"
 // components/settings/SettingsClient.tsx — color scheme picker + joke-of-the-day
 // toggle. (Schemes returned 2026-07-23 as 8 curated looks; the old wallpaper
-// theme picker stays gone.)
+// theme picker stays gone. Gradient mode added 2026-08-18.)
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { SCHEMES, SCHEME_KEYS, type ColorScheme } from "@/lib/color-schemes"
+import SchemePicker from "@/components/settings/SchemePicker"
 
 function Section({ title, blurb, children }: { title: string; blurb: string; children: React.ReactNode }) {
   return (
@@ -17,37 +17,19 @@ function Section({ title, blurb, children }: { title: string; blurb: string; chi
   )
 }
 
-function SchemeSwatch({ scheme, selected, onSelect }: { scheme: ColorScheme; selected: boolean; onSelect: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={selected}
-      className={`text-left rounded-xl border-2 overflow-hidden transition-shadow ${
-        selected ? "border-gray-800 shadow-md" : "border-gray-200 hover:border-gray-400"
-      }`}
-    >
-      <div className="flex h-16" style={{ background: scheme.pageBg }}>
-        <div className="w-6 shrink-0" style={{ background: scheme.sidebarBg }} />
-        <div className="flex-1 p-2">
-          <div className="h-2 w-16 rounded" style={{ background: scheme.accent }} />
-          <div className="mt-1.5 h-6 rounded bg-white border border-gray-200 flex items-center px-1.5">
-            {scheme.titleEmoji && <span className="text-xs">{scheme.titleEmoji}</span>}
-          </div>
-        </div>
-      </div>
-      <div className="px-3 py-2 bg-white">
-        <p className="text-sm font-semibold text-gray-900">{scheme.name}{selected ? " ✓" : ""}</p>
-        <p className="text-xs text-gray-500">{scheme.blurb}</p>
-      </div>
-    </button>
-  )
-}
-
-export default function SettingsClient({ initialShowJoke, initialScheme }: { initialShowJoke: boolean; initialScheme: string }) {
+export default function SettingsClient({
+  initialShowJoke,
+  initialScheme,
+  initialGradient,
+}: {
+  initialShowJoke: boolean
+  initialScheme: string
+  initialGradient: boolean
+}) {
   const router = useRouter()
   const [showJoke, setShowJoke] = useState(initialShowJoke)
   const [scheme, setScheme] = useState(initialScheme)
+  const [gradient, setGradient] = useState(initialGradient)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -57,7 +39,7 @@ export default function SettingsClient({ initialShowJoke, initialScheme }: { ini
     const res = await fetch("/api/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ showJoke, scheme }),
+      body: JSON.stringify({ showJoke, scheme, gradient }),
     })
     setSaving(false)
     if (res.ok) {
@@ -68,12 +50,13 @@ export default function SettingsClient({ initialShowJoke, initialScheme }: { ini
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <Section title="Color Scheme" blurb="Pick the look of YOUR portal. Every scheme keeps things easy to read — seasonal ones add a little extra fun.">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {SCHEME_KEYS.map((key) => (
-            <SchemeSwatch key={key} scheme={SCHEMES[key]} selected={scheme === key} onSelect={() => setScheme(key)} />
-          ))}
-        </div>
+      <Section title="Color Scheme" blurb="Pick the look of YOUR portal. Every scheme keeps things easy to read — turn on the gradient for a softer fade, and seasonal ones add a little extra fun.">
+        <SchemePicker
+          scheme={scheme}
+          gradient={gradient}
+          onSchemeChange={setScheme}
+          onGradientChange={setGradient}
+        />
       </Section>
 
       <Section title="Joke of the Day" blurb="A clean, family-friendly joke at the top of your portal. A fresh one appears every 4 hours.">

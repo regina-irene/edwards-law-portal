@@ -5,6 +5,8 @@ import AdminNav from "@/components/admin/AdminNav"
 import Motif from "@/components/ui/Motif"
 import FirmAnnouncementBanner from "@/components/announcement/FirmAnnouncementBanner"
 import { getFirmAnnouncement } from "@/lib/firm-announcement"
+import { getAdminPrefs } from "@/lib/admin-prefs"
+import { resolveScheme, isDarkSidebar, DEFAULT_SCHEME_KEY } from "@/lib/color-schemes"
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const check = await requireAdmin()
@@ -12,14 +14,38 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const initials = check.email.replace(/@.*/, "").slice(0, 2).toUpperCase() || "EFL"
   const today = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" })
-  const firmAnnouncement = await getFirmAnnouncement()
+  const [firmAnnouncement, prefs] = await Promise.all([getFirmAnnouncement(), getAdminPrefs()])
+
+  // Appearance (2026-08-18). Until an admin actively picks a look, the admin
+  // side keeps its original cream page + white nav exactly as it was.
+  const untouched = prefs.scheme === DEFAULT_SCHEME_KEY && !prefs.gradient
+  const scheme = resolveScheme(prefs.scheme, prefs.gradient)
+  const dark = isDarkSidebar(scheme)
+  const nav = untouched
+    ? { bg: "#FFFFFF", activeBg: "#1B2D45", activeInk: "#ffffff", ink: "#4b443b", chipBg: "#F0E7DA", chipInk: "#4b443b", border: "#E8DFD2" }
+    : {
+        bg: scheme.sidebarBg,
+        activeBg: scheme.navActiveBg,
+        activeInk: scheme.navActiveInk,
+        ink: scheme.navInk,
+        chipBg: dark ? "rgba(255,255,255,.18)" : "#F0E7DA",
+        chipInk: dark ? "#ffffff" : "#4b443b",
+        border: scheme.metaBorder,
+      }
 
   return (
-    <div className="flex min-h-screen" style={{ background: "#FBF8F3" }}>
-      <AdminNav initials={initials} />
+    <div
+      className="flex min-h-screen"
+      style={{
+        background: untouched ? "#FBF8F3" : scheme.pageBg,
+        ["--scheme-accent" as string]: scheme.accent,
+        ["--scheme-heading" as string]: scheme.heading,
+      }}
+    >
+      <AdminNav initials={initials} nav={nav} />
       <Motif />
       <div className="flex-1 flex flex-col min-h-0">
-        <div className="flex items-center justify-between px-6 py-2 border-b" style={{ borderColor: "#E8DFD2" }}>
+        <div className="flex items-center justify-between px-6 py-2 border-b" style={{ borderColor: nav.border }}>
           <span className="section-label">{today}</span>
           <span className="text-[12px]" style={{ color: "#334155" }}>Edwards Family Law · Admin</span>
         </div>

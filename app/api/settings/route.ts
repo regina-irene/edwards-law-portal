@@ -11,7 +11,8 @@ export async function PUT(req: Request) {
   const showJoke = Boolean(body?.showJoke)
   const scheme = typeof body?.scheme === "string" ? body.scheme : DEFAULT_SCHEME_KEY
   if (!SCHEMES[scheme]) return NextResponse.json({ error: "Unknown color scheme" }, { status: 400 })
+  const gradient = Boolean(body?.gradient)
 
-  await saveClientPrefs(String(client.clientId), { showJoke, scheme })
+  await saveClientPrefs(String(client.clientId), { showJoke, scheme, gradient })
   return NextResponse.json({ ok: true })
 }
