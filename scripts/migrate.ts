@@ -240,7 +240,7 @@ export const MIGRATION_SQL = `
     light_text BOOLEAN NOT NULL DEFAULT false,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
-  -- Gradient mode (2026-08-18) rides on the dead `light_text` column above
+  -- Gradient mode (2026-08-18) rides on the dead light_text column above
   -- rather than adding a new one, so no migration is needed to enable it.
 
   -- AI-reformatted calendar event notes (cache; keyed by Airtable event record id)
