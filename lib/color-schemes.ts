@@ -5,6 +5,13 @@
 // the client layout sets these as CSS vars and components fall back to the
 // same values, which is also what keeps the admin layout unchanged.
 
+/** [month, day] with month 1-12. Windows may wrap the year end (Dec 27 → Jan 7). */
+export type SeasonDate = [number, number]
+export interface SeasonWindow {
+  from: SeasonDate
+  to: SeasonDate
+}
+
 export interface ColorScheme {
   key: string
   name: string
@@ -28,6 +35,9 @@ export interface ColorScheme {
   // about the scheme changes, so contrast and readability are unaffected.
   pageBgGradient: string
   sidebarBgGradient: string
+  // When this look is in season, used to surface a gentle suggestion on the
+  // Settings page. Seasonal schemes only; nothing is ever applied automatically.
+  season?: SeasonWindow
 }
 
 export const DEFAULT_SCHEME_KEY = "navy"
@@ -93,6 +103,7 @@ export const SCHEMES: Record<string, ColorScheme> = {
     watermark: ["🎃", "🦇", "🍂", "🕸️", "🎃", "🍁"], titleEmoji: "🎃",
     pageBgGradient: "linear-gradient(160deg,#FDF2DE 0%,#F2DCB8 50%,#DDB47F 100%)",
     sidebarBgGradient: "linear-gradient(180deg,#241B30 0%,#63401F 55%,#A85512 100%)",
+    season: { from: [10, 1], to: [10, 31] },
   },
   winter: {
     key: "winter", name: "Winter Frost", blurb: "Snow, frost and sparkle — happy holidays. ❄️",
@@ -104,6 +115,7 @@ export const SCHEMES: Record<string, ColorScheme> = {
     watermark: ["❄️", "⛄", "❄️", "🌨️", "❄️", "✨"], titleEmoji: "❄️",
     pageBgGradient: "linear-gradient(160deg,#F4FAFF 0%,#DCE9F5 50%,#B3D0E9 100%)",
     sidebarBgGradient: "linear-gradient(180deg,#0F2740 0%,#2A5078 55%,#4E85B8 100%)",
+    season: { from: [1, 8], to: [2, 1] },
   },
   football: {
     key: "football", name: "Game Day", blurb: "Turf, yard lines and touchdowns — team-neutral. 🏈",
@@ -115,6 +127,7 @@ export const SCHEMES: Record<string, ColorScheme> = {
     watermark: ["🏈", "🏆", "🏈", "📣", "🏈", "⭐"], titleEmoji: "🏈",
     pageBgGradient: "linear-gradient(160deg,#F2F9EC 0%,#DDE9D3 50%,#BCD5AB 100%)",
     sidebarBgGradient: "linear-gradient(180deg,#152B1A 0%,#2E5636 55%,#4C8452 100%)",
+    season: { from: [8, 25], to: [9, 30] },
   },
   // Pastel + sunset additions (2026-08-18) — requested alongside gradient mode.
   blush: {
@@ -147,6 +160,107 @@ export const SCHEMES: Record<string, ColorScheme> = {
     pageBgGradient: "linear-gradient(160deg,#FFF8F0 0%,#FBE7D4 50%,#F4C8A3 100%)",
     sidebarBgGradient: "linear-gradient(180deg,#6B2F17 0%,#B0602E 100%)",
   },
+
+  // ── Holiday schemes (2026-08-18) ──────────────────────────────────────────
+  // Every one keeps the same contract as the originals: light page, dark ink,
+  // text on solid white cards. The holiday shows up in the sidebar, the stripe
+  // and the watermark, never in the readability of the content.
+  valentines: {
+    key: "valentines", name: "Sweetheart", blurb: "Rose, blush and a little romance. 💕",
+    seasonal: true,
+    pageBg: "#FBEFF3", sidebarBg: "linear-gradient(180deg,#7A1F3D,#A83A5B)", sidebarLogoBg: "#ffffff",
+    navInk: "#f6dde5", navHoverBg: "rgba(255,255,255,.14)", navActiveBg: "rgba(255,255,255,.22)", navActiveInk: "#ffffff",
+    accent: "#A83A5B", heading: "#7A1F3D", metaBorder: "#f0d5de",
+    stripe: "linear-gradient(90deg,#A83A5B,#F7C5D9,#7A1F3D,#F7C5D9,#A83A5B)",
+    watermark: ["💕", "🌹", "💌", "💞", "🍫", "💗"], titleEmoji: "💕",
+    pageBgGradient: "linear-gradient(160deg,#FFF6F9 0%,#F8E3EB 50%,#EFC2D2 100%)",
+    sidebarBgGradient: "linear-gradient(180deg,#5E1530 0%,#A83A5B 55%,#C75B7C 100%)",
+    season: { from: [2, 2], to: [2, 15] },
+  },
+  stpatricks: {
+    key: "stpatricks", name: "Lucky Clover", blurb: "Emerald, gold and a bit of luck. ☘️",
+    seasonal: true,
+    pageBg: "#EDF6EC", sidebarBg: "linear-gradient(180deg,#0F4C2A,#1B6B3A)", sidebarLogoBg: "#ffffff",
+    navInk: "#d9eddc", navHoverBg: "rgba(255,255,255,.14)", navActiveBg: "rgba(255,255,255,.22)", navActiveInk: "#ffffff",
+    accent: "#147A3D", heading: "#0F4C2A", metaBorder: "#d3e6d1",
+    stripe: "linear-gradient(90deg,#147A3D,#E8C547,#147A3D)",
+    watermark: ["☘️", "🍀", "🌈", "🪙", "☘️", "✨"], titleEmoji: "☘️",
+    pageBgGradient: "linear-gradient(160deg,#F5FCF3 0%,#E2F0E0 50%,#C0DFBE 100%)",
+    sidebarBgGradient: "linear-gradient(180deg,#0A3A1F 0%,#1B6B3A 55%,#2C8B4E 100%)",
+    season: { from: [3, 8], to: [3, 18] },
+  },
+  spring: {
+    key: "spring", name: "Spring Bloom", blurb: "Tulips, pastels and fresh starts. 🌷",
+    seasonal: true,
+    pageBg: "#F4F8EE", sidebarBg: "linear-gradient(180deg,#4A7C59,#7BA05B)", sidebarLogoBg: "#ffffff",
+    navInk: "#eaf4e4", navHoverBg: "rgba(255,255,255,.16)", navActiveBg: "rgba(255,255,255,.24)", navActiveInk: "#ffffff",
+    accent: "#5B8C5A", heading: "#3F6B4B", metaBorder: "#dfeacf",
+    stripe: "linear-gradient(90deg,#F7C5D9,#FDF2B8,#B7DCA6,#A9CCE8)",
+    watermark: ["🌷", "🐣", "🌸", "🦋", "🌼", "🐇"], titleEmoji: "🌷",
+    pageBgGradient: "linear-gradient(160deg,#FBFDF6 0%,#EDF5E2 50%,#D3E6C4 100%)",
+    sidebarBgGradient: "linear-gradient(180deg,#3C6749 0%,#7BA05B 100%)",
+    season: { from: [3, 19], to: [4, 30] },
+  },
+  july4: {
+    key: "july4", name: "Stars & Stripes", blurb: "Red, white, blue and fireworks. 🎆",
+    seasonal: true,
+    pageBg: "#F2F5FA", sidebarBg: "linear-gradient(180deg,#0A2463,#16357F)", sidebarLogoBg: "#ffffff",
+    navInk: "#dde5f5", navHoverBg: "rgba(255,255,255,.14)", navActiveBg: "rgba(255,255,255,.22)", navActiveInk: "#ffffff",
+    accent: "#B22234", heading: "#0A2463", metaBorder: "#d5dcea",
+    stripe: "repeating-linear-gradient(90deg,#B22234 0 16px,#FFFFFF 16px 32px)",
+    watermark: ["🎆", "⭐", "🎇", "🗽", "⭐", "🎆"], titleEmoji: "🎆",
+    pageBgGradient: "linear-gradient(160deg,#F9FBFF 0%,#E6ECF7 50%,#C6D4EA 100%)",
+    sidebarBgGradient: "linear-gradient(180deg,#061A4A 0%,#16357F 55%,#2A4FA8 100%)",
+    season: { from: [6, 25], to: [7, 8] },
+  },
+  thanksgiving: {
+    key: "thanksgiving", name: "Harvest Table", blurb: "Cranberry, amber and gratitude. 🦃",
+    seasonal: true,
+    pageBg: "#F8EFE0", sidebarBg: "linear-gradient(180deg,#5A2A1E,#7C4426)", sidebarLogoBg: "#ffffff",
+    navInk: "#f3e2cf", navHoverBg: "rgba(255,255,255,.14)", navActiveBg: "rgba(255,255,255,.22)", navActiveInk: "#ffffff",
+    accent: "#8C3B25", heading: "#5A2A1E", metaBorder: "#e8d7bf",
+    stripe: "linear-gradient(90deg,#8C3B25,#C9821F,#5A2A1E,#C9821F,#8C3B25)",
+    watermark: ["🦃", "🍂", "🌽", "🥧", "🍁", "🌾"], titleEmoji: "🦃",
+    pageBgGradient: "linear-gradient(160deg,#FDF6EA 0%,#F3E2C8 50%,#E2C193 100%)",
+    sidebarBgGradient: "linear-gradient(180deg,#48200F 0%,#7C4426 55%,#A8622F 100%)",
+    season: { from: [11, 1], to: [11, 30] },
+  },
+  christmas: {
+    key: "christmas", name: "Christmas", blurb: "Evergreen, cranberry and candlelight. 🎄",
+    seasonal: true,
+    pageBg: "#F2F6EF", sidebarBg: "linear-gradient(180deg,#123524,#1E4D32)", sidebarLogoBg: "#ffffff",
+    navInk: "#dcecdf", navHoverBg: "rgba(255,255,255,.14)", navActiveBg: "rgba(255,255,255,.22)", navActiveInk: "#ffffff",
+    accent: "#9B2226", heading: "#123524", metaBorder: "#d8e3d5",
+    stripe: "linear-gradient(90deg,#9B2226,#F2F6EF,#123524,#F2F6EF,#9B2226)",
+    watermark: ["🎄", "🎁", "⭐", "🎄", "❄️", "🔔"], titleEmoji: "🎄",
+    pageBgGradient: "linear-gradient(160deg,#F8FBF5 0%,#E7F0E4 50%,#C8DCC6 100%)",
+    sidebarBgGradient: "linear-gradient(180deg,#0C2618 0%,#1E4D32 55%,#2F6B44 100%)",
+    season: { from: [12, 1], to: [12, 26] },
+  },
+  hanukkah: {
+    key: "hanukkah", name: "Hanukkah", blurb: "Candlelight blue, silver and gold. 🕎",
+    seasonal: true,
+    pageBg: "#EDF3FA", sidebarBg: "linear-gradient(180deg,#0F2E5C,#1B4A8A)", sidebarLogoBg: "#ffffff",
+    navInk: "#d9e7f7", navHoverBg: "rgba(255,255,255,.16)", navActiveBg: "rgba(255,255,255,.24)", navActiveInk: "#ffffff",
+    accent: "#1B4A8A", heading: "#0F2E5C", metaBorder: "#d4e0ee",
+    stripe: "linear-gradient(90deg,#C9A227,#0F2E5C,#C9A227)",
+    watermark: ["🕎", "✨", "🕯️", "✡️", "⭐", "🔵"], titleEmoji: "🕎",
+    pageBgGradient: "linear-gradient(160deg,#F5F9FF 0%,#E1EBF8 50%,#BFD5EE 100%)",
+    sidebarBgGradient: "linear-gradient(180deg,#0A2246 0%,#1B4A8A 55%,#2F6BB5 100%)",
+    season: { from: [12, 1], to: [12, 31] },
+  },
+  newyear: {
+    key: "newyear", name: "Midnight Confetti", blurb: "Black, gold and a fresh page. 🎉",
+    seasonal: true,
+    pageBg: "#F3F1EC", sidebarBg: "linear-gradient(180deg,#14141A,#2A2A35)", sidebarLogoBg: "#ffffff",
+    navInk: "#e6e2d6", navHoverBg: "rgba(255,255,255,.14)", navActiveBg: "rgba(255,255,255,.22)", navActiveInk: "#ffffff",
+    accent: "#B8912F", heading: "#14141A", metaBorder: "#ddd8cc",
+    stripe: "linear-gradient(90deg,#B8912F,#14141A,#B8912F)",
+    watermark: ["🎉", "🥂", "✨", "🎊", "🕛", "⭐"], titleEmoji: "🎉",
+    pageBgGradient: "linear-gradient(160deg,#FAF8F3 0%,#EBE7DC 50%,#D2CBB6 100%)",
+    sidebarBgGradient: "linear-gradient(180deg,#0C0C10 0%,#2A2A35 55%,#454553 100%)",
+    season: { from: [12, 27], to: [1, 7] },
+  },
 }
 
 export const SCHEME_KEYS = Object.keys(SCHEMES)
@@ -171,4 +285,27 @@ export function resolveScheme(key: string | null | undefined, gradient: boolean 
  *  the tell: it only exists so the logo reads against a dark sidebar. */
 export function isDarkSidebar(scheme: ColorScheme): boolean {
   return scheme.sidebarLogoBg !== "transparent"
+}
+
+/** Everyday looks first, seasonal ones after — the picker renders them as two
+ *  labelled groups so the list stays scannable as holidays accumulate. */
+export const EVERYDAY_KEYS = SCHEME_KEYS.filter((k) => !SCHEMES[k].seasonal)
+export const SEASONAL_KEYS = SCHEME_KEYS.filter((k) => SCHEMES[k].seasonal)
+
+const ord = (month: number, day: number) => month * 100 + day
+
+/** Windows may wrap the year end (Dec 27 → Jan 7), so compare ordinals and
+ *  treat a from > to window as "either side of New Year". */
+export function isInSeason(scheme: ColorScheme, date: Date = new Date()): boolean {
+  if (!scheme.season) return false
+  const today = ord(date.getMonth() + 1, date.getDate())
+  const from = ord(scheme.season.from[0], scheme.season.from[1])
+  const to = ord(scheme.season.to[0], scheme.season.to[1])
+  return from <= to ? today >= from && today <= to : today >= from || today <= to
+}
+
+/** Every scheme whose window covers the given day. December returns both
+ *  Christmas and Hanukkah — nothing is ever applied without the user choosing. */
+export function getSeasonalSuggestions(date: Date = new Date()): ColorScheme[] {
+  return SEASONAL_KEYS.map((k) => SCHEMES[k]).filter((s) => isInSeason(s, date))
 }

@@ -6,15 +6,22 @@ import {
   applyGradient,
   resolveScheme,
   isDarkSidebar,
+  isInSeason,
+  getSeasonalSuggestions,
+  EVERYDAY_KEYS,
+  SEASONAL_KEYS,
 } from "@/lib/color-schemes"
 
 describe("color schemes", () => {
-  it("has exactly the 11 approved schemes", () => {
+  it("has exactly the 19 approved schemes", () => {
     expect(SCHEME_KEYS.sort()).toEqual(
       [
         "burgundy", "football", "halloween", "navy", "plum", "sage", "slate", "winter",
         // pastel + sunset additions, 2026-08-18
         "blush", "seafoam", "sunset",
+        // holiday additions, 2026-08-18
+        "valentines", "stpatricks", "spring", "july4", "thanksgiving",
+        "christmas", "hanukkah", "newyear",
       ].sort()
     )
   })
@@ -41,7 +48,10 @@ describe("color schemes", () => {
   })
 
   it("seasonal schemes have decorations, core schemes have none", () => {
-    for (const key of ["halloween", "winter", "football"]) {
+    for (const key of [
+      "halloween", "winter", "football", "valentines", "stpatricks", "spring",
+      "july4", "thanksgiving", "christmas", "hanukkah", "newyear",
+    ]) {
       const s = SCHEMES[key]
       expect(s.seasonal).toBe(true)
       expect(s.stripe).toBeTruthy()
@@ -98,10 +108,57 @@ describe("gradient mode", () => {
     expect(resolveScheme(null, false).pageBg).toBe("#FBF8F3")
   })
 
+  it("groups every scheme into exactly one of everyday or seasonal", () => {
+    expect([...EVERYDAY_KEYS, ...SEASONAL_KEYS].sort()).toEqual([...SCHEME_KEYS].sort())
+    expect(EVERYDAY_KEYS.filter((k) => SEASONAL_KEYS.includes(k))).toEqual([])
+  })
+
   it("flags navy as the only light sidebar", () => {
     expect(isDarkSidebar(SCHEMES.navy)).toBe(false)
     for (const key of SCHEME_KEYS.filter((k) => k !== "navy")) {
       expect(isDarkSidebar(SCHEMES[key])).toBe(true)
     }
+  })
+})
+
+describe("seasonal suggestions", () => {
+  const on = (m: number, d: number) => new Date(2026, m - 1, d)
+
+  it("only seasonal schemes carry a season window", () => {
+    for (const key of SEASONAL_KEYS) expect(SCHEMES[key].season).toBeDefined()
+    for (const key of EVERYDAY_KEYS) expect(SCHEMES[key].season).toBeUndefined()
+  })
+
+  it("matches each holiday on its own date", () => {
+    const cases: [number, number, string][] = [
+      [2, 12, "valentines"],
+      [3, 15, "stpatricks"],
+      [4, 5, "spring"],
+      [7, 4, "july4"],
+      [9, 12, "football"],
+      [10, 31, "halloween"],
+      [11, 26, "thanksgiving"],
+      [12, 25, "christmas"],
+      [1, 20, "winter"],
+    ]
+    for (const [m, d, key] of cases) {
+      expect(getSeasonalSuggestions(on(m, d)).map((s) => s.key)).toContain(key)
+    }
+  })
+
+  it("handles the window that wraps the year end", () => {
+    expect(isInSeason(SCHEMES.newyear, on(12, 31))).toBe(true)
+    expect(isInSeason(SCHEMES.newyear, on(1, 3))).toBe(true)
+    expect(isInSeason(SCHEMES.newyear, on(6, 1))).toBe(false)
+  })
+
+  it("returns both December looks in December", () => {
+    const keys = getSeasonalSuggestions(on(12, 10)).map((s) => s.key)
+    expect(keys).toEqual(expect.arrayContaining(["christmas", "hanukkah"]))
+  })
+
+  it("suggests nothing in the quiet stretches", () => {
+    expect(getSeasonalSuggestions(on(5, 20))).toEqual([])
+    expect(getSeasonalSuggestions(on(8, 10))).toEqual([])
   })
 })
