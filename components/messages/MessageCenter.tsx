@@ -36,6 +36,27 @@ function timeOf(d: string) {
 function dayLabel(d: string) {
   return new Date(d).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })
 }
+function escapeHtml(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+}
+
+// Message bodies are plain text with newlines. Rendering them as real <br>
+// elements (rather than leaning on white-space: pre-wrap alone) is what makes
+// the line breaks survive a copy/paste into Word — Word reads the clipboard's
+// HTML flavor, and pre-wrap newlines don't exist there. (2026-08-18)
+function MessageBody({ body }: { body: string }) {
+  const lines = body.split(/\r?\n/)
+  return (
+    <p className="whitespace-pre-wrap break-words">
+      {lines.map((line, i) => (
+        <span key={i}>
+          {line}
+          {i < lines.length - 1 && <br />}
+        </span>
+      ))}
+    </p>
+  )
+}
 
 export default function MessageCenter() {
   const params = useSearchParams()
@@ -53,6 +74,7 @@ export default function MessageCenter() {
   const [smsNotice, setSmsNotice] = useState<string | null>(null)
   const [watchOn, setWatchOn] = useState(false)
   const [watchPhone, setWatchPhone] = useState("")
+  const [copied, setCopied] = useState(false)
 
   // load the "text me on reply" state for the open conversation
   useEffect(() => {
@@ -216,6 +238,48 @@ export default function MessageCenter() {
     a.click()
   }
 
+  // Copy the whole thread to the clipboard in BOTH flavors: rich HTML for Word
+  // and Outlook, plain text for everything else. Without the HTML flavor Word
+  // collapses the thread into one run-on paragraph. (2026-08-18)
+  async function copyConversation() {
+    const conv = convos.find((c) => c.id === selected)
+    const who = (m: Msg) => (m.sender === "firm" ? "Firm" : conv?.name ?? "Client")
+    const stamp = (m: Msg) => new Date(m.created_at).toLocaleString("en-US")
+
+    const plain =
+      `Conversation with ${conv?.name ?? ""}\n\n` +
+      messages.map((m) => `[${stamp(m)}] ${who(m)} (via ${channelOf(m)}):\n${m.body}`).join("\n\n")
+
+    const html =
+      `<div style="font-family:Calibri,Arial,sans-serif;font-size:11pt">` +
+      `<p style="margin:0 0 12px"><b>Conversation with ${escapeHtml(conv?.name ?? "")}</b></p>` +
+      messages
+        .map(
+          (m) =>
+            `<p style="margin:0 0 12px">` +
+            `<b>${escapeHtml(who(m))}</b> &mdash; ${escapeHtml(stamp(m))} ` +
+            `<span style="color:#666">(via ${escapeHtml(channelOf(m))})</span><br>` +
+            escapeHtml(m.body).replace(/\r?\n/g, "<br>") +
+            `</p>`
+        )
+        .join("") +
+      `</div>`
+
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/plain": new Blob([plain], { type: "text/plain" }),
+          "text/html": new Blob([html], { type: "text/html" }),
+        }),
+      ])
+    } catch {
+      // Older browsers, or a page without clipboard-write permission.
+      await navigator.clipboard.writeText(plain)
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   const q = search.trim().toLowerCase()
   const filtered = q ? convos.filter((c) => c.name.toLowerCase().includes(q) || c.preview.toLowerCase().includes(q) || c.email.toLowerCase().includes(q)) : convos
   const active = convos.find((c) => c.id === selected)
@@ -305,6 +369,13 @@ export default function MessageCenter() {
                 >
                   📱 Text me on reply: {watchOn ? "ON" : "off"}
                 </button>
+                <button
+                  onClick={copyConversation}
+                  title="Copy the whole thread with its formatting intact, ready to paste into Word"
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  {copied ? "Copied ✓" : "Copy"}
+                </button>
                 <button onClick={exportTxt} className="text-xs text-blue-600 hover:underline">Export</button>
                 <a href={`/admin/messages/print/${active.id}`} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">Print / PDF</a>
               </div>
@@ -322,7 +393,7 @@ export default function MessageCenter() {
                     <div className={`flex ${firm ? "justify-end" : "justify-start"}`}>
                       {/* firm bubbles: navy = portal only; lighter blue = also sent via text */}
                       <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${firm ? "text-white" : "text-gray-800 bg-white border border-gray-200"}`} style={firm ? { background: m.sms_status === "full" ? "#4F86D6" : "#1B2D45" } : undefined}>
-                        <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                        <MessageBody body={m.body} />
                         {m.files?.map((f) => (
                           <a key={f.id} href={`/api/message-files/${f.id}`} target="_blank" rel="noreferrer" className={`block text-xs mt-1 underline ${firm ? "text-white/90" : "text-blue-600"}`}>📎 {f.file_name}</a>
                         ))}
