@@ -44,21 +44,23 @@ function SchemeSwatch({
           In season
         </span>
       )}
-      <div className="flex h-16" style={{ background: s.pageBg }}>
-        <div className="w-6 shrink-0" style={{ background: s.sidebarBg }} />
-        <div className="flex-1 p-2">
-          <div className="h-2 w-16 rounded" style={{ background: s.accent }} />
-          <div className="mt-1.5 h-6 rounded bg-white border border-gray-200 flex items-center px-1.5">
-            {s.titleEmoji && <span className="text-xs">{s.titleEmoji}</span>}
+      <div className="flex h-12" style={{ background: s.pageBg }}>
+        <div className="w-5 shrink-0" style={{ background: s.sidebarBg }} />
+        <div className="flex-1 p-1.5">
+          <div className="h-1.5 w-12 rounded" style={{ background: s.accent }} />
+          <div className="mt-1 h-4 rounded bg-white border border-gray-200 flex items-center px-1">
+            {s.titleEmoji && <span className="text-[10px]">{s.titleEmoji}</span>}
           </div>
         </div>
       </div>
-      <div className="px-3 py-2 bg-white">
-        <p className="text-sm font-semibold text-gray-900">
+      <div className="px-2 py-1.5 bg-white">
+        <p className="text-[13px] font-semibold text-gray-900 leading-tight">
           {s.name}
           {selected ? " ✓" : ""}
         </p>
-        <p className="text-xs text-gray-500">{s.blurb}</p>
+        {/* Blurb kept, but clamped to one line — 19 of them stacked two deep
+            was most of this page's height. Full text stays in the tooltip. */}
+        <p className="text-[11px] text-gray-500 truncate" title={s.blurb}>{s.blurb}</p>
       </div>
     </button>
   )
@@ -81,8 +83,10 @@ function Group({
 }) {
   return (
     <div>
-      <p className="text-[11px] uppercase tracking-wide font-semibold text-gray-400 mb-2">{label}</p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <p className="text-[11px] uppercase tracking-wide font-semibold text-gray-400 mb-1.5">{label}</p>
+      {/* Four across on desktop rather than three: 19 schemes in a 3-wide grid
+          made this page mostly scroll. (2026-08-18) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
         {keys.map((key) => (
           <SchemeSwatch
             key={key}

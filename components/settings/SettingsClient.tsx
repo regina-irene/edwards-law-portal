@@ -7,11 +7,16 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import SchemePicker from "@/components/settings/SchemePicker"
 
+// Tightened 2026-08-18: the page was three tall cards with a lot of air. The
+// heading and its blurb now share a line where they fit, and the padding is
+// closer to the rest of the portal.
 function Section({ title, blurb, children }: { title: string; blurb: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
-      <h2 className="text-xs uppercase tracking-wide font-semibold mb-1" style={{ color: "var(--scheme-heading, #1b2d45)" }}>{title}</h2>
-      <p className="text-sm text-gray-500 mb-4">{blurb}</p>
+    <div className="bg-white rounded-xl border border-gray-200 px-4 py-3.5">
+      <div className="flex items-baseline gap-x-3 gap-y-0.5 flex-wrap mb-3">
+        <h2 className="text-xs uppercase tracking-wide font-semibold shrink-0" style={{ color: "var(--scheme-heading, #1b2d45)" }}>{title}</h2>
+        <p className="text-xs text-gray-500">{blurb}</p>
+      </div>
       {children}
     </div>
   )
@@ -54,26 +59,29 @@ export default function SettingsClient({
   }
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <Section title="Color Scheme" blurb="Pick the look of YOUR portal. Every scheme keeps things easy to read — turn on the gradient for a softer fade, and seasonal ones add a little extra fun.">
+    <div className="space-y-3 max-w-3xl">
+      {/* Joke first: it's the one-click setting, so it shouldn't sit below the
+          swatch grid where it needs a scroll to reach. */}
+      <div className="bg-white rounded-xl border border-gray-200 px-4 py-3">
+        <label className="flex items-center gap-3 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={showJoke}
+            onChange={(e) => setShowJoke(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 shrink-0"
+          />
+          <span className="text-sm text-gray-800 font-medium shrink-0">Joke of the day 😄</span>
+          <span className="text-xs text-gray-500">A clean, family-friendly joke at the top of your portal, refreshed every few hours.</span>
+        </label>
+      </div>
+
+      <Section title="Color Scheme" blurb="Pick the look of YOUR portal — gradient for a softer fade, seasonal ones for a little fun.">
         <SchemePicker
           scheme={scheme}
           gradient={gradient}
           onSchemeChange={setScheme}
           onGradientChange={setGradient}
         />
-      </Section>
-
-      <Section title="Joke of the Day" blurb="A clean, family-friendly joke at the top of your portal. A fresh one appears every 4 hours.">
-        <label className="flex items-center gap-3 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={showJoke}
-            onChange={(e) => setShowJoke(e.target.checked)}
-            className="h-5 w-5 rounded border-gray-300"
-          />
-          <span className="text-sm text-gray-800 font-medium">Show me a silly joke 😄</span>
-        </label>
       </Section>
 
       <div className="flex items-center gap-3 flex-wrap">

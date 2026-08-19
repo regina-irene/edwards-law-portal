@@ -93,23 +93,25 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
         className="rounded-b-lg rounded-tr-lg border p-6 shadow-sm keep-ink"
         style={{ background: "#FAF0D7", borderColor: "#E0CD9E" }}
       >
-      {/* Equal-width columns: 1 per row on phones, 2 on tablets, all side-by-side on desktop */}
-      <div className={`grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2 ${nextCourt ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
+      {/* Stage sits across the top rather than owning a whole column of its own
+          (2026-08-18). It is usually one chip, so a full column left three
+          quarters of that space empty and squeezed everything else. */}
+      <div className="mb-4">
+        <ColumnTitle>Stage</ColumnTitle>
+        {info.stages.length > 0 ? (
+          <div className="flex flex-wrap items-start gap-1.5">
+            {info.stages.map((s) => <Chip key={s} value={plainStage(s)} color={stageColor(s)} soft />)}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400">—</p>
+        )}
+      </div>
 
-        {/* Left: stage */}
+      {/* Equal-width columns: 1 per row on phones, 2 on tablets, side-by-side on desktop */}
+      <div className={`grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2 ${nextCourt ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
+
+        {/* Key dates in fixed order */}
         <div>
-          <ColumnTitle>Stage</ColumnTitle>
-          {info.stages.length > 0 ? (
-            <div className="flex flex-col items-start gap-1.5">
-              {info.stages.map((s) => <Chip key={s} value={plainStage(s)} color={stageColor(s)} soft />)}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-400">—</p>
-          )}
-        </div>
-
-        {/* Middle: key dates in fixed order */}
-        <div className={`${COL_DIVIDER} sm:border-t-0 sm:pt-0 sm:border-l sm:pl-5`}>
           <ColumnTitle>Key Dates</ColumnTitle>
           <ul>
             {rows.map((r) => (
@@ -122,8 +124,8 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
           </ul>
         </div>
 
-        {/* Right: court + case facts */}
-        <div className={COL_DIVIDER}>
+        {/* Court + case facts */}
+        <div className={`${COL_DIVIDER} sm:border-t-0 sm:pt-0 sm:border-l sm:pl-5`}>
           <ColumnTitle>Case Info</ColumnTitle>
           <div className="space-y-2">
             {info.county && (
@@ -190,9 +192,9 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
           )}
         </div>
 
-        {/* 4th column: next court date — full title, never cut off */}
+        {/* Next court date — full title, never cut off */}
         {nextCourt && (
-          <div className={`${COL_DIVIDER} sm:border-t-0 sm:pt-0 sm:border-l sm:pl-5`}>
+          <div className={COL_DIVIDER}>
             <ColumnTitle>Next Important Calendar Date</ColumnTitle>
             <p className="text-lg font-bold" style={{ color: "#1b2d45" }}>
               {new Date(nextCourt.start).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
