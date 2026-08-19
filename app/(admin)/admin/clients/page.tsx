@@ -100,10 +100,9 @@ export default async function ClientsPage({
   }
 
   return (
-    /* Wider than the other admin pages on purpose: seven row actions plus the
-       name need the room, and cramping them is what pushed some rows' icons
-       onto a second line. */
-    <div className="space-y-6 max-w-6xl">
+    /* 900px: enough for the name plus all seven actions on one line, without
+       stranding them at opposite ends of a wide screen. */
+    <div className="space-y-6 max-w-[900px]">
       <PageTitle
         title="Clients"
         tagline={taglineFor("admin:clients")}
