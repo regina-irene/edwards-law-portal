@@ -26,7 +26,6 @@ import StatusHistory from "@/components/status/StatusHistory"
 import { getStatusHistory } from "@/lib/status-history"
 import { resolveStatusHtml } from "@/lib/status-rich"
 import { RichTextView } from "@/components/ui/RichTextView"
-import { paymentStatusColor } from "@/lib/airtable-colors"
 import { resolveVisibleFields, ALREADY_ON_PAGE } from "@/lib/status-fields"
 import { getExtraFields } from "@/lib/status-extra"
 
@@ -136,17 +135,8 @@ export default async function StatusPage() {
         />
       )}
 
-      {caseStatus?.paymentStatus && visibleFields.has("Payment Status") && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs uppercase tracking-wide font-semibold" style={{ color: "#1b2d45" }}>Payment Status</span>
-          <span
-            className="px-3.5 py-1.5 rounded-full text-sm font-semibold shadow-sm border border-black/5"
-            style={{ background: paymentStatusColor(caseStatus.paymentStatus).bg, color: paymentStatusColor(caseStatus.paymentStatus).text }}
-          >
-            {caseStatus.paymentStatus}
-          </span>
-        </div>
-      )}
+      {/* Payment status now rides in the Case File banner beside Stage rather
+          than sitting on its own line under the whole card. */}
 
       {billing && <BillingSection billing={billing} />}
     </div>
