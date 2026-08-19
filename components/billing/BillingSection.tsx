@@ -1,4 +1,4 @@
-// components/billing/BillingSection.tsx — flat-fee billing on the Case Status /
+// components/billing/BillingSection.tsx - flat-fee billing on the Case Status /
 // Invoicing page: balance banner and payment schedule.
 import { PAY_NOW_URL, type BillingSummary } from "@/lib/billing"
 
@@ -11,7 +11,7 @@ function money(n: number): string {
   })
 }
 
-// Date-only strings ("2026-07-01") — anchor to local midnight so the day never shifts.
+// Date-only strings ("2026-07-01") - anchor to local midnight so the day never shifts.
 function dueDate(d: string): string {
   return new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 }

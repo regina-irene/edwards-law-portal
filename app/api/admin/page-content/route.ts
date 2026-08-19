@@ -71,7 +71,7 @@ export async function PUT(req: Request) {
   }
 
   const headerVal = typeof header === "string" ? header.trim() || null : null
-  // Announcement and body are rich text (HTML) — sanitize.
+  // Announcement and body are rich text (HTML) - sanitize.
   const announcementVal = typeof announcement === "string" ? sanitizeNotesHtml(announcement) || null : null
   const bodyVal = typeof body === "string" ? sanitizeNotesHtml(body) || null : null
   // Embed URL: accept with or without scheme (default to https://).

@@ -1,4 +1,4 @@
-// app/(admin)/admin/notes/page.tsx — Field Notes hub: a running log of every
+// app/(admin)/admin/notes/page.tsx - Field Notes hub: a running log of every
 // note across every case, newest first, with search / author / case filters.
 // Admin layout gates auth; notes themselves are served only through admin-only
 // code paths.
@@ -38,7 +38,7 @@ export const dynamic = "force-dynamic"
 const PAGE = 50
 
 // "Today" and "Yesterday" read faster when scanning the top of the log, but
-// carry the real date with them — a heading that only says "Today" is useless
+// carry the real date with them - a heading that only says "Today" is useless
 // a week later, and worse once printed. (2026-08-18)
 const dayHeading = dayHeadingWithDate
 const timeOf = timeOfDay
@@ -226,7 +226,7 @@ export default async function FieldNotesHub({
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-baseline gap-3 flex-wrap">
             <p className="section-label">
-              {filtered ? "Matching activity" : "Running log — every case"}
+              {filtered ? "Matching activity" : "Running log - every case"}
             </p>
             <span className="text-xs text-gray-400">
               {log.length} of {merged.length} {merged.length === 1 ? "entry" : "entries"}
@@ -240,13 +240,13 @@ export default async function FieldNotesHub({
 
           {notesFailed && (
             <p className="text-sm text-red-600 bg-white rounded-xl border border-red-200 p-4">
-              The log couldn&apos;t be loaded right now — refresh to try again.
+              The log couldn&apos;t be loaded right now - refresh to try again.
             </p>
           )}
 
           {!notesFailed && log.length === 0 && (
             <p className="text-sm text-gray-500 bg-white rounded-xl border border-gray-200 p-6">
-              {filtered ? "Nothing matches those filters." : "No activity yet — open a case and write the first note."}
+              {filtered ? "Nothing matches those filters." : "No activity yet - open a case and write the first note."}
             </p>
           )}
 

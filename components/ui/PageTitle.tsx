@@ -1,4 +1,4 @@
-// components/ui/PageTitle.tsx — Thistle-style page heading: big serif title
+// components/ui/PageTitle.tsx - Thistle-style page heading: big serif title
 // (h1 renders in Libre Baskerville via globals.css) + one-line tagline.
 // Shared by the client PageHeader and admin pages.
 interface PageTitleProps {

@@ -1,10 +1,10 @@
-// lib/status-extra.ts — reads and renders the EXTRA Status-board fields a
+// lib/status-extra.ts - reads and renders the EXTRA Status-board fields a
 // client has been allowed to see (see lib/status-fields.ts for the allow-list).
 //
 // The board is internal, so its values are all shapes: text, checkboxes,
 // dates, multi-selects, linked-record arrays, collaborator objects, formula
 // results. Anything this file doesn't positively recognise is dropped rather
-// than guessed at — a client should never be shown "[object Object]", and a
+// than guessed at - a client should never be shown "[object Object]", and a
 // field the portal can't describe is better left off the page entirely.
 import { longDate, fullStamp } from "@/lib/dates"
 import { STATUS_TABLE_ID } from "@/lib/status-fields"
@@ -70,7 +70,7 @@ export function renderFieldValue(value: unknown): ExtraFieldDisplay | null {
         values.push(String(item))
       } else if (item && typeof item === "object" && !Array.isArray(item)) {
         // Linked records and collaborators carry a `name`. Attachments carry a
-        // url and a filename instead — those are skipped on purpose, so a
+        // url and a filename instead - those are skipped on purpose, so a
         // file on the internal board can't leak out through this list.
         const name = (item as { name?: unknown }).name
         if (typeof name === "string" && name.trim()) values.push(name.trim())

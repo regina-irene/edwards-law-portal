@@ -27,7 +27,7 @@ export default function AdminMessagesPage({ params }: { params: Promise<{ client
   return (
     <div className="max-w-2xl space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">
-        Send Message — <span className="text-gray-500 font-normal">{clientId}</span>
+        Send Message - <span className="text-gray-500 font-normal">{clientId}</span>
       </h1>
       <p className="text-sm text-gray-500">
         This message will appear in the client&apos;s Messages inbox in the portal.

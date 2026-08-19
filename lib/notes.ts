@@ -1,4 +1,4 @@
-// lib/notes.ts — Field Notes storage: Regina's private per-client case log.
+// lib/notes.ts - Field Notes storage: Regina's private per-client case log.
 // Admin-only by construction: only /api/admin/notes and /admin/notes pages
 // import this. HTML is sanitized on write; body_text is a plain-text shadow
 // kept in sync for search and snippets.
@@ -91,7 +91,7 @@ export async function latestNoteByClient(): Promise<Map<string, { snippet: strin
   return map
 }
 
-// Everyone who has ever written a note — the options for the "written by" filter.
+// Everyone who has ever written a note - the options for the "written by" filter.
 // How many notes exist in total, so the log can say what it isn't showing.
 export async function countNotes(): Promise<number> {
   const r = await sql`SELECT COUNT(*)::int AS n FROM client_notes`
@@ -116,7 +116,7 @@ export interface NoteSearchHit {
 }
 
 // The running log: every note across every case, newest first. Text, author
-// and case filters are all optional — with none of them this is simply the
+// and case filters are all optional - with none of them this is simply the
 // whole log, which is what the Field Notes hub shows.
 export async function searchNotes(q: string, author = "", clientId = "", limit = 50): Promise<NoteSearchHit[]> {
   const text = q.trim()

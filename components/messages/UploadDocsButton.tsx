@@ -1,5 +1,5 @@
 "use client"
-// components/messages/UploadDocsButton.tsx — the "send files" modal: drop or
+// components/messages/UploadDocsButton.tsx - the "send files" modal: drop or
 // browse for documents, watch each one upload, and get a plain confirmation
 // that they reached the legal team.
 import { useState, useEffect } from "react"
@@ -113,12 +113,12 @@ export default function UploadDocsButton({
             {!uploading && result && result.sent > 0 && (
               <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5">
                 <p className="text-sm font-semibold text-green-900">
-                  ✅ {result.sent} {result.sent === 1 ? "file" : "files"} sent — your legal team has {result.sent === 1 ? "it" : "them"}.
+                  ✅ {result.sent} {result.sent === 1 ? "file" : "files"} sent - your legal team has {result.sent === 1 ? "it" : "them"}.
                 </p>
                 <p className="text-xs text-green-800 mt-0.5">{successNote}</p>
                 {result.failed > 0 && (
                   <p className="text-xs text-amber-800 mt-1.5">
-                    {result.failed} {result.failed === 1 ? "file didn't" : "files didn't"} go through — {result.failed === 1 ? "it's" : "they're"} marked above. You can try again.
+                    {result.failed} {result.failed === 1 ? "file didn't" : "files didn't"} go through - {result.failed === 1 ? "it's" : "they're"} marked above. You can try again.
                   </p>
                 )}
               </div>

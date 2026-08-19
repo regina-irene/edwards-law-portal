@@ -44,7 +44,7 @@ function TagBadge({ tag }: { tag: string }) {
 
 // `readOnly` comes from the server page: the client's case is closed and they
 // are inside the 30-day wind-down. The whole list stays readable and every
-// existing file stays downloadable — only ticking, uploading and removing go.
+// existing file stays downloadable - only ticking, uploading and removing go.
 export default function TasksClient({ readOnly = false }: { readOnly?: boolean } = {}) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
@@ -86,7 +86,7 @@ export default function TasksClient({ readOnly = false }: { readOnly?: boolean }
       setActionError(null)
       reload()
     } else {
-      setActionError(`Couldn't upload ${file.name}. Files must be under 25 MB — check the size and your connection, then try again.`)
+      setActionError(`Couldn't upload ${file.name}. Files must be under 25 MB - check the size and your connection, then try again.`)
     }
   }
 
@@ -121,7 +121,7 @@ export default function TasksClient({ readOnly = false }: { readOnly?: boolean }
     return (
       <div className="flex flex-col items-center justify-center h-48 bg-gray-50 rounded-lg border border-gray-200 px-4 text-center">
         <p className="text-sm text-gray-700">We couldn&apos;t load your tasks just now.</p>
-        <p className="text-xs text-gray-500 mt-1">This is a connection problem — it doesn&apos;t mean you have nothing to do.</p>
+        <p className="text-xs text-gray-500 mt-1">This is a connection problem - it doesn&apos;t mean you have nothing to do.</p>
         <button type="button" onClick={reload} className="mt-3 px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white hover:border-gray-500">Try again</button>
       </div>
     )
@@ -130,7 +130,7 @@ export default function TasksClient({ readOnly = false }: { readOnly?: boolean }
   if (tasks.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 bg-gray-50 rounded-lg border border-gray-200">
-        <p className="text-sm text-gray-400">Nothing needed from you yet — tasks will appear here as your case moves forward.</p>
+        <p className="text-sm text-gray-400">Nothing needed from you yet - tasks will appear here as your case moves forward.</p>
       </div>
     )
   }

@@ -67,7 +67,7 @@ export default function ClientLabelEditor({
 
   return (
     <span className="flex items-center gap-2">
-      <span className="text-sm font-medium text-gray-900">{label || "—"}</span>
+      <span className="text-sm font-medium text-gray-900">{label || "-"}</span>
       <button
         type="button"
         onClick={() => setEditing(true)}

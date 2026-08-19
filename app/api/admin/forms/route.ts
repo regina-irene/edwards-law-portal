@@ -1,4 +1,4 @@
-// app/api/admin/forms/route.ts — the form builder's CRUD. Admin only.
+// app/api/admin/forms/route.ts - the form builder's CRUD. Admin only.
 import { requireAdmin } from "@/lib/admin"
 import {
   listPortalForms,
@@ -127,7 +127,7 @@ export async function POST(req: Request) {
     if (definition.sections.length === 0) {
       return NextResponse.json({ error: "A form needs at least one question." }, { status: 400 })
     }
-    // An empty stage means standalone — a form that sits outside every stage.
+    // An empty stage means standalone - a form that sits outside every stage.
     const stage = typeof body?.stage === "string" && body.stage.trim() ? body.stage.trim() : null
     const saved = await savePortalForm({
       key,

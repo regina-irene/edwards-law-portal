@@ -1,6 +1,6 @@
 import type { NextAuthConfig } from "next-auth"
 
-// Proxy-safe base config — deliberately imports NO database, email, or
+// Proxy-safe base config - deliberately imports NO database, email, or
 // Airtable code. proxy.ts builds a lightweight NextAuth from this just to
 // read JWT session cookies; auth.ts extends it with the pg adapter and the
 // real providers (Google OAuth + Resend magic links).

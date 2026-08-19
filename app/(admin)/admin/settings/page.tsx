@@ -144,7 +144,7 @@ export default function AdminSettingsPage() {
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-gray-800">Appearance</h2>
         <p className="text-xs text-gray-500">
-          The look of the admin side. This is firm-wide — everyone on the admin side sees it.
+          The look of the admin side. This is firm-wide - everyone on the admin side sees it.
           Clients pick their own scheme on their Settings page.
         </p>
         <SchemePicker
@@ -168,7 +168,7 @@ export default function AdminSettingsPage() {
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-gray-800">Case Status fields clients see</h2>
         <p className="text-xs text-gray-500">
-          The Case Status board is the firm&apos;s internal board — payment status, the judge,
+          The Case Status board is the firm&apos;s internal board - payment status, the judge,
           drafting reminders, notes. Tick a field to put it on the client&apos;s Case Status page.
           <strong> Anything left unticked stays hidden</strong>, and any field added to the board
           later starts hidden until somebody ticks it here. This applies to{" "}
@@ -184,7 +184,7 @@ export default function AdminSettingsPage() {
           <input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="New page name (e.g. Resources)" className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           <button type="submit" className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">Add</button>
         </form>
-        <p className="text-xs text-gray-400">New pages start blank — edit their content in Global Pages, and turn them on/off per client in each client&apos;s Pages editor.</p>
+        <p className="text-xs text-gray-400">New pages start blank - edit their content in Global Pages, and turn them on/off per client in each client&apos;s Pages editor.</p>
       </section>
 
       <section className="space-y-3 max-w-md">

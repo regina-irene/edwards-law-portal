@@ -1,4 +1,4 @@
-// components/ui/RichTextView.tsx — read-only renderer for sanitized rich
+// components/ui/RichTextView.tsx - read-only renderer for sanitized rich
 // content. Deliberately kept out of RichTextEditor.tsx (and free of
 // "use client") so read-only pages don't ship the WYSIWYG editor bundle.
 

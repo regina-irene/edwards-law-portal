@@ -1,4 +1,4 @@
-// app/(client)/settings/page.tsx — client-side settings: portal background
+// app/(client)/settings/page.tsx - client-side settings: portal background
 // theme + joke of the day.
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"

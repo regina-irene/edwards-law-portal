@@ -1,4 +1,4 @@
-// app/(admin)/admin/clients/page.tsx — the client roster. Archived (former)
+// app/(admin)/admin/clients/page.tsx - the client roster. Archived (former)
 // clients are hidden unless ?archived=1, and can be archived / restored here.
 import { sql } from "@/lib/db"
 import { clientDisplayLabel, fetchAllClientsRaw } from "@/lib/airtable"
@@ -125,7 +125,7 @@ export default async function ClientsPage({
       {clients.length === 0 ? (
         <p className="text-gray-500">No clients found in Airtable.</p>
       ) : visible.length === 0 ? (
-        <p className="text-gray-500">Every client on the board is archived — switch to “Include archived” to see them.</p>
+        <p className="text-gray-500">Every client on the board is archived - switch to “Include archived” to see them.</p>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
           {visible.map((c) => {

@@ -1,4 +1,4 @@
-// app/api/file-dropzone/route.ts — client: upload a dropped file to the firm's
+// app/api/file-dropzone/route.ts - client: upload a dropped file to the firm's
 // Google Drive folder, and leave a note in the conversation saying it arrived.
 import { assertClientCanWrite } from "@/lib/client-write-guard"
 import { deliverClientUpload, driveConfigured } from "@/lib/client-uploads"

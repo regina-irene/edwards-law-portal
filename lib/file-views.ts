@@ -1,4 +1,4 @@
-// lib/file-views.ts — record that an attachment was opened. One row per open,
+// lib/file-views.ts - record that an attachment was opened. One row per open,
 // written after the request has already been authorized, so the case log can
 // show that a client actually looked at a document.
 //

@@ -1,5 +1,5 @@
 "use client"
-// components/ui/RichTextEditor.tsx — the WYSIWYG editor used by notes, page
+// components/ui/RichTextEditor.tsx - the WYSIWYG editor used by notes, page
 // content and the firm's rich composer.
 import { useRef, useEffect, useState } from "react"
 import { PromptDialog } from "@/components/ui/PromptDialog"
@@ -114,7 +114,7 @@ export function RichTextEditor({
       const fd = new FormData()
       fd.append("file", file)
       const res = await fetch("/api/admin/content-image", { method: "POST", body: fd }).catch(() => null)
-      if (!res?.ok) { setUploadError("That image didn't upload — images only, up to 10 MB."); return }
+      if (!res?.ok) { setUploadError("That image didn't upload - images only, up to 10 MB."); return }
       const { url } = await res.json()
       restoreSelection()
       exec("insertImage", url)
@@ -198,7 +198,7 @@ export function RichTextEditor({
         </div>
       )}
 
-      {/* Image controls — appear when an image is selected */}
+      {/* Image controls - appear when an image is selected */}
       {imgEl && (
         <div className="flex items-center gap-3 flex-wrap border-b border-gray-200 bg-blue-50 px-3 py-1.5 text-xs text-gray-700">
           <span className="font-medium">Image:</span>
@@ -209,7 +209,7 @@ export function RichTextEditor({
           <button type="button" onMouseDown={hold(() => resizeImg(25))} className="px-2 py-0.5 rounded hover:bg-blue-100">25%</button>
           <button type="button" onMouseDown={hold(() => resizeImg(50))} className="px-2 py-0.5 rounded hover:bg-blue-100">50%</button>
           <button type="button" onMouseDown={hold(() => resizeImg(100))} className="px-2 py-0.5 rounded hover:bg-blue-100">Full</button>
-          <span className="text-gray-400">— use the align buttons above to center/float it</span>
+          <span className="text-gray-400"> - use the align buttons above to center/float it</span>
         </div>
       )}
 

@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     if (!client?.clientId || String(client.clientId) !== messageClientId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-    // Client branch only — the firm can still attach files to an archived
+    // Client branch only - the firm can still attach files to an archived
     // client's conversation.
     const gate = await assertClientCanWrite()
     if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status })
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       VALUES (${messageId}, ${messageClientId}, ${file.name}, ${blob.pathname}, ${blob.url}, ${file.type || null}, ${file.size})
       RETURNING id, file_name
     `
-    // Deliver to the firm's Drive folder. Fail-soft — the portal copy is saved.
+    // Deliver to the firm's Drive folder. Fail-soft - the portal copy is saved.
     if (isClientUpload) {
       await deliverClientUpload({ clientId: messageClientId, fileName: file.name, buffer, mimeType: file.type })
     }

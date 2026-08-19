@@ -1,11 +1,11 @@
-# Edwards Family Law — Portal Design Spec
+# Edwards Family Law - Portal Design Spec
 
 A self-contained reference for reproducing the "Mail-style" admin look on any
 project. Copy this file into your new portal repo or hand it to a developer
 (or another AI) and they should be able to build a UI that visually matches
 the FileFlow admin.
 
-The look is intentionally quiet — small typography, hairline borders, no
+The look is intentionally quiet - small typography, hairline borders, no
 shadows, single accent color. Inspired by Linear / Notion / iOS Settings.
 
 ---
@@ -31,7 +31,7 @@ shadows, single accent color. Inspired by Linear / Notion / iOS Settings.
    80px                       flex-1 (main area)
 ```
 
-**Top-level container:** `h-screen flex` — fills viewport, never scrolls
+**Top-level container:** `h-screen flex` - fills viewport, never scrolls
 at the body level.
 
 - **Icon rail (left):** fixed-width column of nav items. 80px wide,
@@ -46,7 +46,7 @@ at the body level.
 
 ## 2. Color tokens
 
-Use these exact hex codes. Don't substitute "close enough" colors — the
+Use these exact hex codes. Don't substitute "close enough" colors - the
 quietness depends on the specific muted grays.
 
 | Name        | Hex       | Use                                              |
@@ -54,15 +54,15 @@ quietness depends on the specific muted grays.
 | `paper`     | `#FFFFFF` | Page background. Crisp white.                    |
 | `paperEdge` | `#E7E5E4` | Inline chips, slightly deeper than surface.      |
 | `surface`   | `#F5F5F4` | Cards, panels, hover backgrounds. Stone-100.     |
-| `ink`       | `#0F172A` | Primary text — page titles, body emphasis.       |
+| `ink`       | `#0F172A` | Primary text - page titles, body emphasis.       |
 | `inkBody`   | `#334155` | Body copy. Slate-700.                            |
-| `inkMuted`  | `#64748B` | Secondary text — descriptions, microcopy.        |
+| `inkMuted`  | `#64748B` | Secondary text - descriptions, microcopy.        |
 | `inkDim`    | `#94A3B8` | Section labels, the quietest text.               |
 | `hairline`  | `#E2E8F0` | Every divider, every card border. Always 1px.    |
-| `accent`    | `#1A2A4A` | Single primary color — navy. Active state, CTAs. |
+| `accent`    | `#1A2A4A` | Single primary color - navy. Active state, CTAs. |
 | `accentHov` | `#0F1A33` | Hover state for accent.                          |
 
-**Status colors** (use sparingly — only for status pills and progress fill):
+**Status colors** (use sparingly - only for status pills and progress fill):
 
 | Name      | Hex       | Use                                          |
 |-----------|-----------|----------------------------------------------|
@@ -80,11 +80,11 @@ darker matching text color (e.g. Active = `bg:#DCFCE7` `text:#15803D`).
 
 **Fonts**
 
-- **Sans (body, UI):** Geist — fallback `system-ui, -apple-system, sans-serif`.
-  Free swap: **Inter** (Google Fonts) — visually similar enough.
+- **Sans (body, UI):** Geist - fallback `system-ui, -apple-system, sans-serif`.
+  Free swap: **Inter** (Google Fonts) - visually similar enough.
 - **Serif (page titles only):** Tailwind's default serif stack
   (`ui-serif, Georgia, Cambria, "Times New Roman", Times, serif`).
-- **Mono (numbers, code):** Geist Mono — fallback `ui-monospace, SF Mono,
+- **Mono (numbers, code):** Geist Mono - fallback `ui-monospace, SF Mono,
   Menlo, monospace`. Use the `tabular-nums` feature for all counts so
   digits don't shift width when numbers change.
 
@@ -101,7 +101,7 @@ darker matching text color (e.g. Active = `bg:#DCFCE7` `text:#15803D`).
 | Stat label (card)  | `text-[10px] uppercase tracking-wider` · `inkDim`             |
 
 The 10px uppercase tracked label is the signature. Use it for every section
-heading inside a page. It's quiet but unambiguous — readers scan it like a
+heading inside a page. It's quiet but unambiguous - readers scan it like a
 table of contents.
 
 ---
@@ -121,7 +121,7 @@ table of contents.
 **Page padding:** `px-6 py-6` (24px) on the main scroll container.
 
 **Card / panel radius:** `rounded-lg` (8px). Never larger than 12px. Never
-square-cornered — softness is part of the calm.
+square-cornered - softness is part of the calm.
 
 **Borders:** Always 1px solid `hairline` (`#E2E8F0`). Never thicker.
 
@@ -299,7 +299,7 @@ background `#F5F5F4` (or `#FFFFFF`) with a 1px right border.
 />
 ```
 
-Focus ring color: any 30% opacity tint of accent — e.g. `ring-blue-500/30`.
+Focus ring color: any 30% opacity tint of accent - e.g. `ring-blue-500/30`.
 
 ### Empty state
 
@@ -326,7 +326,7 @@ Focus ring color: any 30% opacity tint of accent — e.g. `ring-blue-500/30`.
   numbers change. Critical for progress counts, deadlines, timestamps.
 - **Dates:** `Apr 14, 2026` (short month + numeric day + year). No leading
   zeros on day. Use `toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })`.
-- **Times:** `9:42 AM` — never 24-hour. Append timezone for cross-context
+- **Times:** `9:42 AM` - never 24-hour. Append timezone for cross-context
   data (`9:42 AM EDT`).
 - **Relative time:** `12m ago`, `3h ago`, `2d ago`, then fall back to absolute
   date (`Apr 14`) at 7+ days.
@@ -424,9 +424,9 @@ body {
 Live example to compare against: **https://fileflow-eta.vercel.app**. Once
 signed in, look at:
 
-- `/admin/matters` — split-pane list + detail (the full Mail pattern)
-- `/admin/intake` — card grid with preview/edit buttons
-- `/admin/settings` — long form on a stone surface
+- `/admin/matters` - split-pane list + detail (the full Mail pattern)
+- `/admin/intake` - card grid with preview/edit buttons
+- `/admin/settings` - long form on a stone surface
 
 Right-click anywhere → Inspect to confirm exact pixel values if anything in
 this spec disagrees with what's on screen. (Screen is source of truth.)

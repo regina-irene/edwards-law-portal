@@ -1,4 +1,4 @@
-// app/(client)/layout.tsx — the shell every client page renders inside, and the
+// app/(client)/layout.tsx - the shell every client page renders inside, and the
 // place the archived-client wind-down is enforced for the whole portal.
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
@@ -88,7 +88,7 @@ export default async function ClientLayout({ children }: { children: React.React
     )
   }
 
-  // The 30-day wind-down. getPortalArchiveState fails SAFE — a database problem
+  // The 30-day wind-down. getPortalArchiveState fails SAFE - a database problem
   // resolves to "active", because locking a current client out of their own
   // case file is far worse than one extra day of access for a closed one.
   const archive = await getPortalArchiveState(client)
@@ -122,7 +122,7 @@ export default async function ClientLayout({ children }: { children: React.React
   const scheme = resolveScheme(prefs.scheme, prefs.gradient)
 
   const today = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" })
-  // Airtable names are "Last | First" — greet the client by first name only
+  // Airtable names are "Last | First" - greet the client by first name only
   const firstName = (client.name.split("|")[1] ?? client.name).trim()
 
   return (
@@ -151,7 +151,7 @@ export default async function ClientLayout({ children }: { children: React.React
         {scheme.stripe && <div className="h-2.5 shrink-0 print:hidden" style={{ background: scheme.stripe }} />}
         {previewEmail && (
           <div className="bg-amber-100 border-b border-amber-300 text-amber-900 text-sm px-4 py-2 flex items-center justify-center gap-3 print:hidden">
-            <span>Admin preview — viewing the portal as <strong>{client.name}</strong></span>
+            <span>Admin preview - viewing the portal as <strong>{client.name}</strong></span>
             <form action={stopPreview}>
               <button type="submit" className="underline font-medium hover:text-amber-950">Exit preview</button>
             </form>
@@ -163,7 +163,7 @@ export default async function ClientLayout({ children }: { children: React.React
           <span className="text-[12px]" style={{ color: "#334155" }}>{firstName}</span>
         </div>
         <FirmAnnouncementView html={firmAnnouncement} />
-        {/* Read-only wind-down. Calm and warm on purpose — these are divorce
+        {/* Read-only wind-down. Calm and warm on purpose - these are divorce
             clients, and a hard-edged notice here reads like a collections
             letter. Never mentions money. */}
         {archive.readOnly && (
@@ -174,7 +174,7 @@ export default async function ClientLayout({ children }: { children: React.React
             <p className="text-sm max-w-3xl mx-auto text-center">
               <strong className="font-semibold">Your case with our office is closed.</strong>{" "}
               You can still read everything here for another {archive.daysLeft}{" "}
-              {archive.daysLeft === 1 ? "day" : "days"} — messages, documents, tasks and your case
+              {archive.daysLeft === 1 ? "day" : "days"} - messages, documents, tasks and your case
               status. Please save anything you would like to keep. New messages and uploads are
               turned off, so if you need something, please contact the office.
             </p>

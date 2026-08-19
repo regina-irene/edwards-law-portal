@@ -1,4 +1,4 @@
-// lib/task-progress.ts — pure helpers behind the admin Tasks screen: what
+// lib/task-progress.ts - pure helpers behind the admin Tasks screen: what
 // state an assigned task is in, how a client's caseload rolls up, and the
 // accent colour each stage carries. No React, no data access, so it can be
 // unit-tested on its own.
@@ -56,7 +56,7 @@ export const STATE_LABEL: Record<TaskState, string> = {
   open: "Open",
 }
 
-// Tailwind classes per state — one place so pills read the same everywhere.
+// Tailwind classes per state - one place so pills read the same everywhere.
 export const STATE_CLASS: Record<TaskState, string> = {
   done: "bg-green-100 text-green-800",
   overdue: "bg-red-100 text-red-800",
@@ -106,7 +106,7 @@ export function progressFor(clientId: string, label: string, tasks: AssignedTask
   }
 }
 
-// Most overdue first, then by name — the order Regina works in.
+// Most overdue first, then by name - the order Regina works in.
 export function sortProgress(list: ClientProgress[]): ClientProgress[] {
   return [...list].sort((a, b) => {
     if (b.worstOverdueDays !== a.worstOverdueDays) return b.worstOverdueDays - a.worstOverdueDays

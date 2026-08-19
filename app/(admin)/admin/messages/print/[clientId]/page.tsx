@@ -30,7 +30,7 @@ export default function PrintThread({ params }: { params: Promise<{ clientId: st
 
   return (
     <div style={{ maxWidth: 720, margin: "0 auto", padding: 32, fontFamily: "Georgia, serif", color: "#111" }}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Edwards Family Law — Message Transcript</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Edwards Family Law - Message Transcript</h1>
       <p style={{ fontSize: 12, color: "#555", marginBottom: 20 }}>Generated {new Date().toLocaleString("en-US")}</p>
       {messages.map((m) => (
         <div key={m.id} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid #eee" }}>

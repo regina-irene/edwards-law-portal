@@ -1,4 +1,4 @@
-// components/ui/Motif.tsx — signature watermark: the firm logo, very faint,
+// components/ui/Motif.tsx - signature watermark: the firm logo, very faint,
 // in the bottom-right corner of every page. Regina picked her logo over drawn
 // line art (2026-07-17); the SVG variants + /admin/motif picker were removed.
 

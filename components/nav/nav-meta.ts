@@ -1,4 +1,4 @@
-// components/nav/nav-meta.ts — icons and unread-badge rules shared by the
+// components/nav/nav-meta.ts - icons and unread-badge rules shared by the
 // desktop icon rail (Sidebar) and the phone bottom bar (BottomNav), so the two
 // can never drift apart.
 

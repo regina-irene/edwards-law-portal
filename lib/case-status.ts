@@ -1,4 +1,4 @@
-// lib/case-status.ts — the Status board (Airtable tbl3gCA0CQ0S6ewW6) as data:
+// lib/case-status.ts - the Status board (Airtable tbl3gCA0CQ0S6ewW6) as data:
 // plain-English names for every Case Stage, a paginated read of the whole
 // board, and the one write path the admin Status page uses.
 //
@@ -21,7 +21,7 @@ const STATUS_TABLE_ID = "tbl3gCA0CQ0S6ewW6"
 export const CASE_STATUS_CACHE_TAG = "case-status"
 
 // Only what the board needs. Payment Status and Judge are deliberately NOT
-// read here — this data feeds a client-facing status, and the less of the
+// read here - this data feeds a client-facing status, and the less of the
 // internal record travels, the less can leak.
 const STATUS_FIELDS = [
   "Case Stage",
@@ -101,7 +101,7 @@ const STAGE_PLAIN_LOOSE: Record<string, string> = (() => {
  */
 export function plainStage(raw: string): string {
   const value = typeof raw === "string" ? raw.trim() : ""
-  if (!value) return "—"
+  if (!value) return "-"
   const exact = STAGE_PLAIN[value]
   if (exact) return exact
   const loose = STAGE_PLAIN_LOOSE[value.replace(/\s+/g, " ").toLowerCase()]
@@ -191,7 +191,7 @@ const cachedCaseStatuses: () => Promise<CaseStatusRow[]> = unstable_cache(
 
 /**
  * Every row on the Status board. Cached 60s under the "case-status" tag; a
- * successful save busts the tag. Fails soft to [] — the caller shows its own
+ * successful save busts the tag. Fails soft to [] - the caller shows its own
  * "couldn't load" message rather than a crash.
  */
 export async function listAllCaseStatuses(): Promise<CaseStatusRow[]> {
@@ -222,7 +222,7 @@ export interface CaseStatusBoardRow {
   daysSinceUpdate: number | null
   /** false when this client has no row on the Status board at all. */
   hasStatusRecord: boolean
-  /** "Archived" on the Clients board — a former or closed case. */
+  /** "Archived" on the Clients board - a former or closed case. */
   archived: boolean
   /** The formatted status, when the stored formatting still matches Airtable. */
   statusHtml: string
@@ -232,8 +232,8 @@ export interface CaseStatusBoardRow {
 
 export interface StatusBoardOptions {
   /**
-   * Archived cases are OFF by default, so every existing caller — the board
-   * page, the GET route and the assist endpoint — hides closed cases without
+   * Archived cases are OFF by default, so every existing caller - the board
+   * page, the GET route and the assist endpoint - hides closed cases without
    * needing a change. Only a screen with an explicit "Include archived" toggle
    * should pass true.
    */
@@ -252,7 +252,7 @@ function statusRecordId(clientId: string): string {
  * returned (empty stages, hasStatusRecord false) so nobody silently vanishes
  * from the board.
  *
- * Archived (former) clients are left out unless `includeArchived` is set — a
+ * Archived (former) clients are left out unless `includeArchived` is set - a
  * closed case shouldn't sit on the working board, or be counted as stuck.
  */
 export async function buildStatusBoard(options: StatusBoardOptions = {}): Promise<CaseStatusBoardRow[]> {
@@ -260,7 +260,7 @@ export async function buildStatusBoard(options: StatusBoardOptions = {}): Promis
   // Deliberately NOT fail-soft. If either read fails, this THROWS so the page
   // and the API route show "couldn't load". Swallowing the error produced a
   // board where every case read "no stage set", and saving such a row sent
-  // `Case Stage: []` to Airtable — silently wiping the real stages off the
+  // `Case Stage: []` to Airtable - silently wiping the real stages off the
   // live board. A visible error is always better than a plausible blank one.
   const [clients, statuses] = await Promise.all([
     getAllClients(),
@@ -290,7 +290,7 @@ export async function buildStatusBoard(options: StatusBoardOptions = {}): Promis
     const stages = status?.stages ?? []
     const lastModified = status?.lastModified ?? null
     const statusText = status?.statusText ?? ""
-    // Only honour stored formatting while it still matches Airtable's words —
+    // Only honour stored formatting while it still matches Airtable's words - 
     // a status edited on the board must not show yesterday's styling.
     const storedRich = rich.get(recordId)
     const statusHtml =
@@ -367,7 +367,7 @@ export function revalidateCaseStatus(): void {
 }
 
 // ---------------------------------------------------------------------------
-// Stuck-case detection (deterministic — no model involved)
+// Stuck-case detection (deterministic - no model involved)
 // ---------------------------------------------------------------------------
 
 export interface CaseFlag {
@@ -392,7 +392,7 @@ function median(values: number[]): number | null {
  *  1. no change on the board in 30+ days
  *  2. nothing written in the client-facing status box
  *  3. sat noticeably longer than every other case at the same stage
- * One reason per case — the first that applies — so the marker stays readable.
+ * One reason per case - the first that applies - so the marker stays readable.
  *
  * Archived cases are skipped entirely, and are also kept out of the stage
  * medians: a closed case sitting untouched for a year is not stuck, and letting

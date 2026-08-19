@@ -1,4 +1,4 @@
-// components/admin/ArchiveToggle.tsx — the "Active / Include archived" switch
+// components/admin/ArchiveToggle.tsx - the "Active / Include archived" switch
 // on the server-rendered admin lists (2026-08-19).
 //
 // It is two links rather than a checkbox on purpose: the state lives in the URL

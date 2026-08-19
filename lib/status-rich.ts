@@ -1,4 +1,4 @@
-// lib/status-rich.ts — formatting for the client-facing case status (2026-08-18).
+// lib/status-rich.ts - formatting for the client-facing case status (2026-08-18).
 //
 // Airtable's rich text is Markdown, which has no colour or highlight, so the
 // formatted version lives here and Airtable receives the plain text. The board
@@ -35,7 +35,7 @@ export function hashOf(plain: string): string {
  *
  * The `<p>` wrapper is load-bearing. bodyToPlainText only decodes entities when
  * it detects a real tag, and an unformatted one-line status is bare escaped
- * text with no tags at all — so "Smith &amp; Jones" would have gone into the
+ * text with no tags at all - so "Smith &amp; Jones" would have gone into the
  * live base literally, ampersand-a-m-p and all, and re-escaped on every
  * subsequent save. Forcing the HTML branch decodes it properly.
  */
@@ -76,7 +76,7 @@ export async function getRichStatuses(clientIds: string[]): Promise<Map<string, 
       }
     }
   } catch {
-    // fail soft — the board renders plain text
+    // fail soft - the board renders plain text
   }
   return out
 }
@@ -101,7 +101,7 @@ export async function saveRichStatus(clientId: string, html: string, plain: stri
  * The HTML to render for a client's status.
  *
  * Returns the stored formatting when it still matches what Airtable holds, and
- * otherwise the Airtable text escaped into simple HTML — so a status edited on
+ * otherwise the Airtable text escaped into simple HTML - so a status edited on
  * the board shows the board's words, never stale formatting over new text.
  */
 export async function resolveStatusHtml(clientId: string, airtableText: string): Promise<string> {

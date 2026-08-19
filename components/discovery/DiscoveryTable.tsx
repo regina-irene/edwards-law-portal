@@ -1,5 +1,5 @@
 "use client"
-// components/discovery/DiscoveryTable.tsx — sortable table of discovery items
+// components/discovery/DiscoveryTable.tsx - sortable table of discovery items
 // the firm has made available to the client. Mirrors the pleadings table.
 // Below `md` the same rows render as stacked cards so nothing scrolls sideways
 // on a phone and "View file" is always a full-width tap target.
@@ -88,7 +88,7 @@ export default function DiscoveryTable({ docs }: { docs: DiscoveryDoc[] }) {
             <dl className="mt-3 space-y-2 text-sm">
               <div className="flex gap-3">
                 <dt className={CARD_LABEL}>Date</dt>
-                <dd className="font-medium text-gray-700">{d.date ? shortDate(d.date) : "—"}</dd>
+                <dd className="font-medium text-gray-700">{d.date ? shortDate(d.date) : "-"}</dd>
               </div>
               <div className="flex gap-3">
                 <dt className={CARD_LABEL}>Direction</dt>
@@ -101,7 +101,7 @@ export default function DiscoveryTable({ docs }: { docs: DiscoveryDoc[] }) {
                       {d.direction}
                     </span>
                   ) : (
-                    <span className="text-gray-300">—</span>
+                    <span className="text-gray-300">-</span>
                   )}
                 </dd>
               </div>
@@ -150,7 +150,7 @@ export default function DiscoveryTable({ docs }: { docs: DiscoveryDoc[] }) {
           {sorted.map((d) => (
             <tr key={d.id} className="align-top hover:bg-gray-50/70">
               <td className="px-4 py-3 whitespace-nowrap font-semibold text-gray-700">
-                {d.date ? shortDate(d.date) : "—"}
+                {d.date ? shortDate(d.date) : "-"}
               </td>
               <td className="px-4 py-3 font-medium text-gray-900 min-w-[14rem] max-w-md break-words">
                 {d.title}
@@ -173,7 +173,7 @@ export default function DiscoveryTable({ docs }: { docs: DiscoveryDoc[] }) {
                     {d.direction}
                   </span>
                 ) : (
-                  <span className="text-gray-300">—</span>
+                  <span className="text-gray-300">-</span>
                 )}
               </td>
               <td className="px-4 py-3 text-gray-600 max-w-[16rem] break-words whitespace-pre-wrap">{d.notes || ""}</td>

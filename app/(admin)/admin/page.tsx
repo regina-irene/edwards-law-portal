@@ -1,4 +1,4 @@
-// app/(admin)/admin/page.tsx — admin Home / dashboard with activity.
+// app/(admin)/admin/page.tsx - admin Home / dashboard with activity.
 // Archived (former) clients are left out of the count, the open-task list and
 // the activity feed unless ?archived=1.
 import { sql } from "@/lib/db"
@@ -61,7 +61,7 @@ export default async function AdminHome({
 
   // Names are looked up from the WHOLE roster on purpose. Filtering the roster
   // here instead would leave any archived row that IS shown reading
-  // "A client" — worse than showing it, not better.
+  // "A client" - worse than showing it, not better.
   const labelById = new Map(clients.map((c) => [String(c.clientId), labels[String(c.clientId)] || clientDisplayLabel(c.name)]))
   const nameFor = (id: string) => labelById.get(id) || "A client"
 
@@ -69,7 +69,7 @@ export default async function AdminHome({
   const archivedCount = archivedIds.size
   const activeClients = clients.filter((c) => !c.archived)
 
-  // auth_activity rows carry an EMAIL in the client_id slot — map it back to
+  // auth_activity rows carry an EMAIL in the client_id slot - map it back to
   // the client where possible; otherwise show the raw address (e.g. Regina's).
   const AUTH_KINDS = new Set(["link_sent", "sign_in"])
   const emailToId = new Map(
@@ -86,15 +86,15 @@ export default async function AdminHome({
   }
 
   const describe = (a: any): string => {
-    if (a.kind === "chat") return a.sender === "firm" ? "— you sent a message" : "sent a message"
-    if (a.kind === "message") return "— you sent a message"
+    if (a.kind === "chat") return a.sender === "firm" ? " - you sent a message" : "sent a message"
+    if (a.kind === "message") return " - you sent a message"
     if (a.kind === "upload") return `uploaded ${a.detail}`
     if (a.kind === "form") return `updated the ${String(a.detail).replace(/-/g, " ")} form`
     if (a.kind === "link_sent") return "was emailed a sign-in link"
     if (a.kind === "sign_in") return `signed in${a.detail === "google" ? " with Google" : a.detail === "resend" ? " via email link" : ""}`
     if (a.kind === "note") {
       const snippet = String(a.detail ?? "").slice(0, 60)
-      return `— you wrote a field note${snippet ? `: “${snippet}${String(a.detail).length > 60 ? "…" : ""}”` : ""}`
+      return ` - you wrote a field note${snippet ? `: “${snippet}${String(a.detail).length > 60 ? "…" : ""}”` : ""}`
     }
     return "activity"
   }
@@ -167,7 +167,7 @@ export default async function AdminHome({
           <Link href="/admin/tasks" className="text-xs text-blue-600 hover:underline">Manage tasks →</Link>
         </div>
         {openTasks.length === 0 ? (
-          <div className="px-5 py-8 text-center text-sm text-gray-400">No open tasks — everything's done.</div>
+          <div className="px-5 py-8 text-center text-sm text-gray-400">No open tasks - everything's done.</div>
         ) : (
           <ul className="divide-y divide-gray-100">
             {openTasks.slice(0, 10).map((t: any) => {
@@ -177,11 +177,11 @@ export default async function AdminHome({
                   <Link href="/admin/tasks" className="min-w-0 flex-1">
                     <p className="text-sm text-gray-800 truncate">
                       <span className="font-semibold text-gray-900">{nameFor(String(t.client_id))}</span>
-                      {" — "}{t.title}
+                      {"-"}{t.title}
                     </p>
                   </Link>
                   <span className={`text-xs whitespace-nowrap flex-shrink-0 ${overdue ? "text-red-600 font-semibold" : "text-gray-400"}`}>
-                    {t.due_date ? `${overdue ? "Overdue — was due " : "Due "}${fmtDue(t.due_date)}` : "No due date"}
+                    {t.due_date ? `${overdue ? "Overdue - was due " : "Due "}${fmtDue(t.due_date)}` : "No due date"}
                   </span>
                 </li>
               )

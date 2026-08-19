@@ -1,4 +1,4 @@
-// app/(admin)/admin/tasks/page.tsx — Tasks, split into three tabs: assign work,
+// app/(admin)/admin/tasks/page.tsx - Tasks, split into three tabs: assign work,
 // keep the task board, and see where every client stands. Tabs are local state
 // only, so switching never refetches.
 "use client"
@@ -158,7 +158,7 @@ export default function AdminTasksPage() {
         </div>
         {search.trim() && (
           <p className="mt-1 text-xs text-gray-400">
-            {matchCount} {matchCount === 1 ? "match" : "matches"} for “{search.trim()}” — showing them across every tab.
+            {matchCount} {matchCount === 1 ? "match" : "matches"} for “{search.trim()}” - showing them across every tab.
           </p>
         )}
       </div>

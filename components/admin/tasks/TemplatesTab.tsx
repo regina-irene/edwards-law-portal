@@ -1,5 +1,5 @@
 "use client"
-// components/admin/tasks/TemplatesTab.tsx — the task board: one collapsible
+// components/admin/tasks/TemplatesTab.tsx - the task board: one collapsible
 // panel per stage. Panels start closed (the page used to be ~2,500px of
 // permanently-open lists) and remember what you had open.
 import { useEffect, useState } from "react"
@@ -211,7 +211,7 @@ export default function TemplatesTab({
 
       {groups.length === 0 && (
         <p className="text-sm text-gray-500 bg-white rounded-xl border border-gray-200 p-6">
-          No tasks yet — add a stage above, then add tasks to it.
+          No tasks yet - add a stage above, then add tasks to it.
         </p>
       )}
       {groups.length > 0 && visibleGroups.length === 0 && (
@@ -412,7 +412,7 @@ export default function TemplatesTab({
                           <input
                             defaultValue={t.embed_url ?? ""}
                             onBlur={(e) => { if (e.target.value.trim() !== (t.embed_url ?? "")) setEmbedUrl(t.id, e.target.value) }}
-                            placeholder="https://airtable.com/…/form — shows inside the task"
+                            placeholder="https://airtable.com/…/form - shows inside the task"
                             aria-label="Embedded form URL"
                             className="flex-1 min-w-[18rem] px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />

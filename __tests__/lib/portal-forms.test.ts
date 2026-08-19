@@ -10,7 +10,7 @@ describe("slugify", () => {
 })
 
 describe("normalizeDefinition", () => {
-  it("keeps an existing field key exactly — answers are filed under it", () => {
+  it("keeps an existing field key exactly - answers are filed under it", () => {
     const def = normalizeDefinition("intake", "Intake", null, [
       { title: "About you", fields: [{ label: "Full legal name", fieldKey: "client_full_name", type: "text" }] },
     ])

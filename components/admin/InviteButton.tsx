@@ -1,5 +1,5 @@
 "use client"
-// components/admin/InviteButton.tsx — per-client "Send invite" on the admin
+// components/admin/InviteButton.tsx - per-client "Send invite" on the admin
 // client list: emails the welcome/login instructions via Resend.
 // Rendered as a big icon with a label underneath (client-list action style).
 

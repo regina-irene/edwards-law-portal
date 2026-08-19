@@ -1,4 +1,4 @@
-// app/(admin)/admin/notes/[clientId]/page.tsx — one client's Field Notes
+// app/(admin)/admin/notes/[clientId]/page.tsx - one client's Field Notes
 // timeline: manual notes merged with live portal events, newest first.
 import Link from "next/link"
 import { redirect } from "next/navigation"
@@ -29,7 +29,7 @@ export default async function ClientFieldNotes({ params }: { params: Promise<{ c
 
   const client = clients.find((c) => String(c.clientId) === cid)
   const label = labels[cid] || (client ? clientDisplayLabel(client.name) : cid)
-  // Entries read "Client Cleon Grey uploaded …" — the person, not a role. The
+  // Entries read "Client Cleon Grey uploaded …" - the person, not a role. The
   // Airtable name reads best in prose; fall back to whatever label we have.
   const proseName = clientProseName(client?.name) || labels[cid] || ""
   const events = await fetchClientEvents(cid, proseName)
@@ -39,7 +39,7 @@ export default async function ClientFieldNotes({ params }: { params: Promise<{ c
     <div className="space-y-6">
       <PageTitle
         title={label}
-        tagline="Field Notes — your private case log; clients never see this"
+        tagline="Field Notes - your private case log; clients never see this"
         actions={
           <span className="flex items-center gap-3 print:hidden">
             <Link href="/admin/notes" className="text-sm underline text-gray-500 hover:text-gray-900">← All clients</Link>

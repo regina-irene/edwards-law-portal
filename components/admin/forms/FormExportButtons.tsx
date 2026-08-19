@@ -1,5 +1,5 @@
 "use client"
-// Export a completed form. CSV opens in Excel; Word opens in Word — both are
+// Export a completed form. CSV opens in Excel; Word opens in Word - both are
 // generated from the same server response so what you export matches what's on
 // screen.
 import { useState } from "react"

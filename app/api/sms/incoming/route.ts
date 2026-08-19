@@ -1,4 +1,4 @@
-// app/api/sms/incoming/route.ts — Twilio webhook for texts clients send TO the
+// app/api/sms/incoming/route.ts - Twilio webhook for texts clients send TO the
 // firm's Twilio number. Matched texts land in that client's Message Center
 // conversation (tagged as received-by-text); unmatched numbers are forwarded
 // to the firm cell so nothing vanishes.
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     const adminPhone = await getAdminPhone()
 
     if (!client) {
-      // no matching client — forward to the firm cell so it isn't lost
+      // no matching client - forward to the firm cell so it isn't lost
       if (adminPhone) {
         await sendSms(adminPhone, `📨 Text from unknown number ${from}:\n\n"${body.slice(0, 200)}"`)
       }

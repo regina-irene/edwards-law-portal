@@ -1,5 +1,5 @@
 "use client"
-// components/correspondence/CorrespondenceTable.tsx — sortable table of the
+// components/correspondence/CorrespondenceTable.tsx - sortable table of the
 // client's correspondence, all columns from the Airtable board but
 // portal-styled. Mirrors the pleadings table.
 // Click a column header to sort; click again to flip direction.
@@ -35,7 +35,7 @@ const CARD_LABEL = "w-20 shrink-0 pt-0.5 text-[10px] uppercase tracking-wide tex
 function sortValue(d: CorrespondenceDoc, key: SortKey): string {
   if (key === "sentOn") return d.sentOn ?? (d.created ?? "").slice(0, 10)
   // Sort "Sent by" on what the client actually reads, not the board's shorthand
-  // — otherwise the column would order by Us/Them while displaying something
+  // - otherwise the column would order by Us/Them while displaying something
   // else entirely.
   if (key === "sentBy") return sentByLabel(d.sentBy).toLowerCase()
   return (d[key] ?? "").toString().toLowerCase()
@@ -81,7 +81,7 @@ export default function CorrespondenceTable({ docs }: { docs: CorrespondenceDoc[
       {/* Phones: one card per letter, in the same order the table is sorted in. */}
       <ul className="md:hidden space-y-3">
         {sorted.map((d) => {
-          const dateLabel = d.sentOn ? shortDate(d.sentOn) : "—"
+          const dateLabel = d.sentOn ? shortDate(d.sentOn) : "-"
           const fc = d.folder ? folderColor(d.folder) : null
           return (
             <li
@@ -127,7 +127,7 @@ export default function CorrespondenceTable({ docs }: { docs: CorrespondenceDoc[
                         {sentByLabel(d.sentBy)}
                       </span>
                     ) : (
-                      <span className="text-gray-300">—</span>
+                      <span className="text-gray-300">-</span>
                     )}
                   </dd>
                 </div>
@@ -178,7 +178,7 @@ export default function CorrespondenceTable({ docs }: { docs: CorrespondenceDoc[
           {sorted.map((d) => {
             // the Date column is always the date at the start of the file name;
             // a name with no date shows nothing rather than the sync date
-            const dateLabel = d.sentOn ? shortDate(d.sentOn) : "—"
+            const dateLabel = d.sentOn ? shortDate(d.sentOn) : "-"
             // letters kept in a subfolder ("Opposing Counsel") are tagged and
             // washed in that folder's color so they stand apart from the rest
             const fc = d.folder ? folderColor(d.folder) : null
@@ -235,7 +235,7 @@ export default function CorrespondenceTable({ docs }: { docs: CorrespondenceDoc[
                       {sentByLabel(d.sentBy)}
                     </span>
                   ) : (
-                    <span className="text-gray-300">—</span>
+                    <span className="text-gray-300">-</span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-gray-600 max-w-[16rem] break-words whitespace-pre-wrap">{d.notes || ""}</td>

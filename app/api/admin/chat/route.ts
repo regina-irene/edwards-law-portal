@@ -61,7 +61,7 @@ export async function POST(req: Request) {
   }
 
   // Rich replies arrive as HTML from the formatting-mode composer. Sanitize
-  // before storing — admins are trusted, so this is defense in depth. Plain
+  // before storing - admins are trusted, so this is defense in depth. Plain
   // bodies are stored exactly as typed, the way they always were.
   const rich = isHtmlBody(body)
   const storedBody = rich ? sanitizeNotesHtml(body).trim() : body.trim()
@@ -79,9 +79,9 @@ export async function POST(req: Request) {
     `
 
     // Notifications on firm replies. One Airtable lookup feeds both channels:
-    // SMS — opt-IN via the "SMS Reminders" checkbox (sms:true = send the actual
+    // SMS - opt-IN via the "SMS Reminders" checkbox (sms:true = send the actual
     //   message text instead of the generic notification).
-    // Email — opt-OUT via the "No Message Emails" checkbox; generic notice only
+    // Email - opt-OUT via the "No Message Emails" checkbox; generic notice only
     //   (the message text stays in the portal for confidentiality).
     let sms: SmsResult | null = null
     let email: { sent: boolean; reason?: string } | null = null
@@ -121,7 +121,7 @@ export async function POST(req: Request) {
 
       try {
         if (client.noMessageEmails) {
-          email = null // opted out — silently skipped
+          email = null // opted out - silently skipped
         } else if (!client.email) {
           email = { sent: false, reason: "No email on file for this client" }
         } else {

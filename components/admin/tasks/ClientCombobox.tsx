@@ -1,5 +1,5 @@
 "use client"
-// components/admin/tasks/ClientCombobox.tsx — type to find a client instead of
+// components/admin/tasks/ClientCombobox.tsx - type to find a client instead of
 // hunting a 38-entry dropdown. Matches anywhere in the name (names read
 // "Last, First", so prefix matching would hide people), keyboard-operable,
 // and holds several clients at once for bulk assigning.

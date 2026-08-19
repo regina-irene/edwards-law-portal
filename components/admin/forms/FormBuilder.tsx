@@ -1,12 +1,12 @@
 "use client"
-// components/admin/forms/FormBuilder.tsx — build a form by uploading a PDF or
+// components/admin/forms/FormBuilder.tsx - build a form by uploading a PDF or
 // pasting the text of one, then checking and editing what came back before it
 // goes live. Nothing is saved until "Save form" is pressed.
 import { useState } from "react"
 import { FIELD_TYPES } from "@/lib/portal-forms"
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
 
-// What's waiting on a confirm — a whole section, or a single question.
+// What's waiting on a confirm - a whole section, or a single question.
 type PendingDelete =
   | { kind: "section"; si: number; title: string; count: number }
   | { kind: "field"; si: number; fi: number; label: string }
@@ -57,7 +57,7 @@ export default function FormBuilder({
   onCancel,
 }: {
   initial?: Draft | null
-  // The stages on the task board — a form is filed under one, or stands alone.
+  // The stages on the task board - a form is filed under one, or stands alone.
   stages: string[]
   onSaved: (label: string) => void
   onCancel: () => void
@@ -94,7 +94,7 @@ export default function FormBuilder({
           body: JSON.stringify({ text: pasted, label: label.trim() || undefined }),
         }).catch(() => null)
       }
-      if (!res) { setError("Couldn't reach the server — try again."); return }
+      if (!res) { setError("Couldn't reach the server - try again."); return }
       const data = await res.json().catch(() => null)
       if (!res.ok) { setError(data?.error ?? "The conversion didn't work."); return }
       setDraft(data.draft as Draft)
@@ -116,7 +116,7 @@ export default function FormBuilder({
   }
 
   // Removing a question used to happen on a single stray click, with the ✕
-  // sitting right next to the move arrows — it asks first now.
+  // sitting right next to the move arrows - it asks first now.
   function removeField(si: number, fi: number) {
     setDraft((d) => {
       if (!d) return d
@@ -258,7 +258,7 @@ export default function FormBuilder({
               onChange={(e) => setStage(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Standalone — no stage</option>
+              <option value="">Standalone - no stage</option>
               {stages.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
             <span className="text-[11px] text-gray-400">The same stages as your task board</span>
@@ -302,7 +302,7 @@ export default function FormBuilder({
                   value={pasted}
                   onChange={(e) => setPasted(e.target.value)}
                   rows={8}
-                  placeholder="Paste the questions from the form here — headings, questions, instructions, anything the client is asked to fill in."
+                  placeholder="Paste the questions from the form here - headings, questions, instructions, anything the client is asked to fill in."
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -334,7 +334,7 @@ export default function FormBuilder({
           <div className="flex items-baseline gap-3 flex-wrap">
             <p className="section-label">Questions</p>
             <span className="text-xs text-gray-400">
-              {totalFields} {totalFields === 1 ? "question" : "questions"} in {draft.sections.length} {draft.sections.length === 1 ? "section" : "sections"} — edit anything that came out wrong
+              {totalFields} {totalFields === 1 ? "question" : "questions"} in {draft.sections.length} {draft.sections.length === 1 ? "section" : "sections"} - edit anything that came out wrong
             </span>
           </div>
 

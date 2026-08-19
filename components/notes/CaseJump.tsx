@@ -1,5 +1,5 @@
 "use client"
-// components/notes/CaseJump.tsx — type a case name and go straight to its
+// components/notes/CaseJump.tsx - type a case name and go straight to its
 // notes. Replaces the old A→Z list of every case, which was mostly rows
 // reading "No notes yet".
 import { useRouter } from "next/navigation"

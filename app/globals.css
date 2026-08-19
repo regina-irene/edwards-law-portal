@@ -47,13 +47,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Serif headings (Libre Baskerville) — Regina's pick, 2026-06-10. */
+/* Serif headings (Libre Baskerville) - Regina's pick, 2026-06-10. */
 h1, h2.serif {
   font-family: var(--font-baskerville), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   letter-spacing: -0.01em;
 }
 
-/* Signature uppercase tracked section label — in the clay accent. */
+/* Signature uppercase tracked section label - in the clay accent. */
 .section-label {
   font-size: 10px;
   letter-spacing: 0.18em;
@@ -97,8 +97,8 @@ h1.page-title::before { content: var(--scheme-title-emoji, ""); }
 /* ---------------------------------------------------------------------------
    Print (2026-08-18)
 
-   Clients print their case file — status updates, message transcripts, filing
-   lists — and hand them to accountants, mediators and courts. On screen the
+   Clients print their case file - status updates, message transcripts, filing
+   lists - and hand them to accountants, mediators and courts. On screen the
    portal is an app shell: a fixed sidebar, a full-height flex column and a
    scrolling <main>. All three are wrong on paper.
 
@@ -144,7 +144,7 @@ h1.page-title::before { content: var(--scheme-title-emoji, ""); }
 
   /* Every scroll container becomes its full height, so nothing is clipped and
      breaks fall where the content actually ends. This is the single biggest
-     cause of unnatural page breaks — a message thread pinned to 100dvh with
+     cause of unnatural page breaks - a message thread pinned to 100dvh with
      overflow-auto prints one screenful and silently drops the rest. */
   [class*="overflow-auto"],
   [class*="overflow-y-auto"],
@@ -184,7 +184,7 @@ h1.page-title::before { content: var(--scheme-title-emoji, ""); }
     widows: 3;
   }
 
-  /* Collapsed sections (earlier status updates) print in full — the point of
+  /* Collapsed sections (earlier status updates) print in full - the point of
      printing is the record, not the current view state. */
   details > summary {
     display: none;

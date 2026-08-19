@@ -1,7 +1,7 @@
-// lib/color-schemes.ts — the 8 curated client color schemes (2026-07-23,
+// lib/color-schemes.ts - the 8 curated client color schemes (2026-07-23,
 // approved by Regina via mockups). Every scheme keeps the Thistle style:
 // light background, dark ink, one deep accent, text on solid white cards.
-// The default `navy` MUST equal today's hardcoded portal colors exactly —
+// The default `navy` MUST equal today's hardcoded portal colors exactly - 
 // the client layout sets these as CSS vars and components fall back to the
 // same values, which is also what keeps the admin layout unchanged.
 
@@ -109,7 +109,7 @@ export const SCHEMES: Record<string, ColorScheme> = {
     season: { from: [10, 1], to: [10, 31] },
   },
   winter: {
-    key: "winter", name: "Winter Frost", blurb: "Snow, frost and sparkle — happy holidays. ❄️",
+    key: "winter", name: "Winter Frost", blurb: "Snow, frost and sparkle - happy holidays. ❄️",
     seasonal: true,
     pageBg: "#E3EDF6", sidebarBg: "linear-gradient(180deg,#16324F,#2A5078)", sidebarLogoBg: "#ffffff",
     navInk: "#dcebf8", navHoverBg: "rgba(255,255,255,.16)", navActiveBg: "rgba(255,255,255,.24)", navActiveInk: "#ffffff",
@@ -124,7 +124,7 @@ export const SCHEMES: Record<string, ColorScheme> = {
     seasonNote: "No religious imagery",
   },
   football: {
-    key: "football", name: "Game Day", blurb: "Turf, yard lines and touchdowns — team-neutral. 🏈",
+    key: "football", name: "Game Day", blurb: "Turf, yard lines and touchdowns - team-neutral. 🏈",
     seasonal: true,
     pageBg: "#E4EEDD", sidebarBg: "linear-gradient(180deg,#1E3B24,#2E5636)", sidebarLogoBg: "#ffffff",
     navInk: "#dfeeda", navHoverBg: "rgba(255,255,255,.14)", navActiveBg: "rgba(255,255,255,.22)", navActiveInk: "#ffffff",
@@ -135,7 +135,7 @@ export const SCHEMES: Record<string, ColorScheme> = {
     sidebarBgGradient: "linear-gradient(180deg,#152B1A 0%,#2E5636 55%,#4C8452 100%)",
     season: { from: [8, 25], to: [9, 30] },
   },
-  // Pastel + sunset additions (2026-08-18) — requested alongside gradient mode.
+  // Pastel + sunset additions (2026-08-18) - requested alongside gradient mode.
   blush: {
     key: "blush", name: "Blush & Rose", blurb: "Soft pastel pink, warm and welcoming.",
     seasonal: false,
@@ -293,7 +293,7 @@ export function isDarkSidebar(scheme: ColorScheme): boolean {
   return scheme.sidebarLogoBg !== "transparent"
 }
 
-/** Everyday looks first, seasonal ones after — the picker renders them as two
+/** Everyday looks first, seasonal ones after - the picker renders them as two
  *  labelled groups so the list stays scannable as holidays accumulate. */
 export const EVERYDAY_KEYS = SCHEME_KEYS.filter((k) => !SCHEMES[k].seasonal)
 export const SEASONAL_KEYS = SCHEME_KEYS.filter((k) => SCHEMES[k].seasonal)
@@ -311,7 +311,7 @@ export function isInSeason(scheme: ColorScheme, date: Date = new Date()): boolea
 }
 
 /** Every scheme whose window covers the given day. December returns both
- *  Christmas and Hanukkah — nothing is ever applied without the user choosing. */
+ *  Christmas and Hanukkah - nothing is ever applied without the user choosing. */
 export function getSeasonalSuggestions(date: Date = new Date()): ColorScheme[] {
   return SEASONAL_KEYS.map((k) => SCHEMES[k]).filter((s) => isInSeason(s, date))
 }

@@ -13,7 +13,7 @@ function getClient() {
   return new Resend(process.env.RESEND_API_KEY!)
 }
 
-// Welcome / portal invite — sent from the admin client list.
+// Welcome / portal invite - sent from the admin client list.
 export async function sendInviteEmail(opts: { to: string; firstName: string }): Promise<void> {
   const resend = getClient()
   const FROM = process.env.EMAIL_FROM ?? "Edwards Family Law <portal@edwardsfamilylaw.com>"
@@ -35,10 +35,10 @@ HOW TO LOG IN
   1. Go to ${PORTAL_URL}
   2. Sign in either way:
      - "Sign in with Google" (if this email is a Google account), OR
-     - type your email and click "Email me a sign-in link" — then open the link we send you
+     - type your email and click "Email me a sign-in link" - then open the link we send you
   3. Always use THIS email address: ${opts.to}
 
-That's it — no password to create. Just be sure to use this exact email address, since it's the one connected to your case.
+That's it - no password to create. Just be sure to use this exact email address, since it's the one connected to your case.
 
 If you have any trouble signing in or any questions, simply reply to this email or contact our office.
 
@@ -53,7 +53,7 @@ Edwards Family Law`
   })
 }
 
-// Magic-link sign-in email — the passwordless alternative to Google sign-in.
+// Magic-link sign-in email - the passwordless alternative to Google sign-in.
 // Auth.js calls this from the Resend provider's sendVerificationRequest.
 export async function sendMagicLinkEmail(opts: { to: string; url: string }): Promise<void> {
   const resend = getClient()
@@ -73,12 +73,12 @@ Edwards Family Law`
   await resend.emails.send({
     from: FROM,
     to: opts.to,
-    subject: "Your sign-in link — Edwards Family Law",
+    subject: "Your sign-in link - Edwards Family Law",
     text: body,
   })
 }
 
-// New-message notice — sent on every firm reply in Messages unless the
+// New-message notice - sent on every firm reply in Messages unless the
 // client's "No Message Emails" box is checked on the Airtable Clients board.
 // Deliberately generic: for confidentiality the message text stays in the portal.
 export async function sendNewMessageEmail(opts: { to: string; firstName: string }): Promise<void> {
@@ -95,7 +95,7 @@ For your privacy, the message itself can only be read in your client portal:
 
   ${PORTAL_URL}/messages
 
-Sign in using this email address to read and reply — with Google, or by requesting a sign-in link on the login page.
+Sign in using this email address to read and reply - with Google, or by requesting a sign-in link on the login page.
 
 Warm regards,
 Edwards Family Law`
@@ -115,7 +115,7 @@ export async function sendReminderEmail(opts: ReminderEmailOptions): Promise<voi
   const PORTAL_URL = process.env.AUTH_URL ?? "https://portal.edwardslaw.com"
 
   const subject = overdue
-    ? `OVERDUE — Action Required: ${taskName}`
+    ? `OVERDUE - Action Required: ${taskName}`
     : `Reminder: ${taskName} is due soon`
 
   const formattedDate = new Date(dueDate + "T00:00:00").toLocaleDateString("en-US", {
@@ -126,8 +126,8 @@ export async function sendReminderEmail(opts: ReminderEmailOptions): Promise<voi
   })
 
   const body = overdue
-    ? `Dear ${clientName},\n\nThis is an urgent reminder that the following item is overdue:\n\n"${taskName}" — was due ${formattedDate}\n\nPlease log in to your portal as soon as possible:\n${PORTAL_URL}\n\nIf you have any questions, please contact your attorney.\n\nEdwards Family Law`
-    : `Dear ${clientName},\n\nThis is a reminder that the following item is due soon:\n\n"${taskName}" — due ${formattedDate}\n\nPlease log in to your portal to submit the requested item:\n${PORTAL_URL}\n\nThank you,\nEdwards Family Law`
+    ? `Dear ${clientName},\n\nThis is an urgent reminder that the following item is overdue:\n\n"${taskName}" - was due ${formattedDate}\n\nPlease log in to your portal as soon as possible:\n${PORTAL_URL}\n\nIf you have any questions, please contact your attorney.\n\nEdwards Family Law`
+    : `Dear ${clientName},\n\nThis is a reminder that the following item is due soon:\n\n"${taskName}" - due ${formattedDate}\n\nPlease log in to your portal to submit the requested item:\n${PORTAL_URL}\n\nThank you,\nEdwards Family Law`
 
   await resend.emails.send({
     from: FROM,

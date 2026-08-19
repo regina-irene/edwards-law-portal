@@ -1,4 +1,4 @@
-// lib/airtable-colors.ts — Airtable's select-option colors, carried into the
+// lib/airtable-colors.ts - Airtable's select-option colors, carried into the
 // portal so chips look the same as on Regina's Status board. Airtable's REST
 // API returns only the option NAME, so the name→color mapping is baked in here
 // (pulled from the base schema 2026-06-09). Unknown values fall back to gray.
@@ -185,7 +185,7 @@ export function paymentStatusColor(name: string): ChipColor {
 }
 
 // "Filed by:" on the per-client Pleadings tables (choice names vary slightly
-// between bases — trailing spaces etc — so match by keyword).
+// between bases - trailing spaces etc - so match by keyword).
 export function filedByColor(name: string): ChipColor {
   const n = name.toLowerCase()
   if (n.includes("plaintiff") || n.includes("wife")) return fromName("yellowLight2")
@@ -196,7 +196,7 @@ export function filedByColor(name: string): ChipColor {
 
 // "Sent by:" on the per-client Correspondence tables. The real choices are
 // "Us" / "Them " (trailing space on the board) / "Court" / "Mediator", with
-// these colors. filedByColor doesn't fit — it matches party words like
+// these colors. filedByColor doesn't fit - it matches party words like
 // "plaintiff", so everything except Court would have come out gray.
 const SENT_BY: Record<string, string> = {
   us: "greenLight2",
@@ -231,7 +231,7 @@ export function sentByLabel(name: string): string {
 
 // Pleadings that live in a Drive subfolder ("TPO", "FV matter") get a tag and a
 // tinted row. Folder names are free-form per client, so pick a stable color from
-// a light rotation by hashing the name — the same folder is always the same color.
+// a light rotation by hashing the name - the same folder is always the same color.
 const FOLDER_ROTATION = [
   "purpleLight2",
   "tealLight2",

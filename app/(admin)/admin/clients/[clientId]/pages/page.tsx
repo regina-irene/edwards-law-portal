@@ -40,14 +40,14 @@ export default async function ClientPagesEditor({ params }: { params: Promise<{ 
 
       <section className="space-y-3 pt-4 border-t border-gray-200">
         <h2 className="text-sm font-semibold text-gray-800">
-          Case Status fields — override the firm-wide setting for this client
+          Case Status fields - override the firm-wide setting for this client
         </h2>
         <p className="text-xs text-gray-500">
           Every field on the firm&apos;s internal Case Status board. Leave a field on{" "}
           <strong>Use firm setting</strong> and it follows Settings → Case Status fields; the
           bracket tells you what that currently means. <strong>Always show</strong> and{" "}
           <strong>Always hide</strong> apply to this client only. A field the firm-wide setting
-          hides stays hidden here unless you explicitly choose Always show — nothing is revealed by
+          hides stays hidden here unless you explicitly choose Always show - nothing is revealed by
           accident.
         </p>
         <StatusFieldsEditor clientId={clientId} />

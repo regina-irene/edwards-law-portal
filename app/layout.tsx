@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 const baskerville = Libre_Baskerville({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-baskerville" })
 
 export const metadata: Metadata = {
-  title: "Edwards Family Law — Client Portal",
+  title: "Edwards Family Law - Client Portal",
   description: "Secure client portal for Edwards Family Law",
 }
 

@@ -1,5 +1,5 @@
-// lib/discovery.ts — reads the "Discovery" table from a client's own Airtable
-// base. ONLY rows with "Avail. to Client" checked are returned — that checkbox
+// lib/discovery.ts - reads the "Discovery" table from a client's own Airtable
+// base. ONLY rows with "Avail. to Client" checked are returned - that checkbox
 // is the firm's gate for what clients may see. Fails soft: null → the page
 // falls back to the old embed view.
 

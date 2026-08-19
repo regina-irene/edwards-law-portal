@@ -1,9 +1,9 @@
-// lib/drop-files.ts — read files out of a drag-and-drop event, walking into
+// lib/drop-files.ts - read files out of a drag-and-drop event, walking into
 // any dropped folders. Shared by the client "Send files" dropzone and the
 // admin Message Center composer.
 //
-// IMPORTANT: the entries must be pulled off dataTransfer synchronously — the
-// browser clears it as soon as the drop handler returns — so collect them
+// IMPORTANT: the entries must be pulled off dataTransfer synchronously - the
+// browser clears it as soon as the drop handler returns - so collect them
 // first, then await the (async) file reads.
 
 export interface DroppedFile {

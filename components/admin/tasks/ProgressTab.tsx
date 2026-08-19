@@ -1,5 +1,5 @@
 "use client"
-// components/admin/tasks/ProgressTab.tsx — where each client's caseload
+// components/admin/tasks/ProgressTab.tsx - where each client's caseload
 // stands. One collapsed card per client, most overdue first, so the work that
 // needs chasing is at the top.
 import { useState } from "react"
@@ -196,7 +196,7 @@ export default function ProgressTab({
         >
           <p className="text-2xl font-semibold text-red-700">{totals.overdue}</p>
           <p className="text-xs text-gray-500">
-            overdue {totals.overdue === 1 ? "task" : "tasks"} · {overdueOnly ? "showing only these — click to show all" : "click to filter"}
+            overdue {totals.overdue === 1 ? "task" : "tasks"} · {overdueOnly ? "showing only these - click to show all" : "click to filter"}
           </p>
         </button>
         <div className="bg-white rounded-xl border border-gray-200 px-4 py-3">
@@ -218,7 +218,7 @@ export default function ProgressTab({
       {cards.length === 0 ? (
         <p className="text-sm text-gray-500 bg-white rounded-xl border border-gray-200 p-6">
           {tasks.length === 0
-            ? "No tasks are assigned yet — use the Assign tab to give a client their first task."
+            ? "No tasks are assigned yet - use the Assign tab to give a client their first task."
             : overdueOnly
               ? "Nothing is overdue. "
               : `No assigned task matches “${search.trim()}”.`}

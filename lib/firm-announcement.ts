@@ -1,4 +1,4 @@
-// lib/firm-announcement.ts — the firm-wide announcement (FileFlow style):
+// lib/firm-announcement.ts - the firm-wide announcement (FileFlow style):
 // one rich-HTML banner shown across the top of the admin area and the client
 // portal. Stored as a special page_content row (client_id '_global',
 // page '_firm_announcement').

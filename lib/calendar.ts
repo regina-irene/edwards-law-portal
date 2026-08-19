@@ -1,4 +1,4 @@
-// lib/calendar.ts — calendar events for a client's case, read from the
+// lib/calendar.ts - calendar events for a client's case, read from the
 // Google-Calendar-synced events table in the main Airtable base (table ".",
 // tbl6VxRlXtmEATGio), where each event links to the case's Status record.
 // The portal clientId IS the Status record id, so matching is direct.
@@ -14,7 +14,7 @@ export interface CaseEvent {
   allDay: boolean
   location: string
   description: string
-  /** AI-reformatted notes (sanitized HTML) — set by lib/event-notes-ai.ts when available */
+  /** AI-reformatted notes (sanitized HTML) - set by lib/event-notes-ai.ts when available */
   descriptionHtml?: string | null
   zoomLink: string
   eventLink: string
@@ -118,7 +118,7 @@ export async function getCaseEvents(clientId: string): Promise<CaseEvent[] | nul
           start: text(r.fields["Start"]),
           end: text(r.fields["End"]) || null,
           allDay: r.fields["All Day"] === true,
-          // a URL in the Location field is a meeting link, not a place — no 📍
+          // a URL in the Location field is a meeting link, not a place - no 📍
           location: /^https?:\/\//i.test(location) ? "" : location,
           description: cleanDescription(rawDescription),
           zoomLink: findZoomUrl(text(r.fields["Zoom Link"]), rawDescription, rawLocation),

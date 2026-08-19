@@ -1,11 +1,11 @@
-// app/api/settings/route.ts — the client's own portal preferences
+// app/api/settings/route.ts - the client's own portal preferences
 import { NextResponse } from "next/server"
 import { assertClientCanWrite } from "@/lib/client-write-guard"
 import { saveClientPrefs } from "@/lib/client-prefs"
 import { SCHEMES, DEFAULT_SCHEME_KEY } from "@/lib/color-schemes"
 
 export async function PUT(req: Request) {
-  // Preferences are a write like any other — a closed client's portal is frozen
+  // Preferences are a write like any other - a closed client's portal is frozen
   // exactly as they left it.
   const gate = await assertClientCanWrite()
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status })

@@ -1,4 +1,4 @@
-// app/(client)/dashboard/page.tsx — straight to the page's content section
+// app/(client)/dashboard/page.tsx - straight to the page's content section
 // (no title/announcement/image block above it, per Regina; demo video removed 2026-07-23).
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"

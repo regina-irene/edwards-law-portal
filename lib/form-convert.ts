@@ -1,4 +1,4 @@
-// lib/form-convert.ts — turn a PDF or pasted text of a paper form into the
+// lib/form-convert.ts - turn a PDF or pasted text of a paper form into the
 // portal's form definition, using Claude with a strict output schema so the
 // result is always shaped correctly rather than "usually JSON".
 import Anthropic from "@anthropic-ai/sdk"
@@ -92,7 +92,7 @@ export function conversionConfigured(): boolean {
 }
 
 // `key` is the form key the definition will be stored under; `pdfBase64` and
-// `text` are alternatives — exactly one is used.
+// `text` are alternatives - exactly one is used.
 export async function convertToForm(opts: {
   key: string
   labelHint?: string

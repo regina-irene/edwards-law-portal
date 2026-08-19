@@ -1,5 +1,5 @@
 "use client"
-// components/nav/BottomNav.tsx — phone-only bottom tab bar. Below `md` the left
+// components/nav/BottomNav.tsx - phone-only bottom tab bar. Below `md` the left
 // icon rail is hidden and this stands in for it, down where a thumb can reach.
 // Same pages, same unread badges and the same active styling as the rail.
 // At `md` and up it is not rendered at all.

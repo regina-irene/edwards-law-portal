@@ -1,5 +1,5 @@
 "use client"
-// components/messages/MessageCenter.tsx — the firm side of Messages: the
+// components/messages/MessageCenter.tsx - the firm side of Messages: the
 // conversation list, the thread, and the composer with attachments, drafts per
 // client and the "text me on reply" switch.
 import { useState, useEffect, useRef, useCallback } from "react"
@@ -75,14 +75,14 @@ export default function MessageCenter() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [sendError, setSendError] = useState<string | null>(null)
   // Archived (former) clients are off by default, so the inbox is live cases
-  // only. The list is refetched when this flips — the filtering is server-side.
+  // only. The list is refetched when this flips - the filtering is server-side.
   const [showArchived, setShowArchived] = useState(false)
   const [archivedCount, setArchivedCount] = useState(0)
 
   // Drafts are per client (2026-08-18). Previously the composer, the queued
   // attachments and the "also send as text" checkbox were single pieces of
   // state, so switching conversations mid-reply left the half-typed message
-  // aimed at a different client — a confidentiality problem, not just a UX one.
+  // aimed at a different client - a confidentiality problem, not just a UX one.
   const drafts = useRef<Record<string, { body: string; alsoText: boolean; rich: boolean }>>({})
   const selectedRef = useRef<string | null>(null)
 
@@ -108,7 +108,7 @@ export default function MessageCenter() {
       if (adminPhone) setWatchPhone(adminPhone)
     } else {
       const d = await res?.json().catch(() => null)
-      setWatchError(d?.error ?? "Could not update the setting — try again.")
+      setWatchError(d?.error ?? "Could not update the setting - try again.")
     }
   }
 
@@ -140,7 +140,7 @@ export default function MessageCenter() {
   }, [])
 
   // A file dropped anywhere else on the page would make the browser navigate
-  // away and lose the half-typed reply — swallow those drops while open.
+  // away and lose the half-typed reply - swallow those drops while open.
   useEffect(() => {
     const swallow = (e: DragEvent) => {
       if (dragHasFiles(e.dataTransfer)) e.preventDefault()
@@ -162,7 +162,7 @@ export default function MessageCenter() {
       setArchivedCount(typeof d.archivedCount === "number" ? d.archivedCount : 0)
       setLoadError(null)
     } catch {
-      // Never let a failed fetch render as "No conversations." — that reads as
+      // Never let a failed fetch render as "No conversations." - that reads as
       // "there is nothing here", which is a different and wrong statement.
       setLoadError("Couldn't load conversations. Check your connection.")
     }
@@ -233,7 +233,7 @@ export default function MessageCenter() {
     if (selected) loadThread(selected)
   }, [selected, loadThread])
 
-  // Only stick to the bottom if the reader is already near it — otherwise a
+  // Only stick to the bottom if the reader is already near it - otherwise a
   // poll would yank them away from something they're reading further up.
   useEffect(() => {
     const el = threadRef.current
@@ -267,11 +267,11 @@ export default function MessageCenter() {
           parts.push(
             d.sms.sent
               ? alsoText ? "📱 Message sent as text" : "📱 Text notification sent"
-              : `📱 Text not sent — ${d.sms.reason}`
+              : `📱 Text not sent - ${d.sms.reason}`
           )
         }
         if (d.email) {
-          parts.push(d.email.sent ? "📧 Email alert sent" : `📧 Email not sent — ${d.email.reason}`)
+          parts.push(d.email.sent ? "📧 Email alert sent" : `📧 Email not sent - ${d.email.reason}`)
         }
         setSmsNotice(parts.join("  ·  "))
       }
@@ -298,7 +298,7 @@ export default function MessageCenter() {
     } else {
       // Never fail silently: the draft stays put and says so, rather than
       // looking identical to a message that went through. (2026-08-18)
-      setSendError("Not sent. Your message is still here — check your connection and try again.")
+      setSendError("Not sent. Your message is still here - check your connection and try again.")
     }
     setSending(false)
   }
@@ -425,7 +425,7 @@ export default function MessageCenter() {
         </div>
       </div>
 
-      {/* Thread — drop files anywhere over it to attach them to the reply */}
+      {/* Thread - drop files anywhere over it to attach them to the reply */}
       <div
         className="flex-1 flex flex-col min-w-0 relative"
         onDragEnter={(e) => {
@@ -457,7 +457,7 @@ export default function MessageCenter() {
             <div className="rounded-2xl border-2 border-dashed bg-white/95 px-8 py-6 text-center shadow-sm" style={{ borderColor: "#1B2D45" }}>
               <div className="text-3xl mb-1">📎</div>
               <p className="text-sm font-semibold text-gray-900">Drop to attach to {active.name}</p>
-              <p className="text-xs text-gray-500 mt-0.5">You can drop several files at once — they send with your next message.</p>
+              <p className="text-xs text-gray-500 mt-0.5">You can drop several files at once - they send with your next message.</p>
             </div>
           </div>
         )}
@@ -525,7 +525,7 @@ export default function MessageCenter() {
                   </div>
                 )
               })}
-              {messages.length === 0 && <p className="text-sm text-gray-400 text-center py-8">No messages yet — start the conversation below.</p>}
+              {messages.length === 0 && <p className="text-sm text-gray-400 text-center py-8">No messages yet - start the conversation below.</p>}
             </div>
 
             <div className="border-t border-gray-200 p-3 bg-white">
@@ -555,7 +555,7 @@ export default function MessageCenter() {
                 </div>
               )}
               <div className="flex items-end gap-2">
-                <button type="button" onClick={() => fileRef.current?.click()} title="Attach files — or drag them onto the conversation" className="px-2 py-2 text-gray-500 hover:text-gray-800 text-lg">📎</button>
+                <button type="button" onClick={() => fileRef.current?.click()} title="Attach files - or drag them onto the conversation" className="px-2 py-2 text-gray-500 hover:text-gray-800 text-lg">📎</button>
                 <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { attachFiles(Array.from(e.target.files ?? [])); e.target.value = "" }} />
                 {rich ? (
                   <div className="flex-1 min-w-0">
@@ -600,7 +600,7 @@ export default function MessageCenter() {
       <PromptDialog
         open={askingPhone}
         title="Where should reply alerts go?"
-        body="A one-time setup — we'll text this number whenever a client replies in the portal."
+        body="A one-time setup - we'll text this number whenever a client replies in the portal."
         label="Cell number"
         placeholder="(770) 555-0134"
         confirmLabel="Turn alerts on"

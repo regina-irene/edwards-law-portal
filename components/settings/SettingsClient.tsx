@@ -1,5 +1,5 @@
 "use client"
-// components/settings/SettingsClient.tsx — color scheme picker + joke-of-the-day
+// components/settings/SettingsClient.tsx - color scheme picker + joke-of-the-day
 // toggle. (Schemes returned 2026-07-23 as 8 curated looks; the old wallpaper
 // theme picker stays gone. Gradient mode added 2026-08-18.)
 
@@ -75,7 +75,7 @@ export default function SettingsClient({
         </label>
       </div>
 
-      <Section title="Color Scheme" blurb="Pick the look of YOUR portal — gradient for a softer fade, seasonal ones for a little fun.">
+      <Section title="Color Scheme" blurb="Pick the look of YOUR portal - gradient for a softer fade, seasonal ones for a little fun.">
         <SchemePicker
           scheme={scheme}
           gradient={gradient}

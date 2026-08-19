@@ -1,5 +1,5 @@
 "use client"
-// components/notes/NotesTimeline.tsx — composer + merged timeline for one
+// components/notes/NotesTimeline.tsx - composer + merged timeline for one
 // client's Field Notes. Manual notes are white cards with a navy edge (the
 // "important" entries); portal events are lighter compact rows. Newest first.
 import { useCallback, useRef, useState } from "react"
@@ -49,7 +49,7 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
       body: JSON.stringify({ clientId, body: draft }),
     }).catch(() => null)
     setSaving(false)
-    if (!res?.ok) { setError("Couldn't save the note — try again."); return }
+    if (!res?.ok) { setError("Couldn't save the note - try again."); return }
     const { note } = (await res.json()) as { note: ClientNote }
     setItems([{ type: "note", at: note.created_at, note }, ...items])
     setDraft("")
@@ -61,7 +61,7 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, body: editDraft }),
     }).catch(() => null)
-    if (!res?.ok) { setError("Couldn't update the note — try again."); return }
+    if (!res?.ok) { setError("Couldn't update the note - try again."); return }
     const { note } = (await res.json()) as { note: ClientNote }
     setItems(items.map((i) => (i.type === "note" && i.note.id === id ? { ...i, note } : i)))
     setEditingId(null)
@@ -74,8 +74,8 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
     const res = await fetch(`/api/admin/notes?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => null)
     deletingRef.current = null
     setPendingDeleteId(null)
-    // On a failure the note simply comes back into the list — nothing is lost.
-    if (!res?.ok) { setError("Couldn't delete the note — try again."); return }
+    // On a failure the note simply comes back into the list - nothing is lost.
+    if (!res?.ok) { setError("Couldn't delete the note - try again."); return }
     setItems((prev) => prev.filter((i) => !(i.type === "note" && i.note.id === id)))
   }, [])
 
@@ -84,7 +84,7 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
   }, [pendingDeleteId, runDelete])
 
   function askRemove(id: string) {
-    // Only one note can be waiting at a time — see the other one out first.
+    // Only one note can be waiting at a time - see the other one out first.
     commitPendingDelete()
     setError("")
     setConfirmingId(id)
@@ -95,7 +95,7 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
     new Set(items.flatMap((i) => (i.type === "note" && i.note.author_name ? [i.note.author_name] : []))),
   ).sort((a, b) => a.localeCompare(b))
 
-  // Picking a person implies "just my notes" — portal events have no author.
+  // Picking a person implies "just my notes" - portal events have no author.
   const visible = items.filter((i) => {
     if (pendingDeleteId && i.type === "note" && i.note.id === pendingDeleteId) return false
     if (author) return i.type === "note" && i.note.author_name === author
@@ -168,11 +168,11 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
       </div>
 
       {loadError && (
-        <p className="text-sm text-red-600 bg-white rounded-xl border border-red-200 p-4">Notes couldn&apos;t be loaded right now — refresh to try again. (New notes may not appear below.)</p>
+        <p className="text-sm text-red-600 bg-white rounded-xl border border-red-200 p-4">Notes couldn&apos;t be loaded right now - refresh to try again. (New notes may not appear below.)</p>
       )}
 
       {!loadError && paged.length === 0 && (
-        <p className="text-sm text-gray-500 bg-white rounded-xl border border-gray-200 p-6">No notes yet — write the first one.</p>
+        <p className="text-sm text-gray-500 bg-white rounded-xl border border-gray-200 p-6">No notes yet - write the first one.</p>
       )}
 
       <div className="space-y-3">
@@ -233,7 +233,7 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
       <ConfirmDialog
         open={confirmingId !== null}
         title="Delete this note?"
-        body="This note is only kept here — deleting it removes it from the case log for good. You'll have ten seconds to undo."
+        body="This note is only kept here - deleting it removes it from the case log for good. You'll have ten seconds to undo."
         confirmLabel="Delete note"
         onConfirm={() => { setPendingDeleteId(confirmingId); setConfirmingId(null) }}
         onCancel={() => setConfirmingId(null)}

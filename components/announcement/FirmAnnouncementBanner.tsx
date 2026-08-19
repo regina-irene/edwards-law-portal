@@ -1,5 +1,5 @@
 "use client"
-// components/announcement/FirmAnnouncementBanner.tsx — FileFlow-style firm
+// components/announcement/FirmAnnouncementBanner.tsx - FileFlow-style firm
 // announcement strip for the ADMIN area: amber banner across the full width
 // with 📢 FIRM ANNOUNCEMENTS, edit-in-place (pencil), remove (✕), and an
 // "Add firm announcement" affordance when empty.

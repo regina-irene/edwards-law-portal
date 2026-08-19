@@ -26,7 +26,7 @@ export interface AdminNavColors {
   border: string
 }
 
-// Original hardcoded admin colors — used when the layout supplies nothing.
+// Original hardcoded admin colors - used when the layout supplies nothing.
 const DEFAULT_NAV: AdminNavColors = {
   bg: "#FFFFFF", activeBg: "#1B2D45", activeInk: "#ffffff", ink: "#4b443b",
   chipBg: "#F0E7DA", chipInk: "#4b443b", border: "#E8DFD2",

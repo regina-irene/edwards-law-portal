@@ -36,7 +36,7 @@ export default async function CalendarPage() {
   const refreshedAt = formatRefreshed(Date.now())
 
   // AI-reformatted notes for long messy event descriptions. Read from cache
-  // only — anything not yet formatted is generated AFTER the response is sent,
+  // only - anything not yet formatted is generated AFTER the response is sent,
   // so the calendar never waits on an API call. Unformatted notes render as
   // plain text this visit and are formatted by the next one. (2026-08-18)
   const notesHtml = events ? await getCachedNotes(events) : {}
@@ -46,7 +46,7 @@ export default async function CalendarPage() {
   return (
     <div className="space-y-6">
       {/* When the calendar renders, suppress any embed configured in the
-          page-content editor — the rendered calendar replaces it. */}
+          page-content editor - the rendered calendar replaces it. */}
       <PageHeader defaultTitle="Calendar" page="calendar" content={events ? { ...pageContent, embed_url: null } : pageContent} />
       {events ? (
         <>

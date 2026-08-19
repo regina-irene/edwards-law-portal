@@ -1,8 +1,8 @@
 // app/api/activity-feed/route.ts
 // ── Read-only Field Notes activity feed for the EFL Apps dashboard ───────────
 // Returns the same running log the Field Notes hub shows (/admin/notes):
-// hand-written field notes merged with live portal activity — messages, file
-// uploads and views, form updates, completed tasks — newest first, across every
+// hand-written field notes merged with live portal activity - messages, file
+// uploads and views, form updates, completed tasks - newest first, across every
 // case. GET only; nothing can be changed through this endpoint.
 //
 // PRIVILEGED CONTENT. Field notes are the firm's private case log and message

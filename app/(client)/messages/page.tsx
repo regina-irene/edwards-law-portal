@@ -1,4 +1,4 @@
-// app/(client)/messages/page.tsx — two-way conversation with the firm
+// app/(client)/messages/page.tsx - two-way conversation with the firm
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { getPortalClient } from "@/lib/portal-client"

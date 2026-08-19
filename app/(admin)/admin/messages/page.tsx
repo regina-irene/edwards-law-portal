@@ -1,4 +1,4 @@
-// app/(admin)/admin/messages/page.tsx — Message Center (inbox)
+// app/(admin)/admin/messages/page.tsx - Message Center (inbox)
 import { Suspense } from "react"
 import MessageCenter from "@/components/messages/MessageCenter"
 import PageTitle from "@/components/ui/PageTitle"

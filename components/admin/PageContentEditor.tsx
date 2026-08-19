@@ -1,5 +1,5 @@
 "use client"
-// components/admin/PageContentEditor.tsx — edits the title, announcement,
+// components/admin/PageContentEditor.tsx - edits the title, announcement,
 // embed, content and banner image of each portal page, globally or for one
 // client.
 import { useState, useEffect } from "react"
@@ -135,8 +135,8 @@ export default function PageContentEditor({ clientId, allowRename = false, layou
   // banner image on the GLOBAL editor (per Regina).
   const GLOBAL_TITLE_ANNOUNCEMENT_ONLY = new Set(["pleadings", "correspondence", "discovery", "status", "tasks", "messages", "calendar"])
 
-  // the editor fields for one page — shared by the accordion and tab layouts.
-  // The embed field is hidden on the GLOBAL editor (per Regina) — pages render
+  // the editor fields for one page - shared by the accordion and tab layouts.
+  // The embed field is hidden on the GLOBAL editor (per Regina) - pages render
   // their own live content now; per-client overrides can still set an embed.
   function editorBody(page: string) {
     const c = get(page)
@@ -161,7 +161,7 @@ export default function PageContentEditor({ clientId, allowRename = false, layou
         {showEmbed && (
           <div>
             <label className={labelCls}>Embed a link (web page, another project, or Airtable table)</label>
-            <input value={c.embed_url} onChange={(e) => update(page, "embed_url", e.target.value)} placeholder="https://… — shows inside this page" className={inputCls} />
+            <input value={c.embed_url} onChange={(e) => update(page, "embed_url", e.target.value)} placeholder="https://… - shows inside this page" className={inputCls} />
             <p className="text-[11px] text-gray-400 mt-1">Paste any link to display it embedded in the page. (Some sites block embedding; if it appears blank, a link to open it is shown instead.)</p>
             <div className="mt-2 flex items-center gap-2">
               <label className="text-xs text-gray-500">Embed height (px)</label>
@@ -190,7 +190,7 @@ export default function PageContentEditor({ clientId, allowRename = false, layou
             <input type="file" accept="image/*" className="hidden" disabled={uploading === page}
               onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(page, f); e.target.value = "" }} />
           </label>
-          {imageError === page && <InlineError message="That image didn't upload — images only, up to 10 MB." />}
+          {imageError === page && <InlineError message="That image didn't upload - images only, up to 10 MB." />}
         </div>
         )}
         <div className="flex items-center gap-3 pt-1 border-t border-gray-100">
@@ -230,7 +230,7 @@ export default function PageContentEditor({ clientId, allowRename = false, layou
               type="checkbox"
               checked={!hidden.has(selected)}
               onChange={(e) => toggleVisible(selected, e.target.checked)}
-              title={hidden.has(selected) ? "Hidden by default — check to show to clients" : "Shown to clients by default"}
+              title={hidden.has(selected) ? "Hidden by default - check to show to clients" : "Shown to clients by default"}
               className="w-4 h-4 accent-blue-600 flex-shrink-0"
             />
             {renaming === selected ? (
@@ -267,8 +267,8 @@ export default function PageContentEditor({ clientId, allowRename = false, layou
                 onChange={(e) => toggleVisible(page, e.target.checked)}
                 title={
                   isGlobal
-                    ? hidden.has(page) ? "Hidden by default — check to show to clients" : "Shown to clients by default"
-                    : hidden.has(page) ? "Hidden from this client — check to show" : "Visible to this client"
+                    ? hidden.has(page) ? "Hidden by default - check to show to clients" : "Shown to clients by default"
+                    : hidden.has(page) ? "Hidden from this client - check to show" : "Visible to this client"
                 }
                 className="w-4 h-4 accent-blue-600 flex-shrink-0"
               />

@@ -1,4 +1,4 @@
-// app/api/task-files/[id]/route.ts — download (stream) or delete an attachment
+// app/api/task-files/[id]/route.ts - download (stream) or delete an attachment
 import { auth } from "@/auth"
 import { requireAdmin } from "@/lib/admin"
 import { getClientByEmail } from "@/lib/airtable"

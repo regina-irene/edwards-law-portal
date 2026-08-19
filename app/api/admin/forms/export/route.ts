@@ -1,4 +1,4 @@
-// app/api/admin/forms/export/route.ts — download one client's completed form
+// app/api/admin/forms/export/route.ts - download one client's completed form
 // as CSV (Excel) or .doc (Word). Admin only.
 import { requireAdmin } from "@/lib/admin"
 import { getPortalForm } from "@/lib/portal-forms"
@@ -14,7 +14,7 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
 
-// Word opens an HTML document with a .doc extension — the same approach the
+// Word opens an HTML document with a .doc extension - the same approach the
 // Message Center transcripts use.
 function toWordHtml(form: CompletedForm, clientLabel: string): string {
   const rows = form.sections
@@ -37,7 +37,7 @@ function toWordHtml(form: CompletedForm, clientLabel: string): string {
   return `<html><head><meta charset="utf-8"><title>${escapeHtml(form.label)}</title></head><body>
     <h1 style="font-family:Georgia,serif;font-size:18pt;margin-bottom:2pt">${escapeHtml(form.label)}</h1>
     <p style="font-family:Arial,sans-serif;font-size:10pt;color:#666;margin-top:0">
-      ${escapeHtml(clientLabel)} — ${form.answered} of ${form.total} answered${
+      ${escapeHtml(clientLabel)} - ${form.answered} of ${form.total} answered${
         form.updatedAt ? ` · last saved ${escapeHtml(new Date(form.updatedAt).toLocaleString("en-US", { timeZone: "America/New_York" }))}` : ""
       }
     </p>

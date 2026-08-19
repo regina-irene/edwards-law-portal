@@ -1,5 +1,5 @@
 "use client"
-// components/calendar/CalendarClient.tsx — the client's case calendar with
+// components/calendar/CalendarClient.tsx - the client's case calendar with
 // Month / Week / Agenda views, replacing the Airtable embed.
 
 import { useMemo, useState } from "react"
@@ -105,7 +105,7 @@ function icsEscape(s: string): string {
   return s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n")
 }
 
-// Apple Calendar (and everything else) — downloads a standard .ics file
+// Apple Calendar (and everything else) - downloads a standard .ics file
 function downloadIcs(e: CaseEvent) {
   const lines = [
     "BEGIN:VCALENDAR",

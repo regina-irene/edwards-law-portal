@@ -185,7 +185,7 @@ export async function PATCH(req: Request) {
   }
 
   // Mark an assigned task done (or reopen it) from the admin side. Mirrors the
-  // client's own PATCH /api/tasks so completed_at stays consistent — Field
+  // client's own PATCH /api/tasks so completed_at stays consistent - Field
   // Notes reads that column for its "task completed" entries.
   if (typeof taskId === "string" && taskId && typeof status === "string") {
     if (!["pending", "done"].includes(status)) {

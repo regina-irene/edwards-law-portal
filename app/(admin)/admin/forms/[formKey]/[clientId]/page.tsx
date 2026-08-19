@@ -1,4 +1,4 @@
-// app/(admin)/admin/forms/[formKey]/[clientId]/page.tsx — one client's
+// app/(admin)/admin/forms/[formKey]/[clientId]/page.tsx - one client's
 // completed form, laid out question-by-question so it reads like the paper
 // form. Print/PDF and CSV export both work from here.
 import Link from "next/link"
@@ -56,7 +56,7 @@ export default async function CompletedFormPage({
     <div className="space-y-6 max-w-3xl">
       <PageTitle
         title={definition.label}
-        tagline={`${clientLabel} — ${completed.answered} of ${completed.total} answered${
+        tagline={`${clientLabel} - ${completed.answered} of ${completed.total} answered${
           completed.updatedAt
             ? ` · last saved ${new Date(completed.updatedAt).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" })}`
             : ""

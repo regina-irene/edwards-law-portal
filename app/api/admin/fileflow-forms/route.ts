@@ -1,6 +1,6 @@
 // Lists the forms a task can be linked to: forms built in the portal's own
 // builder first, then any FileFlow form that hasn't been imported yet. A
-// portal form with the same key wins — that's the copy Regina now edits.
+// portal form with the same key wins - that's the copy Regina now edits.
 import { requireAdmin } from "@/lib/admin"
 import { listForms } from "@/lib/fileflow"
 import { listPortalForms } from "@/lib/portal-forms"

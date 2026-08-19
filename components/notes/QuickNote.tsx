@@ -1,5 +1,5 @@
 "use client"
-// components/notes/QuickNote.tsx — write a field note for any case from the
+// components/notes/QuickNote.tsx - write a field note for any case from the
 // Field Notes hub (2026-08-18).
 //
 // The hub is a search across every case; the composer only ever lived on one
@@ -37,7 +37,7 @@ export default function QuickNote({ clients }: { clients: ClientOption[] }) {
       body: JSON.stringify({ clientId, body: draft }),
     }).catch(() => null)
     setSaving(false)
-    if (!res?.ok) { setError("Couldn't save the note — nothing was written. Try again."); return }
+    if (!res?.ok) { setError("Couldn't save the note - nothing was written. Try again."); return }
     setSavedFor(chosen?.label ?? "that case")
     setDraft("")
     // Leave the case selected: notes usually come in twos and threes.

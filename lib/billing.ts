@@ -1,4 +1,4 @@
-// lib/billing.ts — flat-fee billing for the Case Status / Invoicing page.
+// lib/billing.ts - flat-fee billing for the Case Status / Invoicing page.
 // One board: the "Client Payments" table in the main Airtable base. Each row is
 // a fee the client owes (Description, Amount, Due Date, Client link, Status).
 // Regina flips Status to "Paid" when the client pays. Rows with no Amount are

@@ -1,9 +1,9 @@
 "use client"
-// components/settings/SchemePicker.tsx — the scheme swatch grid + gradient
+// components/settings/SchemePicker.tsx - the scheme swatch grid + gradient
 // toggle (2026-08-18). Shared by the client Settings page and the admin
 // Appearance section so both sides offer exactly the same looks.
 // Schemes are grouped Everyday / Seasonal, and whatever is in season today
-// gets a badge plus a one-click suggestion — never applied automatically.
+// gets a badge plus a one-click suggestion - never applied automatically.
 
 import { useEffect, useState } from "react"
 import {
@@ -58,7 +58,7 @@ function SchemeSwatch({
           {s.name}
           {selected ? " ✓" : ""}
         </p>
-        {/* Blurb kept, but clamped to one line — 19 of them stacked two deep
+        {/* Blurb kept, but clamped to one line - 19 of them stacked two deep
             was most of this page's height. Full text stays in the tooltip. */}
         <p className="text-[11px] text-gray-500 truncate" title={s.blurb}>{s.blurb}</p>
       </div>
@@ -143,7 +143,7 @@ export default function SchemePicker({
           <p className="text-sm text-gray-800">
             {suggestions.length === 1
               ? "This look is in season right now:"
-              : "These looks are in season right now — pick whichever suits you, or keep the one you have:"}
+              : "These looks are in season right now - pick whichever suits you, or keep the one you have:"}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {suggestions.map((s) => (

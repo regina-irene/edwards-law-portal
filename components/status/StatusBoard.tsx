@@ -1,7 +1,7 @@
 "use client"
-// components/status/StatusBoard.tsx — the admin Status board. Every client, the
+// components/status/StatusBoard.tsx - the admin Status board. Every client, the
 // stage their case is at, and the words the client actually reads on their
-// Status page — editable in place.
+// Status page - editable in place.
 //
 // Everything here is admin-only. Payment status and the judge are deliberately
 // absent: this screen edits what the CLIENT sees, so the client-facing fields
@@ -10,7 +10,7 @@
 // This is a client component, so it imports no server-only helper from
 // lib/case-status (that module pulls in next/cache). Types are type-only
 // imports, the stage vocabulary arrives as a prop, and the one bit of logic it
-// needs on its own — the stage's sort order — is the two lines below.
+// needs on its own - the stage's sort order - is the two lines below.
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { InlineError } from "@/components/ui/InlineError"
 import { fullStamp } from "@/lib/dates"
@@ -71,7 +71,7 @@ export default function StatusBoard({
   const [sortKey, setSortKey] = useState<SortKey>("name")
   const [onlyStuck, setOnlyStuck] = useState(false)
 
-  // Inline edit — one row at a time, so there is never an ambiguous "save".
+  // Inline edit - one row at a time, so there is never an ambiguous "save".
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editStages, setEditStages] = useState<string[]>([])
   const [editText, setEditText] = useState("")
@@ -197,13 +197,13 @@ export default function StatusBoard({
 
     if (!res?.ok) {
       const data = (await res?.json().catch(() => null)) as { error?: string } | null
-      errorFor(row.recordId, data?.error || "Couldn't save that change — nothing was written. Try again.")
+      errorFor(row.recordId, data?.error || "Couldn't save that change - nothing was written. Try again.")
       return
     }
 
     const savedStages = [...editStages]
     const savedHtml = editText
-    // Wrapped for the same reason the server wraps it — see statusHtmlToPlain.
+    // Wrapped for the same reason the server wraps it - see statusHtmlToPlain.
     // This must match what the server stored or the row would show one thing
     // and the board another until the next reload.
     const savedText = bodyToPlainText(`<p>${editText}</p>`)
@@ -249,12 +249,12 @@ export default function StatusBoard({
 
     if (!res?.ok) {
       const data = (await res?.json().catch(() => null)) as { error?: string } | null
-      errorFor(row.recordId, data?.error || "Couldn't draft an update right now — try again.")
+      errorFor(row.recordId, data?.error || "Couldn't draft an update right now - try again.")
       return
     }
     const data = (await res.json().catch(() => null)) as { text?: string } | null
     if (!data?.text) {
-      errorFor(row.recordId, "The draft came back empty — try again.")
+      errorFor(row.recordId, "The draft came back empty - try again.")
       return
     }
     // Drop it into the editor. It is a suggestion sitting in a text box: nothing
@@ -262,7 +262,7 @@ export default function StatusBoard({
     if (editingId !== row.recordId) startEdit(row)
     // Claude returns plain sentences; the editor holds HTML.
     setEditText(plainToHtml(data.text))
-    noteFor(row.recordId, "Draft only — read it, edit it, then Save. Nothing has been saved or sent.")
+    noteFor(row.recordId, "Draft only - read it, edit it, then Save. Nothing has been saved or sent.")
   }
 
   async function ask() {
@@ -283,12 +283,12 @@ export default function StatusBoard({
 
     if (!res?.ok) {
       const data = (await res?.json().catch(() => null)) as { error?: string } | null
-      setAskError(data?.error || "Couldn't answer that right now — try again.")
+      setAskError(data?.error || "Couldn't answer that right now - try again.")
       return
     }
     const data = (await res.json().catch(() => null)) as { text?: string } | null
     if (!data?.text) {
-      setAskError("The answer came back empty — try again.")
+      setAskError("The answer came back empty - try again.")
       return
     }
     setAnswer(data.text)
@@ -326,7 +326,7 @@ export default function StatusBoard({
           </p>
         )}
         <p className="mt-2 text-xs text-gray-400">
-          Answers are drawn from this board only, and are for you — clients never see them.
+          Answers are drawn from this board only, and are for you - clients never see them.
         </p>
       </div>
 
@@ -368,7 +368,7 @@ export default function StatusBoard({
 
       {loadError && (
         <p className="text-sm text-red-600 bg-white rounded-xl border border-red-200 p-4">
-          The case board couldn&apos;t be loaded right now — refresh to try again.
+          The case board couldn&apos;t be loaded right now - refresh to try again.
         </p>
       )}
 
@@ -411,14 +411,14 @@ export default function StatusBoard({
                   <span
                     className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
                     style={{ background: "#fdebd8", color: "#7c2d12" }}
-                    title="Flagged automatically — no one has been notified"
+                    title="Flagged automatically - no one has been notified"
                   >
                     ⚠ {reason}
                   </span>
                 </p>
               )}
 
-              {/* Current stage pills — plain English, raw value on hover */}
+              {/* Current stage pills - plain English, raw value on hover */}
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {row.stages.length > 0 ? (
                   row.stages.map((s) => (

@@ -1,4 +1,4 @@
-// app/api/admin/clients/archive/route.ts — tick / untick "Archived" on the
+// app/api/admin/clients/archive/route.ts - tick / untick "Archived" on the
 // Clients board from inside the portal (2026-08-19).
 //
 // Two writes, in this order:
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
   } catch (e) {
     console.error("[clients/archive] Airtable write failed:", e)
     return NextResponse.json(
-      { error: "Airtable wouldn't accept that change — nothing was saved." },
+      { error: "Airtable wouldn't accept that change - nothing was saved." },
       { status: 502 }
     )
   }

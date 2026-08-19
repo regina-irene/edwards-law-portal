@@ -1,4 +1,4 @@
-// app/(admin)/admin/forms/[formKey]/page.tsx — who has answered this form.
+// app/(admin)/admin/forms/[formKey]/page.tsx - who has answered this form.
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import PageTitle from "@/components/ui/PageTitle"
@@ -42,7 +42,7 @@ export default async function FormAnswersPage({ params }: { params: Promise<{ fo
     <div className="space-y-6 max-w-3xl">
       <PageTitle
         title={definition?.label ?? key}
-        tagline="Completed answers — open one to read, print or export it"
+        tagline="Completed answers - open one to read, print or export it"
         actions={<Link href="/admin/forms" className="text-sm underline text-gray-500 hover:text-gray-900">← All forms</Link>}
       />
 

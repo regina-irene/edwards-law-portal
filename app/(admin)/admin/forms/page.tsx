@@ -1,5 +1,5 @@
 "use client"
-// app/(admin)/admin/forms/page.tsx — the form builder: the forms clients fill
+// app/(admin)/admin/forms/page.tsx - the form builder: the forms clients fill
 // in, built here from a PDF or pasted text, and linked to tasks from the Tasks
 // screen.
 import { useCallback, useEffect, useState } from "react"
@@ -19,7 +19,7 @@ interface FormRow {
   sections: number
 }
 
-const STANDALONE = "Standalone — not in a stage"
+const STANDALONE = "Standalone - not in a stage"
 
 function fmt(d: string): string {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" })
@@ -69,7 +69,7 @@ export default function AdminFormsPage() {
     setNotice(
       imported.length
         ? `Rebuilt here: ${imported.join(", ")}.${skipped.length ? ` Already here: ${skipped.join(", ")}.` : ""}`
-        : "Both FileFlow forms are already rebuilt here — nothing to bring over."
+        : "Both FileFlow forms are already rebuilt here - nothing to bring over."
     )
     await load()
   }
@@ -96,7 +96,7 @@ export default function AdminFormsPage() {
     <div className="space-y-6 max-w-4xl">
       <PageTitle
         title="Forms"
-        tagline="Build the forms your clients fill in — from a PDF, from pasted text, or from scratch"
+        tagline="Build the forms your clients fill in - from a PDF, from pasted text, or from scratch"
         actions={
           !building && !editing ? (
             <span className="flex items-center gap-3">

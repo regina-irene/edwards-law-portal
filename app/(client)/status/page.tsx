@@ -39,7 +39,7 @@ export default async function StatusPage() {
   // "Client ID" is a record link, so String() of it is comma-joined when a
   // client has more than one. Everything on the write side keys off the FIRST
   // id (see statusRecordId / getCaseStatus), so this must strip it the same
-  // way — otherwise formatting and history look up a key nobody ever wrote.
+  // way - otherwise formatting and history look up a key nobody ever wrote.
   const statusKey = String(client.clientId).split(",")[0].trim()
 
   const [pageContent, billing, caseStatus, pleadings, events, history, visibleFields] = await Promise.all([
@@ -52,7 +52,7 @@ export default async function StatusPage() {
     // Which Status-board fields this client may see. Falls back to exactly the
     // set the page has always shown if the settings can't be read, so a
     // database problem can only ever show LESS, never more. See
-    // lib/status-fields.ts — anything not switched on is hidden.
+    // lib/status-fields.ts - anything not switched on is hidden.
     resolveVisibleFields(statusKey),
   ])
 
@@ -65,7 +65,7 @@ export default async function StatusPage() {
   // pleadings come back newest-first; surface the last 3 filings in Case Details
   const recentFilings = (pleadings ?? []).slice(0, 3).map((p) => ({
     title: p.title,
-    date: p.filedOn, // date on the document only — never the Drive-sync date
+    date: p.filedOn, // date on the document only - never the Drive-sync date
     filedBy: p.filedBy,
     link: p.link,
   }))
@@ -88,7 +88,7 @@ export default async function StatusPage() {
 
   return (
     <div className="space-y-6">
-      {/* Embed removed per Regina (2026-06-09) — the pulled-out info below replaces the Airtable embed view */}
+      {/* Embed removed per Regina (2026-06-09) - the pulled-out info below replaces the Airtable embed view */}
       <PageHeader defaultTitle="Case Status" page="status" content={{ ...pageContent, embed_url: null }} />
 
       {/* Everyone sees this, not just admins previewing (2026-08-18). Case data
@@ -114,7 +114,7 @@ export default async function StatusPage() {
           </div>
           {statusHtml ? (
             /* Formatting (bold, colour, highlight) is stored portal-side and
-               only used while it still matches the words Airtable holds — see
+               only used while it still matches the words Airtable holds - see
                lib/status-rich. Edited on the board? You get the board's text. */
             <RichTextView html={statusHtml} className="text-gray-800" />
           ) : (
@@ -123,7 +123,7 @@ export default async function StatusPage() {
       </div>
 
       {/* Every earlier update, kept so the client can look back at what they
-          were told and when. Not the firm's field notes — those stay private. */}
+          were told and when. Not the firm's field notes - those stay private. */}
       <StatusHistory entries={history} />
 
       {caseStatus && (

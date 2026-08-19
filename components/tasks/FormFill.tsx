@@ -54,7 +54,7 @@ export default function FormFill({ formKey, readOnly = false }: { formKey: strin
     setSaved(false)
   }
 
-  // A required question must be answered — a checkbox must be ticked, anything
+  // A required question must be answered - a checkbox must be ticked, anything
   // else must be non-empty.
   function isAnswered(field: FormField, value: string): boolean {
     return field.type === "checkbox" ? value === "true" : (value ?? "").trim() !== ""
@@ -72,7 +72,7 @@ export default function FormFill({ formKey, readOnly = false }: { formKey: strin
     setSaving(false)
     if (!res.ok) { setError("Could not save. Please try again."); return }
 
-    // Progress is always saved first — a long form is too much work to lose —
+    // Progress is always saved first - a long form is too much work to lose - 
     // then anything still required is flagged rather than silently accepted.
     const unanswered = (form?.sections ?? [])
       .flatMap((s) => s.fields)
@@ -126,7 +126,7 @@ export default function FormFill({ formKey, readOnly = false }: { formKey: strin
       {missing.length > 0 && (
         <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
           Your answers are saved. {missing.length} required {missing.length === 1 ? "question still needs" : "questions still need"} an
-          answer — they&apos;re marked in red above. You can come back and finish any time.
+          answer - they&apos;re marked in red above. You can come back and finish any time.
         </p>
       )}
     </div>
@@ -155,7 +155,7 @@ function Field({
   const label = (
     <label className={`block text-xs font-medium mb-1 ${flagged ? "text-red-700" : "text-gray-600"}`}>
       {field.label}{field.required && <span className="text-red-500"> *</span>}
-      {flagged && <span className="ml-1 font-normal">— needs an answer</span>}
+      {flagged && <span className="ml-1 font-normal"> - needs an answer</span>}
     </label>
   )
 
@@ -186,7 +186,7 @@ function Field({
         <label className={`flex items-center gap-2 text-sm ${flagged ? "text-red-700" : "text-gray-700"}`}>
           <input type="checkbox" checked={value === "true"} disabled={disabled} onChange={(e) => onChange(e.target.checked ? "true" : "false")} />
           {field.label}{field.required && <span className="text-red-500"> *</span>}
-          {flagged && <span className="font-normal">— needs an answer</span>}
+          {flagged && <span className="font-normal"> - needs an answer</span>}
         </label>
         {field.helpText && <p className="text-xs text-gray-400 mt-0.5">{field.helpText}</p>}
       </div>

@@ -17,7 +17,7 @@ function LoginForm() {
         <h2 className="text-xl font-semibold mb-2">Check your email</h2>
         <p className="text-gray-600">
           We just sent you a sign-in link. Open the email and click the link to
-          enter your portal. (Check your spam folder if you don&apos;t see it —
+          enter your portal. (Check your spam folder if you don&apos;t see it - 
           the link expires in 24 hours.)
         </p>
       </div>
@@ -28,7 +28,7 @@ function LoginForm() {
     <div className="space-y-6">
       <button
         onClick={async () => {
-          // Clear any leftover session first — signing in while already signed
+          // Clear any leftover session first - signing in while already signed
           // in as someone else reads as an account-merge and gets refused.
           await signOut({ redirect: false })
           signIn("google", { callbackUrl: "/dashboard" })
@@ -87,7 +87,7 @@ function LoginForm() {
         </button>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <p className="text-xs text-gray-500 text-center">
-          No password needed — we&apos;ll email you a secure one-time link.
+          No password needed - we&apos;ll email you a secure one-time link.
         </p>
       </form>
     </div>

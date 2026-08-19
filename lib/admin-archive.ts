@@ -1,8 +1,8 @@
-// lib/admin-archive.ts — the admin side of archiving (2026-08-19).
+// lib/admin-archive.ts - the admin side of archiving (2026-08-19).
 //
 // lib/client-archive.ts owns the client's own experience: the 30-day read-only
 // wind-down, and the stamp that starts it. Admin lists need something smaller
-// and read-only — for each client, "are they archived" and one short line of
+// and read-only - for each client, "are they archived" and one short line of
 // human text ("closed 12 days ago", "access ended") to sit beside the chip.
 //
 // Everything here reads. Nothing here ever creates a stamp, so opening an admin
@@ -30,7 +30,7 @@ export const ACTIVE_NOTE: ArchiveNote = {
 }
 
 /**
- * The line that goes next to the "Archived" chip. Pure — safe to call anywhere
+ * The line that goes next to the "Archived" chip. Pure - safe to call anywhere
  * on the server once you already hold the stamp.
  *
  * No stamp yet means the box was ticked in Airtable and the client hasn't been

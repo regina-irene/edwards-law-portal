@@ -41,7 +41,7 @@ Rules:
 - Map task Status field: Outstanding/Pending → "outstanding", In Progress/Under Review/Uploaded → "in_progress", Complete/Done → "completed"
 - Set overdue: true when dueDate exists, is before today, and status is not "completed"
 - Sort items within each section by dueDate ascending (nulls last)
-- Use plain English — do not use legal jargon in item names
+- Use plain English - do not use legal jargon in item names
 - Return ONLY valid JSON. No markdown, no explanation.
 
 Output schema:

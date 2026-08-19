@@ -1,4 +1,4 @@
-// lib/app-settings.ts — small key/value settings (app_settings table).
+// lib/app-settings.ts - small key/value settings (app_settings table).
 import { sql } from "@/lib/db"
 
 export async function getSetting(key: string): Promise<string> {

@@ -1,4 +1,4 @@
-// components/nav/Sidebar.tsx — the desktop icon rail. Hidden below `md`, where
+// components/nav/Sidebar.tsx - the desktop icon rail. Hidden below `md`, where
 // BottomNav takes over; unchanged at `md` and above.
 import NavItem from "./NavItem"
 import SignOutButton from "./SignOutButton"

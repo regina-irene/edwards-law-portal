@@ -47,7 +47,7 @@ function mapClientRecord(r: any): AirtableClient {
 
 /**
  * Tick or untick "Archived" on the Clients board (2026-08-18). Archiving is
- * equally possible directly in Airtable — this just means the portal doesn't
+ * equally possible directly in Airtable - this just means the portal doesn't
  * have to be a one-way mirror.
  *
  * Throws on failure so the caller can show a real error; a silent no-op here
@@ -127,7 +127,7 @@ export interface CaseStatusInfo {
 // The portal's clientId is the client's linked record id in the Status table
 // ("Client ID" on Clients is a record link, so String() of it yields "rec...").
 // Pulls that Status record's Case Stage pills + when the row last changed.
-// Fails soft — the page just skips the pills.
+// Fails soft - the page just skips the pills.
 export async function getCaseStatus(clientId: string): Promise<CaseStatusInfo | null> {
   const recordId = String(clientId).split(",")[0].trim()
   if (!recordId.startsWith("rec")) return null
@@ -167,7 +167,7 @@ export async function getCaseStatus(clientId: string): Promise<CaseStatusInfo | 
       answerFiled: f["Answer Filed?"] === true,
       dateAnswerFiled: date(f["Date Answer Filed"]),
       // "Case Status - Dashboard" on the Status board is THE case status text for
-      // all cases (per Regina) — the old "Status of Case" field on Clients is legacy.
+      // all cases (per Regina) - the old "Status of Case" field on Clients is legacy.
       statusText: text(f["Case Status - Dashboard"]),
       lastModified: date(f["Last Modified"]),
     }

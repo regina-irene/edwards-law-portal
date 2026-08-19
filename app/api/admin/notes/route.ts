@@ -1,4 +1,4 @@
-// app/api/admin/notes/route.ts — Field Notes CRUD. ADMIN ONLY: notes are the
+// app/api/admin/notes/route.ts - Field Notes CRUD. ADMIN ONLY: notes are the
 // firm's private case log; no client-facing route may ever serve them.
 import { NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin"

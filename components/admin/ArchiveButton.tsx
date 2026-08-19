@@ -1,5 +1,5 @@
 "use client"
-// components/admin/ArchiveButton.tsx — archive / restore one client from the
+// components/admin/ArchiveButton.tsx - archive / restore one client from the
 // admin Clients list (2026-08-19). Same icon-over-label shape as the other
 // per-client actions on that row.
 //
@@ -22,7 +22,7 @@ export default function ArchiveButton({
   archived,
   graceDays,
 }: {
-  /** The CLIENTS-table record id — what gets PATCHed. Not the clientId. */
+  /** The CLIENTS-table record id - what gets PATCHed. Not the clientId. */
   recordId: string
   /** The linked Status record id the portal uses as a client id, for the stamp. */
   clientId: string
@@ -55,8 +55,8 @@ export default function ArchiveButton({
     if (!res?.ok) {
       const data = (await res?.json().catch(() => null)) as { error?: string } | null
       setSaving(false)
-      // Never fail silently — the row stays exactly as it was and says why.
-      setError(data?.error || "Couldn't save that — nothing was changed. Try again.")
+      // Never fail silently - the row stays exactly as it was and says why.
+      setError(data?.error || "Couldn't save that - nothing was changed. Try again.")
       return
     }
     // Leave the spinner up until the server-rendered list has actually caught up.
@@ -82,7 +82,7 @@ export default function ArchiveButton({
               ? error
               : archived
                 ? `Restore ${who} to the active client list`
-                : `Archive ${who} — closed case, read-only for ${graceDays} days`
+                : `Archive ${who} - closed case, read-only for ${graceDays} days`
           }
           className={CLIENT_ACTION_CLS}
         >
@@ -104,7 +104,7 @@ export default function ArchiveButton({
         body={
           archived
             ? `${who} goes back on the active client list and gets their full portal access back. The ${graceDays}-day countdown is cleared.`
-            : `${who} keeps read-only access to their portal for ${graceDays} days — they can still read their case file, but can't send messages or upload anything. After ${graceDays} days they lose access entirely. They'll be hidden from your admin lists unless you turn on "Include archived". You can restore them at any time.`
+            : `${who} keeps read-only access to their portal for ${graceDays} days - they can still read their case file, but can't send messages or upload anything. After ${graceDays} days they lose access entirely. They'll be hidden from your admin lists unless you turn on "Include archived". You can restore them at any time.`
         }
         confirmLabel={archived ? "Restore client" : "Archive client"}
         onConfirm={run}

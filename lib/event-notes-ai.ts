@@ -1,4 +1,4 @@
-// lib/event-notes-ai.ts — uses Claude to reformat messy Google-Calendar event
+// lib/event-notes-ai.ts - uses Claude to reformat messy Google-Calendar event
 // notes (court Zoom-rules walls of text) into clean, highlighted HTML for the
 // client portal. Results are cached in Postgres keyed by event id + a hash of
 // the source text, so each note is formatted ONCE, not per page view.
@@ -8,7 +8,7 @@ import { sql } from "@/lib/db"
 import { sanitizeNotesHtml } from "@/lib/sanitize"
 import type { CaseEvent } from "@/lib/calendar"
 
-// Notes shorter than this read fine as plain text — don't spend AI on them.
+// Notes shorter than this read fine as plain text - don't spend AI on them.
 const MIN_LENGTH = 220
 // Cap how many UNCACHED notes we format in a single page render so a first
 // visit isn't slow; the rest get picked up (and cached) on subsequent loads.
@@ -22,7 +22,7 @@ async function formatWithClaude(raw: string): Promise<string | null> {
   if (!process.env.ANTHROPIC_API_KEY) return null
   const client = new Anthropic()
   const response = await client.messages.create({
-    // Was "claude-opus-4-8", which is not a real model id — every call 404'd,
+    // Was "claude-opus-4-8", which is not a real model id - every call 404'd,
     // so notes were never formatted and the page paid the latency anyway.
     // Sonnet is the right tier for a reformatting task like this.
     model: "claude-sonnet-5",
@@ -35,7 +35,7 @@ Rules:
 - Organize with short <h3> section headings and bullet lists where the source has lists.
 - Make every URL a clickable <a href="..." target="_blank"> link with short link text (e.g. "Join Zoom meeting").
 - Make email addresses mailto: links.
-- Highlight critical details — meeting IDs, passwords/passcodes, deadlines, "must notify by" dates, consequences for non-compliance — with <strong> and <span style="background:#fef9c3">…</span>.
+- Highlight critical details - meeting IDs, passwords/passcodes, deadlines, "must notify by" dates, consequences for non-compliance - with <strong> and <span style="background:#fef9c3">…</span>.
 - Keep ALL substantive information; condense pure filler and fix run-together words (e.g. "proceedingswill" → "proceedings will").
 - Write at a level a stressed non-lawyer client can follow.`,
     messages: [{ role: "user", content: raw }],
@@ -46,7 +46,7 @@ Rules:
 
 /**
  * Cache-only read (2026-08-18). Never calls Claude, so it is safe on the render
- * path — the calendar paints from whatever has already been formatted.
+ * path - the calendar paints from whatever has already been formatted.
  */
 export async function getCachedNotes(events: CaseEvent[]): Promise<Record<string, string>> {
   const candidates = events.filter((e) => e.description.length >= MIN_LENGTH)
@@ -63,7 +63,7 @@ export async function getCachedNotes(events: CaseEvent[]): Promise<Record<string
       if (hit && hit.source_hash === hashOf(e.description)) result[e.id] = hit.html
     }
   } catch {
-    // fail soft — plain-text notes
+    // fail soft - plain-text notes
   }
   return result
 }
@@ -95,7 +95,7 @@ export async function warmFormattedNotes(events: CaseEvent[]): Promise<void> {
           DO UPDATE SET source_hash = EXCLUDED.source_hash, html = EXCLUDED.html, updated_at = now()
         `
       } catch {
-        // fail soft — this event keeps its plain-text notes
+        // fail soft - this event keeps its plain-text notes
       }
     })
   )
@@ -110,7 +110,7 @@ export async function getFormattedNotes(events: CaseEvent[]): Promise<Record<str
 
   const result: Record<string, string> = {}
   try {
-    // 1. cached? (sql.query for the array parameter — the tagged template
+    // 1. cached? (sql.query for the array parameter - the tagged template
     // only accepts scalar primitives)
     const ids = candidates.map((e) => e.id)
     const cached = await sql.query(
@@ -146,12 +146,12 @@ export async function getFormattedNotes(events: CaseEvent[]): Promise<Record<str
             DO UPDATE SET source_hash = EXCLUDED.source_hash, html = EXCLUDED.html, updated_at = now()
           `
         } catch {
-          // fail soft — this event keeps its plain-text notes
+          // fail soft - this event keeps its plain-text notes
         }
       })
     )
   } catch {
-    // fail soft — page renders with plain-text notes
+    // fail soft - page renders with plain-text notes
   }
   return result
 }

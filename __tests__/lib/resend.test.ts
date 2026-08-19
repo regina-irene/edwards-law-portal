@@ -111,7 +111,7 @@ describe("sendMagicLinkEmail", () => {
       expect.objectContaining({
         to: "client@aol.com",
         from: "portal@edwardslaw.com",
-        subject: "Your sign-in link — Edwards Family Law",
+        subject: "Your sign-in link - Edwards Family Law",
         text: expect.stringContaining("https://clients.edwardsfamilylaw.com/api/auth/callback/resend?token=abc"),
       })
     )

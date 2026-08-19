@@ -1,10 +1,10 @@
-// app/api/admin/status-fields/route.ts — reads and saves which Status-board
+// app/api/admin/status-fields/route.ts - reads and saves which Status-board
 // fields clients see. One route for both scopes: no clientId in the body means
 // the firm-wide setting, a clientId means that client's override.
 //
 // Admin-only. Everything the Status board holds is internal by default (see
 // lib/status-fields.ts), so this route only ever records a decision somebody
-// made on the admin screen — it never widens anything on its own.
+// made on the admin screen - it never widens anything on its own.
 import { NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin"
 import {
@@ -41,7 +41,7 @@ export async function GET(req: Request): Promise<NextResponse> {
     ])
     return NextResponse.json({
       fields: configurableFieldNames(discovered),
-      // Empty means the board couldn't be read — the screen says so rather
+      // Empty means the board couldn't be read - the screen says so rather
       // than pretending the firm has no fields.
       discovered: discovered.length,
       defaults: DEFAULT_VISIBLE,
@@ -99,6 +99,6 @@ export async function PUT(req: Request): Promise<NextResponse> {
     return NextResponse.json({ ok: true })
   } catch (e) {
     console.error("[status-fields] save failed:", e)
-    return NextResponse.json({ error: "That didn't save — nothing was changed." }, { status: 500 })
+    return NextResponse.json({ error: "That didn't save - nothing was changed." }, { status: 500 })
   }
 }

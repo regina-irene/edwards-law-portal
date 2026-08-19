@@ -1,8 +1,8 @@
-// lib/client-write-guard.ts — the server half of the archived-client wind-down.
+// lib/client-write-guard.ts - the server half of the archived-client wind-down.
 //
 // lib/client-archive.ts decides WHETHER a client may still write; this decides
 // what a write ROUTE does about it. Hiding the buttons in the browser is a
-// courtesy, not a control — anyone can still POST — so every client-facing
+// courtesy, not a control - anyone can still POST - so every client-facing
 // write endpoint calls assertClientCanWrite() before it touches the database.
 //
 // Admin routes deliberately do NOT use this. Regina has to keep working on a
@@ -26,11 +26,11 @@ export type ClientWriteCheck =
 
 // Wrapped in React's per-request `cache` like the rest of lib/portal-client.ts.
 // The layout and the page both ask for this on a single render, and
-// resolveArchiveState writes (a stamp, or a DELETE clearing one) — so without
+// resolveArchiveState writes (a stamp, or a DELETE clearing one) - so without
 // this the same request would hit the database two or three times over.
 //
-// FAIL SAFE, NOT OPEN: if resolveArchiveState throws — Postgres unreachable, a
-// bad stamp row, anything — we return ACTIVE_STATE and let the client carry on.
+// FAIL SAFE, NOT OPEN: if resolveArchiveState throws - Postgres unreachable, a
+// bad stamp row, anything - we return ACTIVE_STATE and let the client carry on.
 // Shutting a paying client out of their own case file because the database
 // hiccuped is far worse than one extra day of write access for someone whose
 // case has closed.

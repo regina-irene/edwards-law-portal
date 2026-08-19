@@ -1,4 +1,4 @@
-// lib/correspondence.ts — reads the "Correspondence" table from a client's own
+// lib/correspondence.ts - reads the "Correspondence" table from a client's own
 // Airtable base and turns the Drive-synced file rows into a clean letter list.
 // Same Drive-synced shape as Pleadings, so the file-name parsing is shared:
 // the primary field is "File Path" rather than "Name of File", and the person
@@ -15,7 +15,7 @@ export interface CorrespondenceDoc {
   title: string
   /** Date parsed from the file name ("2026.08.11 Letter to OC…"), else null */
   sentOn: string | null
-  /** Record created datetime — used only to order rows whose name has no date.
+  /** Record created datetime - used only to order rows whose name has no date.
    *  Never shown as the sent date: it is the Drive-sync time, not the date on
    *  the letter. */
   created: string | null
@@ -57,7 +57,7 @@ export async function getCorrespondence(clientBaseId: string): Promise<Correspon
       text(f["File Path"]) || text(f["Name of File"]) || text(f["Name"]) || ""
 
     // Which folder is the table's own (top-level) one? Whatever the files that
-    // carry no folder path in their name sit in — anything else is a subfolder.
+    // carry no folder path in their name sit in - anything else is a subfolder.
     const rootFolders = new Set(
       records
         .filter((r) => !/[/\\]/.test(rawNameOf(r.fields)))
@@ -69,10 +69,10 @@ export async function getCorrespondence(clientBaseId: string): Promise<Correspon
       .map((r) => {
         const f = r.fields
         const rawName = rawNameOf(f)
-        // shared with Pleadings — the naming convention is identical
+        // shared with Pleadings - the naming convention is identical
         // ("2026.08.11 Letter to OC (Smith).pdf")
         const { title, filedOn: sentOn, folder: parsedFolder } = parsePleadingName(rawName)
-        // "Correspondence/…" is this table's own folder, not a subfolder —
+        // "Correspondence/…" is this table's own folder, not a subfolder - 
         // the shared parser only knows to drop a leading "Pleadings/"
         const folder =
           parsedFolder && parsedFolder.toLowerCase() !== "correspondence" ? parsedFolder : null
@@ -95,7 +95,7 @@ export async function getCorrespondence(clientBaseId: string): Promise<Correspon
         }
       })
       // the subfolder itself syncs in as a row ("Opposing Counsel", File Type
-      // "folder") — it isn't a letter, and its files are listed individually
+      // "folder") - it isn't a letter, and its files are listed individually
       .filter((d) => d.title && d.fileType.toLowerCase() !== "folder")
 
     // newest letter first; rows without a parsed date sort by record creation

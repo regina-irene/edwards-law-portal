@@ -1,4 +1,4 @@
-// lib/form-responses.ts — what clients have answered, laid out against the
+// lib/form-responses.ts - what clients have answered, laid out against the
 // form's own questions so a completed form can be read, printed or exported.
 import { sql } from "@/lib/db"
 import type { FormDefinition } from "@/lib/portal-forms"
@@ -95,7 +95,7 @@ export async function clientsWithAnswers(formKey: string): Promise<{ clientId: s
   }))
 }
 
-// CSV of one client's completed form — question per row, so it opens cleanly
+// CSV of one client's completed form - question per row, so it opens cleanly
 // in Excel without any spreadsheet gymnastics.
 export function toCsv(form: CompletedForm, clientLabel: string): string {
   const esc = (s: string) => `"${(s ?? "").replace(/"/g, '""')}"`

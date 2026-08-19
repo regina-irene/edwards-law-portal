@@ -1,4 +1,4 @@
-// lib/status-fields.ts — which Status-board fields a client is allowed to see.
+// lib/status-fields.ts - which Status-board fields a client is allowed to see.
 //
 // The Status table (tbl3gCA0CQ0S6ewW6) is the firm's INTERNAL board. It holds
 // payment status, the assigned judge, drafting reminders ("KW get OP's DOB"),
@@ -9,7 +9,7 @@
 //
 // DEFAULT_VISIBLE is the exact set the client Case Status page already showed
 // before this control existed, so turning the feature on changes nothing. Every
-// other field on the board — including any field added to it tomorrow — starts
+// other field on the board - including any field added to it tomorrow - starts
 // hidden. Nothing here may ever flip that around: if the settings can't be read
 // (database down, bad JSON, anything) we fall back to DEFAULT_VISIBLE, which
 // shows LESS than any customised setting could, never more.
@@ -50,7 +50,7 @@ export const DEFAULT_VISIBLE: string[] = [
 
 /**
  * Fields the Case Status page renders in its own right, outside the Case File
- * card — the status write-up at the top and its "Updated by EFL" stamp. They
+ * card - the status write-up at the top and its "Updated by EFL" stamp. They
  * are not offered as toggles (there is nothing to toggle: the page is built
  * around them) and they are never repeated in the extra-fields list.
  */
@@ -68,7 +68,7 @@ export const ALREADY_ON_PAGE: ReadonlySet<string> = new Set<string>([
 /**
  * Field names on the Status table, discovered from the data.
  *
- * Deliberately NOT the Airtable Meta API — that needs `schema.bases:read`,
+ * Deliberately NOT the Airtable Meta API - that needs `schema.bases:read`,
  * which the portal's token may not carry. Instead: read a page of records with
  * no `fields` filter and union the keys. Airtable omits empty fields per
  * record, so one record is never enough; 100 records covers the board.
@@ -92,7 +92,7 @@ async function loadStatusFieldNames(): Promise<string[]> {
     return [...names].sort((a, b) => a.localeCompare(b))
   } catch {
     // Fail soft. An empty list means the admin screen says it couldn't read the
-    // board — it never means "show everything".
+    // board - it never means "show everything".
     return []
   }
 }
@@ -151,7 +151,7 @@ export async function saveGlobalFieldPrefs(prefs: Record<string, boolean>): Prom
 }
 
 /**
- * One client's overrides. Only explicitly-set keys are stored — a field absent
+ * One client's overrides. Only explicitly-set keys are stored - a field absent
  * from this map INHERITS the firm-wide value.
  */
 export async function getClientFieldPrefs(clientId: string): Promise<Record<string, boolean>> {
@@ -172,7 +172,7 @@ export async function saveClientFieldPrefs(
 
 /**
  * The fields this client may see: DEFAULT_VISIBLE, then the firm-wide setting,
- * then that client's own overrides — in that order, last one wins.
+ * then that client's own overrides - in that order, last one wins.
  *
  * Fails closed. Both reads return {} on any error, so the worst case is the
  * set the page showed before this control existed.

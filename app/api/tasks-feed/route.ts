@@ -2,7 +2,7 @@
 // ── Read-only to-do feed for the EFL Apps dashboard ──────────────────────────
 // Returns open (pending) client tasks for display on the firm's internal
 // launcher page (eflapps.tiiny.site), in the same shape as FileFlow's
-// /api/tasks-feed so the dashboard can merge both. GET only — nothing can be
+// /api/tasks-feed so the dashboard can merge both. GET only - nothing can be
 // changed through this endpoint.
 //
 // Auth: callers send the shared dashboard key in the `X-Feed-Key` header.

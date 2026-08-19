@@ -1,5 +1,5 @@
 "use client"
-// components/admin/ActivityFeed.tsx — the dashboard's activity feed with type
+// components/admin/ActivityFeed.tsx - the dashboard's activity feed with type
 // filter chips and show-more paging. Receives pre-labeled rows from the server
 // page; dismissing calls the same server action as before.
 import Link from "next/link"
@@ -75,7 +75,7 @@ export default function ActivityFeed({ items }: { items: ActivityItem[] }) {
             list="activity-clients"
             value={client}
             onChange={(e) => { setClient(e.target.value); setShown(PAGE) }}
-            placeholder="All clients — type to filter"
+            placeholder="All clients - type to filter"
             className="w-48 px-2.5 py-1 rounded-lg text-xs font-medium border border-gray-300 bg-white text-gray-900"
           />
           <datalist id="activity-clients">

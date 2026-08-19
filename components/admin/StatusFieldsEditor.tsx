@@ -1,5 +1,5 @@
 "use client"
-// components/admin/StatusFieldsEditor.tsx — picks which fields from the Case
+// components/admin/StatusFieldsEditor.tsx - picks which fields from the Case
 // Status board a client's Case Status page shows.
 //
 // Two modes, same component and same route so there's one pattern to learn:
@@ -7,7 +7,7 @@
 //   a clientId   → that client's override, three states per field
 //
 // The board is the firm's internal one. Anything not ticked stays hidden, and
-// that includes every field nobody has looked at yet — the copy below says so
+// that includes every field nobody has looked at yet - the copy below says so
 // in as many words, because this is the screen where somebody could get it
 // wrong.
 import { useCallback, useEffect, useState } from "react"
@@ -98,7 +98,7 @@ export default function StatusFieldsEditor({ clientId }: { clientId?: string }):
     try {
       // Firm-wide saves write an explicit answer for every field on screen, so
       // the stored setting is a complete record of what was decided. Per-client
-      // saves write ONLY the overrides — a field left on "use firm setting" is
+      // saves write ONLY the overrides - a field left on "use firm setting" is
       // absent from the map and inherits.
       const prefs: Prefs = {}
       if (perClient) {
@@ -113,12 +113,12 @@ export default function StatusFieldsEditor({ clientId }: { clientId?: string }):
       })
       if (!res.ok) {
         const detail = (await res.json().catch(() => null)) as { error?: string } | null
-        throw new Error(detail?.error || "That didn't save — nothing was changed.")
+        throw new Error(detail?.error || "That didn't save - nothing was changed.")
       }
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : "That didn't save — nothing was changed.")
+      setSaveError(e instanceof Error ? e.message : "That didn't save - nothing was changed.")
     } finally {
       setSaving(false)
     }

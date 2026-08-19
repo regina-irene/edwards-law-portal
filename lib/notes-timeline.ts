@@ -1,6 +1,6 @@
-// lib/notes-timeline.ts — live portal activity for Field Notes, merged with
+// lib/notes-timeline.ts - live portal activity for Field Notes, merged with
 // manual notes. Events are QUERIED at render from the tables that already
-// record them — nothing is copied, nothing drifts.
+// record them - nothing is copied, nothing drifts.
 //
 // The same queries serve one case (the per-case timeline) and every case at
 // once (the hub's running log): pass a client id to narrow, or "" for the lot.
@@ -15,7 +15,7 @@ export interface TimelineEvent {
   sender?: "client" | "firm"
   smsStatus?: string | null
   detail: string
-  // Which case this belongs to — the running log needs it to label and link
+  // Which case this belongs to - the running log needs it to label and link
   // each entry; the per-case timeline already knows.
   clientId?: string
   // Where to open the file this entry is about: a portal download route for
@@ -65,8 +65,8 @@ const PER_SOURCE_LIMIT = 500
 export type NameLookup = (clientId: string) => string
 
 async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: number): Promise<TimelineEvent[]> {
-  // An empty id means "every case". Each source therefore has TWO shapes — an
-  // unfiltered read and one narrowed to a single client_id — picked here. The
+  // An empty id means "every case". Each source therefore has TWO shapes - an
+  // unfiltered read and one narrowed to a single client_id - picked here. The
   // old single query used `(${cid} = '' OR client_id = ${cid})`, and that OR
   // hides the client_id from the planner: it cannot use a client_id index and
   // falls back to scanning the table even when a case is named.
@@ -115,7 +115,7 @@ async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: numb
     // hangs off the template, so it became available to them when the task was
     // assigned (whichever happened later).
     // The ::text cast stays on THIS one: these rows are ta.scope = 'template',
-    // and a template ref_id is whatever the uploader passed — it is not checked
+    // and a template ref_id is whatever the uploader passed - it is not checked
     // against task_templates, so ta.ref_id::uuid could throw at runtime.
     (everyCase
       ? sql`SELECT ta.id, ct.client_id, ta.file_name, ct.title,
@@ -283,7 +283,7 @@ async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: numb
       clientId: caseOf(f),
       sender: "client",
       detail: failed
-        ? `${who} sent ${f.file_name} — it did not reach the Drive folder`
+        ? `${who} sent ${f.file_name} - it did not reach the Drive folder`
         : `${who} sent ${f.file_name} to the firm's Drive folder`,
       href: !failed && driveLink ? driveLink : undefined,
       linkLabel: "Open in Drive",

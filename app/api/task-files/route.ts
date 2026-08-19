@@ -1,4 +1,4 @@
-// app/api/task-files/route.ts — upload a file attachment to a task
+// app/api/task-files/route.ts - upload a file attachment to a task
 import { auth } from "@/auth"
 import { requireAdmin } from "@/lib/admin"
 import { getClientByEmail } from "@/lib/airtable"
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     const client = await getClientByEmail(session.user.email)
     if (!client?.clientId) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     if (scope !== "client_task") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-    // Client branch only — the admin branch above stays open, because the firm
+    // Client branch only - the admin branch above stays open, because the firm
     // must still be able to work an archived client's file.
     const gate = await assertClientCanWrite()
     if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status })
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
       VALUES (${scope}, ${refId}, ${clientId}, ${file.name}, ${blob.pathname}, ${blob.url}, ${file.type || null}, ${file.size}, ${actorEmail})
       RETURNING id, scope, ref_id, file_name, content_type, size, created_at
     `
-    // Deliver to the firm's Drive folder. Fail-soft — the portal copy is saved.
+    // Deliver to the firm's Drive folder. Fail-soft - the portal copy is saved.
     if (isClientUpload && clientId) {
       await deliverClientUpload({ clientId, fileName: file.name, buffer, mimeType: file.type })
     }

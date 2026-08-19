@@ -1,4 +1,4 @@
-// lib/portal-forms.ts — forms built in the portal's own form builder.
+// lib/portal-forms.ts - forms built in the portal's own form builder.
 //
 // The stored definition uses the SAME shape FileFlow returns, so the client
 // filler (components/tasks/FormFill.tsx) renders a portal form and a FileFlow
@@ -8,7 +8,7 @@ import type { FormDefinition, FormField, FormSection, FormSummary } from "@/lib/
 
 export type { FormDefinition, FormField, FormSection, FormSummary }
 
-// What the client filler can render — anything outside this list is coerced to
+// What the client filler can render - anything outside this list is coerced to
 // a plain text box rather than silently rendering nothing.
 export const FIELD_TYPES = [
   "text",
@@ -30,7 +30,7 @@ export function isFieldType(t: string): t is FieldType {
 }
 
 // Keys identify a form in a URL and on a task, and identify an answer in
-// form_responses — so they have to be stable, unique and URL-safe.
+// form_responses - so they have to be stable, unique and URL-safe.
 export function slugify(input: string, fallback = "form"): string {
   const slug = (input || "")
     .toLowerCase()
@@ -165,7 +165,7 @@ export function normalizeDefinition(
   const out: FormSection[] = sections.map((section, si) => {
     const fields: FormField[] = (section.fields ?? []).map((f, fi) => {
       const type = f.type && isFieldType(f.type) ? f.type : "text"
-      // An existing key is preserved EXACTLY — it's what a client's saved
+      // An existing key is preserved EXACTLY - it's what a client's saved
       // answer is filed under (FileFlow's are underscored, e.g.
       // client_full_name), so re-slugifying it would orphan real answers.
       // Only a key we're inventing from a label gets slugified.

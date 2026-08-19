@@ -1,9 +1,9 @@
-// app/api/admin/case-status/assist/route.ts — the three helpers behind the
+// app/api/admin/case-status/assist/route.ts - the three helpers behind the
 // admin Status board:
-//   draft — Claude writes a plain-English status update TO the client. Returned
+//   draft - Claude writes a plain-English status update TO the client. Returned
 //           for review only; NOTHING is written to Airtable here.
-//   ask   — Claude answers a question about the whole board.
-//   flag  — which cases look stuck. Pure arithmetic, no model: a rule you can
+//   ask - Claude answers a question about the whole board.
+//   flag - which cases look stuck. Pure arithmetic, no model: a rule you can
 //           read beats a guess you can't.
 // Admin-only. Every path fails soft with a sentence, never a stack trace.
 import { NextResponse } from "next/server"
@@ -122,7 +122,7 @@ Write 1 to 3 sentences: where things stand, and what happens next in general ter
     } catch (e) {
       console.error("[case-status/assist] draft failed:", e)
       return NextResponse.json(
-        { error: "Couldn't draft an update right now — write it yourself or try again." },
+        { error: "Couldn't draft an update right now - write it yourself or try again." },
         { status: 502 }
       )
     }
@@ -161,7 +161,7 @@ Rules:
 - Be direct and specific. Name the cases you are talking about.
 - If the board doesn't contain the answer, say so plainly instead of guessing.
 - Counts and comparisons must come from the rows, not from memory.
-- Keep it short — a few sentences or a short list.
+- Keep it short - a few sentences or a short list.
 - This is an internal answer for staff, not something a client will see.`
 
     const prompt = `Case board (${rows.length} cases):
@@ -174,7 +174,7 @@ Question: ${question}`
   } catch (e) {
     console.error("[case-status/assist] ask failed:", e)
     return NextResponse.json(
-      { error: "Couldn't answer that right now — try again in a moment." },
+      { error: "Couldn't answer that right now - try again in a moment." },
       { status: 502 }
     )
   }

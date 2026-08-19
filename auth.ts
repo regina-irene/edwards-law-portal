@@ -9,7 +9,7 @@ import { sql } from "@/lib/db"
 import { getClientByEmail } from "@/lib/airtable"
 import { sendMagicLinkEmail } from "@/lib/resend"
 
-// Email-link sign-in only sends to addresses we already know — an admin or a
+// Email-link sign-in only sends to addresses we already know - an admin or a
 // client on the Airtable Clients board. Keeps the firm's email sender from
 // being abused and strangers from receiving sign-in links.
 async function isKnownPortalEmail(email: string): Promise<boolean> {
@@ -21,15 +21,15 @@ async function isKnownPortalEmail(email: string): Promise<boolean> {
   try {
     return Boolean(await getClientByEmail(e))
   } catch {
-    return false // Airtable unreachable — fail closed; the client can retry
+    return false // Airtable unreachable - fail closed; the client can retry
   }
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   // Adapter stores users + magic-link verification tokens (tables exist from
-  // scripts/migrate.ts). Sessions stay JWT (set in auth.config.ts) — the
-  // pre-adapter behavior — so existing Google sign-ins keep working unchanged.
+  // scripts/migrate.ts). Sessions stay JWT (set in auth.config.ts) - the
+  // pre-adapter behavior - so existing Google sign-ins keep working unchanged.
   // db is a VercelPool: pg-Pool-compatible at runtime, hence the type cast.
   adapter: PostgresAdapter(db as unknown as Pool),
   providers: [
@@ -37,7 +37,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       // A client may first sign in via email link (creating their user row),
-      // then later use Google with the same address — allow that link-up.
+      // then later use Google with the same address - allow that link-up.
       // Safe here: Google verifies emails, and all portal authorization is
       // by email match against Airtable/admin_users anyway.
       allowDangerousEmailAccountLinking: true,

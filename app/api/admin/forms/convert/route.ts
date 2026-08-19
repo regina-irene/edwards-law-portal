@@ -1,4 +1,4 @@
-// app/api/admin/forms/convert/route.ts — turn an uploaded PDF or pasted text
+// app/api/admin/forms/convert/route.ts - turn an uploaded PDF or pasted text
 // into a draft form definition. Nothing is saved here: the draft goes back to
 // the builder for Regina to check and edit before it becomes a form.
 import { requireAdmin } from "@/lib/admin"
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       text = typeof body?.text === "string" ? body.text.trim() : ""
       labelHint = typeof body?.label === "string" ? body.label.trim() : ""
       if (!text) return NextResponse.json({ error: "Paste the form's text first." }, { status: 400 })
-      if (text.length > MAX_TEXT_CHARS) return NextResponse.json({ error: "That's too long to convert in one go — split it up." }, { status: 413 })
+      if (text.length > MAX_TEXT_CHARS) return NextResponse.json({ error: "That's too long to convert in one go - split it up." }, { status: 413 })
       sourceName = "pasted text"
     }
   } catch (e) {
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     const { definition, fieldCount } = await convertToForm({ key, labelHint, text, pdfBase64 })
     if (fieldCount === 0) {
       return NextResponse.json(
-        { error: "No questions were found in that document — check it's the form itself, not a cover letter." },
+        { error: "No questions were found in that document - check it's the form itself, not a cover letter." },
         { status: 422 }
       )
     }

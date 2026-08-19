@@ -1,4 +1,4 @@
-// components/status/StatusHistory.tsx — the client's record of every status
+// components/status/StatusHistory.tsx - the client's record of every status
 // update they've been given (2026-08-18).
 //
 // Deliberately NOT the firm's field notes: those are the private case log and
@@ -11,7 +11,7 @@ import { sanitizeNotesHtml } from "@/lib/sanitize"
 
 export default function StatusHistory({ entries }: { entries: StatusHistoryEntry[] }) {
   // The newest entry is what the card above already shows, so start at the
-  // second — this section is the history, not a repeat.
+  // second - this section is the history, not a repeat.
   const past = entries.slice(1)
   if (past.length === 0) return null
 

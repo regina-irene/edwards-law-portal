@@ -1,4 +1,4 @@
-// lib/twilio.ts — SMS via Twilio. Fails soft: if credentials are missing or
+// lib/twilio.ts - SMS via Twilio. Fails soft: if credentials are missing or
 // still placeholders, sends are skipped with a human-readable reason instead
 // of erroring.
 import twilio from "twilio"
@@ -12,7 +12,7 @@ function getConfig(): { client: ReturnType<typeof twilio>; from: string } | null
   const sid = process.env.TWILIO_ACCOUNT_SID
   const token = process.env.TWILIO_AUTH_TOKEN
   const from = process.env.TWILIO_FROM_NUMBER
-  // real Twilio SIDs start with "AC" — placeholders don't
+  // real Twilio SIDs start with "AC" - placeholders don't
   if (!sid || !token || !from || !sid.startsWith("AC")) return null
   return { client: twilio(sid, token), from }
 }

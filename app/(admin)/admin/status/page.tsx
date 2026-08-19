@@ -1,4 +1,4 @@
-// app/(admin)/admin/status/page.tsx — Case Status board: every client, the
+// app/(admin)/admin/status/page.tsx - Case Status board: every client, the
 // stage their case is at, and the words they read on their own Status page.
 // Editable in place. Admin layout gates auth; requireAdmin gates this page.
 import { redirect } from "next/navigation"
@@ -64,7 +64,7 @@ export default async function AdminStatusPage({
 
   // Rendered on the server at request time. The board is read through a 60s
   // cache, so this is "when this page was built", and Refresh drops the cache
-  // before re-rendering — the timestamp only moves when the data actually did.
+  // before re-rendering - the timestamp only moves when the data actually did.
   const refreshedAt = formatRefreshed(Date.now())
 
   return (
@@ -74,7 +74,7 @@ export default async function AdminStatusPage({
         <form action={refreshStatusBoard} className="shrink-0">
           <RefreshButton label="Refresh from Airtable" />
           <span className="block text-right text-xs text-gray-500 mt-1">
-            {loadError ? "Not synced — the last refresh failed" : `Last refreshed ${refreshedAt}`}
+            {loadError ? "Not synced - the last refresh failed" : `Last refreshed ${refreshedAt}`}
           </span>
         </form>
       </div>

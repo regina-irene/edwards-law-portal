@@ -1,10 +1,10 @@
-// lib/client-prefs.ts — per-client portal preferences (color scheme, gradient
+// lib/client-prefs.ts - per-client portal preferences (color scheme, gradient
 // mode + joke of the day), stored in the client_prefs table and edited on the
 // client Settings page. The scheme reuses the old `theme` column; legacy values
 // ('classic', old wallpaper keys) normalize to the default navy scheme.
 // Gradient mode (2026-08-18) likewise reuses the dead `light_text` boolean from
-// the retired wallpaper theme — written but never read since the Thistle
-// facelift — so turning gradients on needs no schema change.
+// the retired wallpaper theme - written but never read since the Thistle
+// facelift - so turning gradients on needs no schema change.
 import { sql } from "@/lib/db"
 import { getScheme, DEFAULT_SCHEME_KEY } from "@/lib/color-schemes"
 

@@ -36,7 +36,7 @@ export default async function PleadingsPage() {
   return (
     <div className="space-y-6">
       {/* When the table renders, suppress any embed configured in the page-content
-          editor — otherwise the old Airtable view shows above the new table. */}
+          editor - otherwise the old Airtable view shows above the new table. */}
       <PageHeader defaultTitle="Pleadings" page="pleadings" content={docs ? { ...pageContent, embed_url: null } : pageContent} />
       {/* Sortable table replaces the embed; if this client's base can't be
           read (docs === null) fall back to the old embed so nothing breaks. */}

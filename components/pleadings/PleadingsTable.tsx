@@ -1,5 +1,5 @@
 "use client"
-// components/pleadings/PleadingsTable.tsx — sortable table of the client's
+// components/pleadings/PleadingsTable.tsx - sortable table of the client's
 // pleadings, all columns from the Airtable board but portal-styled.
 // Click a column header to sort; click again to flip direction.
 // Below `md` the same rows render as stacked cards so nothing scrolls sideways
@@ -76,7 +76,7 @@ export default function PleadingsTable({ docs }: { docs: PleadingDoc[] }) {
       {/* Phones: one card per filing, in the same order the table is sorted in. */}
       <ul className="md:hidden space-y-3">
         {sorted.map((d) => {
-          const dateLabel = d.filedOn ? shortDate(d.filedOn) : "—"
+          const dateLabel = d.filedOn ? shortDate(d.filedOn) : "-"
           const fc = d.folder ? folderColor(d.folder) : null
           return (
             <li
@@ -122,7 +122,7 @@ export default function PleadingsTable({ docs }: { docs: PleadingDoc[] }) {
                         {d.filedBy.replace(/\s+/g, " ").trim()}
                       </span>
                     ) : (
-                      <span className="text-gray-300">—</span>
+                      <span className="text-gray-300">-</span>
                     )}
                   </dd>
                 </div>
@@ -173,7 +173,7 @@ export default function PleadingsTable({ docs }: { docs: PleadingDoc[] }) {
           {sorted.map((d) => {
             // the Date column is always the date at the start of the file name;
             // a name with no date shows nothing rather than the sync date
-            const dateLabel = d.filedOn ? shortDate(d.filedOn) : "—"
+            const dateLabel = d.filedOn ? shortDate(d.filedOn) : "-"
             // filings kept in a subfolder ("TPO") are tagged and washed in that
             // folder's color so they stand apart from the main docket
             const fc = d.folder ? folderColor(d.folder) : null
@@ -230,7 +230,7 @@ export default function PleadingsTable({ docs }: { docs: PleadingDoc[] }) {
                       {d.filedBy.replace(/\s+/g, " ").trim()}
                     </span>
                   ) : (
-                    <span className="text-gray-300">—</span>
+                    <span className="text-gray-300">-</span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-gray-600 max-w-[16rem] break-words whitespace-pre-wrap">{d.notes || ""}</td>

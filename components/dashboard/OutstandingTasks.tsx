@@ -1,4 +1,4 @@
-// components/dashboard/OutstandingTasks.tsx — dashboard card of pending tasks,
+// components/dashboard/OutstandingTasks.tsx - dashboard card of pending tasks,
 // checkable in place (same PATCH as the Tasks page).
 "use client"
 
@@ -63,7 +63,7 @@ export default function OutstandingTasks({ initialTasks, readOnly = false }: { i
         </p>
       )}
       {tasks.length === 0 ? (
-        <p className="px-4 py-4 text-sm text-gray-400">You're all caught up — no outstanding tasks. 🎉</p>
+        <p className="px-4 py-4 text-sm text-gray-400">You're all caught up - no outstanding tasks. 🎉</p>
       ) : (
         <ul className="divide-y divide-gray-100">
           {tasks.slice(0, 6).map((t) => {
@@ -90,7 +90,7 @@ export default function OutstandingTasks({ initialTasks, readOnly = false }: { i
                   {t.title}
                 </Link>
                 <span className={`text-xs whitespace-nowrap ${overdue ? "text-red-600 font-semibold" : "text-gray-400"}`}>
-                  {done ? "Done ✓" : t.due_date ? `${overdue ? "Overdue — was due " : "Due "}${fmtDue(t.due_date)}` : "No due date"}
+                  {done ? "Done ✓" : t.due_date ? `${overdue ? "Overdue - was due " : "Due "}${fmtDue(t.due_date)}` : "No due date"}
                 </span>
               </li>
             )

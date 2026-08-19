@@ -1,4 +1,4 @@
-// lib/dates.ts — one place for how dates read across the portal (2026-08-18).
+// lib/dates.ts - one place for how dates read across the portal (2026-08-18).
 //
 // Everything is pinned to America/New_York. A client checking their case from
 // a different timezone should see the same date the firm sees; a court date
@@ -29,7 +29,7 @@ export function timeOfDay(d: string | Date): string {
   })
 }
 
-/** "August 18, 2026 at 3:42 PM" — the unambiguous version, safe to print. */
+/** "August 18, 2026 at 3:42 PM" - the unambiguous version, safe to print. */
 export function fullStamp(d: string | Date): string {
   return `${longDate(d)} at ${timeOfDay(d)}`
 }

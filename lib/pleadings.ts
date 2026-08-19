@@ -1,4 +1,4 @@
-// lib/pleadings.ts — reads the "Pleadings" table from a client's own Airtable
+// lib/pleadings.ts - reads the "Pleadings" table from a client's own Airtable
 // base and turns the Drive-synced file rows into a clean docket list.
 // Client bases vary slightly (some use "Name of File", others "Name"/"File Path"),
 // so field lookups are tolerant. Fails soft: null → the page falls back to the
@@ -11,7 +11,7 @@ export interface PleadingDoc {
   title: string
   /** Filing date parsed from the file name ("2019.08.19 Final Decree…"), else null */
   filedOn: string | null
-  /** Record created datetime — used only to order rows whose name has no date.
+  /** Record created datetime - used only to order rows whose name has no date.
    *  Never shown as the filing date: it is the Drive-sync time, not the date on
    *  the document. */
   created: string | null
@@ -31,7 +31,7 @@ export interface PleadingDoc {
 // also parsed out for the Date column, sorting, and Recent Filings.
 // Files that live in a subfolder of the Drive folder come across with the
 // folder in front of the name ("TPO/2026.05.04 FILED - …pdf"), so strip any
-// folder path first — otherwise the leading date never matches and the row
+// folder path first - otherwise the leading date never matches and the row
 // falls back to the sync date instead of the date on the document. The folder
 // itself comes back too ("TPO"), for the tag and row color on the table.
 export function parsePleadingName(raw: string): {
@@ -80,7 +80,7 @@ export async function getPleadings(clientBaseId: string): Promise<PleadingDoc[] 
       text(f["Name of File"]) || text(f["Name"]) || text(f["File Path"]) || ""
 
     // Which folder is the table's own (top-level) one? Whatever the files that
-    // carry no folder path in their name sit in — anything else is a subfolder.
+    // carry no folder path in their name sit in - anything else is a subfolder.
     const rootFolders = new Set(
       records
         .filter((r) => !/[/\\]/.test(rawNameOf(r.fields)))
@@ -111,7 +111,7 @@ export async function getPleadings(clientBaseId: string): Promise<PleadingDoc[] 
           notes: text(f["Notes"]),
         }
       })
-      // the subfolder itself syncs in as a row ("FV matter", File Type "folder") —
+      // the subfolder itself syncs in as a row ("FV matter", File Type "folder") - 
       // it isn't a filing, and its files are listed individually
       .filter((d) => d.title && d.fileType.toLowerCase() !== "folder")
 

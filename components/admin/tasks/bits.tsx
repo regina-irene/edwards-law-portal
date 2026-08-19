@@ -1,5 +1,5 @@
 "use client"
-// components/admin/tasks/bits.tsx — the small shared pieces of the Tasks
+// components/admin/tasks/bits.tsx - the small shared pieces of the Tasks
 // screen: badges, status pills and icon buttons. Kept together so the tabs stay
 // readable. The confirm dialog, inline error and undo banner now live in
 // components/ui/ (the whole portal uses them) and are re-exported here so the
@@ -33,11 +33,11 @@ export function TagBadge({ tag }: { tag: string }) {
   )
 }
 
-// Replaces the bare 📝 — says what it means instead of leaving it to memory.
+// Replaces the bare 📝 - says what it means instead of leaving it to memory.
 export function NotesBadge() {
   return (
     <span
-      title="This task has instructions saved on it — open it to read or edit them"
+      title="This task has instructions saved on it - open it to read or edit them"
       className="text-[11px] px-2 py-0.5 rounded-full font-semibold border bg-amber-50 text-amber-700 border-amber-200 whitespace-nowrap"
     >
       Has notes

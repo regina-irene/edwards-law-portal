@@ -1,4 +1,4 @@
-// lib/joke.ts — clean joke of the day from icanhazdadjoke.com (family-friendly
+// lib/joke.ts - clean joke of the day from icanhazdadjoke.com (family-friendly
 // dad jokes). Next caches the fetch for 4 hours, so everyone sees the same
 // joke and it rotates every 4 hours. Fails soft to null.
 

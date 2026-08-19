@@ -1,4 +1,4 @@
-// app/api/admin/case-status/route.ts — the admin Status board: read every
+// app/api/admin/case-status/route.ts - the admin Status board: read every
 // client's case stage + client-facing status text, and save changes back to
 // the Airtable Status table. Admin-only; this writes to Regina's live base.
 import { NextResponse } from "next/server"
@@ -95,7 +95,7 @@ export async function PATCH(req: Request) {
 
   try {
     // Read the current values BEFORE writing, so the record of the change can
-    // say what it changed from — including the formatting it was written with.
+    // say what it changed from - including the formatting it was written with.
     // Fails soft: an unreadable "before" costs the note its comparison, never
     // the save itself.
     const [before, beforeRich] = await Promise.all([
@@ -107,7 +107,7 @@ export async function PATCH(req: Request) {
 
     // Retention (2026-08-18). Two writes, both non-blocking: the client's own
     // status history, and the same change as a field note on the admin case
-    // log. If either fails the status is still saved — they record the change,
+    // log. If either fails the status is still saved - they record the change,
     // they aren't the change.
     const fromStages = before?.stages ?? []
     const fromText = before?.statusText ?? ""
@@ -154,7 +154,7 @@ export async function PATCH(req: Request) {
   } catch (e) {
     console.error("[case-status] save failed:", e)
     return NextResponse.json(
-      { error: "Airtable wouldn't accept that save — nothing was changed." },
+      { error: "Airtable wouldn't accept that save - nothing was changed." },
       { status: 502 }
     )
   }

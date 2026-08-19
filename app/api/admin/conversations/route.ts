@@ -1,4 +1,4 @@
-// app/api/admin/conversations/route.ts — one conversation per client for the
+// app/api/admin/conversations/route.ts - one conversation per client for the
 // admin Message Center. Archived (former) clients are left out unless the
 // caller asks for them with ?archived=1, so a closed case doesn't sit in the
 // inbox next to live ones.

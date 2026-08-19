@@ -1,5 +1,5 @@
 "use client"
-// components/messages/ClientThread.tsx — the client's two-way conversation with
+// components/messages/ClientThread.tsx - the client's two-way conversation with
 // the firm: transcript, export buttons and the composer.
 
 import { useState, useEffect, useRef, useCallback } from "react"
@@ -36,7 +36,7 @@ function transcriptHtml(messages: Msg[]): string {
     </div>`)
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Message Transcript</title></head>
     <body style="max-width:720px;margin:0 auto;padding:32px;font-family:Georgia,serif;color:#111">
-      <h1 style="font-size:22px;margin-bottom:4px">Edwards Family Law — Message Transcript</h1>
+      <h1 style="font-size:22px;margin-bottom:4px">Edwards Family Law - Message Transcript</h1>
       <p style="font-size:12px;color:#555;margin-bottom:20px">Generated ${esc(new Date().toLocaleString("en-US"))}</p>
       ${rows.join("")}
     </body></html>`
@@ -99,12 +99,12 @@ function ExportButtons({ messages }: { messages: Msg[] }) {
 
 // `readOnly` comes from the server page (the client's case is closed and they
 // are inside the 30-day wind-down). The transcript and the export buttons stay
-// exactly as they were — only the ways of adding to the thread go away.
+// exactly as they were - only the ways of adding to the thread go away.
 export default function ClientThread({ readOnly = false }: { readOnly?: boolean } = {}) {
   const [messages, setMessages] = useState<Msg[]>([])
   const [body, setBody] = useState("")
   const [sending, setSending] = useState(false)
-  // A failed load must never render as "No messages yet" — that tells a client
+  // A failed load must never render as "No messages yet" - that tells a client
   // their attorney hasn't written, which may be false. (2026-08-18)
   const [loadFailed, setLoadFailed] = useState(false)
   const [loaded, setLoaded] = useState(false)
@@ -126,7 +126,7 @@ export default function ClientThread({ readOnly = false }: { readOnly?: boolean 
 
   useEffect(() => {
     load()
-    // Pause polling while the tab is hidden — it was polling forever in the
+    // Pause polling while the tab is hidden - it was polling forever in the
     // background, and each poll costs a round trip.
     const t = setInterval(() => {
       if (document.visibilityState === "visible") load()
@@ -229,7 +229,7 @@ export default function ClientThread({ readOnly = false }: { readOnly?: boolean 
           <>
         {sendError && (
           <div className="mb-2 flex items-center justify-between gap-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2">
-            <p className="text-xs text-red-800">Your message wasn&apos;t sent. It&apos;s still here — check your connection and try again.</p>
+            <p className="text-xs text-red-800">Your message wasn&apos;t sent. It&apos;s still here - check your connection and try again.</p>
             <button type="button" onClick={send} disabled={sending} className="text-xs font-semibold text-red-800 underline disabled:opacity-50">Try again</button>
           </div>
         )}

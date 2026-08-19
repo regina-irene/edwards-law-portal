@@ -1,4 +1,4 @@
-// lib/client-uploads.ts — every file a CLIENT uploads through the portal is
+// lib/client-uploads.ts - every file a CLIENT uploads through the portal is
 // also delivered to the firm's Google Drive folder, in a subfolder named after
 // the client. Firm uploads stay in the portal only.
 //
@@ -20,7 +20,7 @@ export function driveFolderName(name: string): string {
   return last || first || ""
 }
 
-// Drive treats "/" as a path separator and trims oddly — keep folder names tame.
+// Drive treats "/" as a path separator and trims oddly - keep folder names tame.
 export function safeFolderName(name: string): string {
   return name.replace(/[\\/]+/g, "-").replace(/\s+/g, " ").trim().slice(0, 120)
 }
@@ -64,7 +64,7 @@ export async function deliverClientUpload(opts: {
   const { clientId, fileName, buffer, mimeType, subPath = [] } = opts
   const root = clientUploadsRootFolderId()
   if (!driveConfigured()) {
-    console.warn("[client-uploads] Drive not configured — file stayed in the portal only:", fileName)
+    console.warn("[client-uploads] Drive not configured - file stayed in the portal only:", fileName)
     return { delivered: false, link: null }
   }
 

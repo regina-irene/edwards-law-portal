@@ -1,11 +1,11 @@
-// app/api/admin/clients-list/route.ts — id + display label for every client,
+// app/api/admin/clients-list/route.ts - id + display label for every client,
 // for pickers (e.g. the task assign dropdown).
 //
 // This one deliberately returns EVERY client, archived ones included, each
 // carrying an `archived` flag. The Tasks page uses this same list to put a name
 // on tasks that were assigned before a case closed; dropping archived clients
 // here would leave those rows labelled with a raw Airtable record id. The
-// picker itself hides them — see AssignTab's "Include archived".
+// picker itself hides them - see AssignTab's "Include archived".
 import { NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin"
 import { getAllClients, clientDisplayLabel } from "@/lib/airtable"

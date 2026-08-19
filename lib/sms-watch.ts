@@ -1,4 +1,4 @@
-// lib/sms-watch.ts — "text me when this client replies": per-conversation
+// lib/sms-watch.ts - "text me when this client replies": per-conversation
 // switch (admin_sms_watch) + the firm cell number it notifies (app_settings).
 import { sql } from "@/lib/db"
 

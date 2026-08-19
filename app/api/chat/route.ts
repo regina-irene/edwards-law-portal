@@ -1,4 +1,4 @@
-// app/api/chat/route.ts — client side of the two-way conversation
+// app/api/chat/route.ts - client side of the two-way conversation
 import { getPortalClient } from "@/lib/portal-client"
 import { assertClientCanWrite } from "@/lib/client-write-guard"
 import { sql } from "@/lib/db"
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
     RETURNING id, sender, body, created_at
   `
 
-  // "Text me when this client replies" — notify the firm cell if Regina has
+  // "Text me when this client replies" - notify the firm cell if Regina has
   // the watch switched on for this conversation. Fail-soft: never block the
   // client's message on a notification problem.
   try {

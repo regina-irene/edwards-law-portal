@@ -1,4 +1,4 @@
-// lib/status-history.ts — the record of every status update on a case
+// lib/status-history.ts - the record of every status update on a case
 // (2026-08-18).
 //
 // Two audiences, deliberately two different stores:
@@ -6,8 +6,8 @@
 //   • The CLIENT sees this history on their own Case Status page, so they can
 //     look back at what they were told and when. That is what this file holds.
 //   • REGINA gets the same change written into the case's Field Notes, which
-//     are admin-only. Field notes must never be shown to a client — the private
-//     case log lives there — so the two cannot share a store.
+//     are admin-only. Field notes must never be shown to a client - the private
+//     case log lives there - so the two cannot share a store.
 //
 // Kept as one JSON row per client in the existing app_settings table rather
 // than a new table, so this works the moment it deploys with no migration. A
@@ -36,7 +36,7 @@ function keyFor(clientId: string): string {
   return KEY_PREFIX + String(clientId)
 }
 
-/** Newest first. Fails soft to [] — history is a nice-to-have, never a blocker. */
+/** Newest first. Fails soft to [] - history is a nice-to-have, never a blocker. */
 export async function getStatusHistory(clientId: string): Promise<StatusHistoryEntry[]> {
   try {
     const r = await sql`SELECT value FROM app_settings WHERE key = ${keyFor(clientId)} LIMIT 1`
@@ -81,7 +81,7 @@ export async function appendStatusHistory(
     `
     return next
   } catch {
-    // Never let a history write fail the status save itself — the status is
+    // Never let a history write fail the status save itself - the status is
     // the thing that matters; the log is a record of it.
     return null
   }

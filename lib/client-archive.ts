@@ -1,4 +1,4 @@
-// lib/client-archive.ts — the 30-day wind-down for archived clients (2026-08-18).
+// lib/client-archive.ts - the 30-day wind-down for archived clients (2026-08-18).
 //
 // Airtable's "Archived" checkbox says WHETHER a client is archived; it can't say
 // WHEN, and Regina archives straight from the board as often as from the portal.
@@ -46,7 +46,7 @@ function daysBetween(fromIso: string, now: Date): number {
 
 function stateFrom(archivedAt: string | null, now: Date): ArchiveState {
   if (!archivedAt) {
-    // Archived but not yet stamped — treat as day 0 rather than locking them
+    // Archived but not yet stamped - treat as day 0 rather than locking them
     // out on a missing row. The stamp is written on the same request.
     return { archived: true, archivedAt: null, daysLeft: ARCHIVE_GRACE_DAYS, readOnly: true, accessClosed: false }
   }
@@ -91,13 +91,13 @@ export async function clearArchiveStamp(clientId: string): Promise<void> {
   try {
     await sql`DELETE FROM app_settings WHERE key = ${KEY_PREFIX + String(clientId)}`
   } catch {
-    // fail soft — a stale stamp is harmless while Archived is unticked
+    // fail soft - a stale stamp is harmless while Archived is unticked
   }
 }
 
 /**
  * The state for one client, stamping on first sight. Call this on the client's
- * own portal requests — it is the single source of truth for whether they may
+ * own portal requests - it is the single source of truth for whether they may
  * read, write, or neither.
  */
 export async function resolveArchiveState(
@@ -126,7 +126,7 @@ export async function getArchiveStamps(clientIds: string[]): Promise<Map<string,
     const r = await sql.query("SELECT key, value FROM app_settings WHERE key = ANY($1)", [keys])
     for (const row of r.rows) out.set(String(row.key).slice(KEY_PREFIX.length), String(row.value))
   } catch {
-    // fail soft — the admin list just shows no archive dates
+    // fail soft - the admin list just shows no archive dates
   }
   return out
 }

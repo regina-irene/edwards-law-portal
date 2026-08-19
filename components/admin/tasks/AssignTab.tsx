@@ -1,5 +1,5 @@
 "use client"
-// components/admin/tasks/AssignTab.tsx — give one or several clients a set of
+// components/admin/tasks/AssignTab.tsx - give one or several clients a set of
 // tasks. The picker filters as you type, stages can be checked as a block, and
 // a successful assign can be undone for ten seconds.
 import { useMemo, useState } from "react"
@@ -36,7 +36,7 @@ export default function AssignTab({
   const [undo, setUndo] = useState<{ message: string; ids: string[] } | null>(null)
   const [confirm, setConfirm] = useState<{ title: string; body: string; run: () => void } | null>(null)
   const [expandedPreview, setExpandedPreview] = useState(true)
-  // Archived (former) clients are off the picker by default — a closed case is
+  // Archived (former) clients are off the picker by default - a closed case is
   // not somebody you mean to hand new work to. Local state, like the tabs: this
   // page keeps all of its view state in React and never in the URL.
   const [includeArchived, setIncludeArchived] = useState(false)
@@ -105,10 +105,10 @@ export default function AssignTab({
     await reload()
 
     if (failed && !created.length) {
-      setError("Nothing was assigned — try again.")
+      setError("Nothing was assigned - try again.")
       return
     }
-    if (failed) setError(`${failed} ${failed === 1 ? "client" : "clients"} couldn't be assigned — check the list below.`)
+    if (failed) setError(`${failed} ${failed === 1 ? "client" : "clients"} couldn't be assigned - check the list below.`)
 
     const clientWord = selectedClients.length === 1 ? labelOf(selectedClients[0]) : `${selectedClients.length} clients`
     setUndo({
@@ -176,7 +176,7 @@ export default function AssignTab({
               </label>
               {selectedClients.some((id) => clients.find((c) => c.id === id)?.archived) && (
                 <p className="mt-1 text-[11px] text-amber-700">
-                  One of the clients you&apos;ve picked is archived — they may not be able to open a new task.
+                  One of the clients you&apos;ve picked is archived - they may not be able to open a new task.
                 </p>
               )}
             </div>
@@ -284,7 +284,7 @@ export default function AssignTab({
           {preview ? (
             preview.total === 0 ? (
               <p className="text-sm text-gray-500 bg-white rounded-xl border border-gray-200 p-5">
-                {preview.label} has no tasks yet — anything you check will be their first.
+                {preview.label} has no tasks yet - anything you check will be their first.
               </p>
             ) : (
               <ClientProgressCard
@@ -300,7 +300,7 @@ export default function AssignTab({
           ) : (
             <p className="text-sm text-gray-500 bg-white rounded-xl border border-gray-200 p-5">
               {selectedClients.length > 1
-                ? `${selectedClients.length} clients selected — pick a single client to see their current tasks.`
+                ? `${selectedClients.length} clients selected - pick a single client to see their current tasks.`
                 : "Pick a client to see what they already have."}
             </p>
           )}

@@ -51,7 +51,7 @@ async function getLabelOverrides(): Promise<Record<string, string>> {
   }
 }
 
-// All pages (built-in + custom), unfiltered — used by admin editors.
+// All pages (built-in + custom), unfiltered - used by admin editors.
 export async function getAllPages(): Promise<NavPage[]> {
   const [custom, overrides] = await Promise.all([getCustomPages(), getLabelOverrides()])
   const builtins: NavPage[] = BUILTIN_PAGE_KEYS.map((k) => ({ key: k, label: overrides[k] || BUILTIN_LABELS[k], href: `/${k}`, custom: false }))
