@@ -57,7 +57,7 @@ export default function BottomNav({ pages, unreadChat }: BottomNavProps) {
   return (
     <>
       {moreOpen && (
-        <div className="md:hidden print:hidden fixed inset-0 z-40">
+        <div className="no-print md:hidden print:hidden fixed inset-0 z-40">
           <button
             type="button"
             aria-label="Close menu"
@@ -107,7 +107,7 @@ export default function BottomNav({ pages, unreadChat }: BottomNavProps) {
 
       <nav
         aria-label="Portal pages"
-        className="md:hidden print:hidden fixed bottom-0 inset-x-0 z-50 border-t bottom-nav-safe"
+        className="no-print md:hidden print:hidden fixed bottom-0 inset-x-0 z-50 border-t bottom-nav-safe"
         style={{ borderColor: "#E8DFD2", background: "var(--sidebar-bg, #F5EEE3)" }}
       >
         <div className="flex items-stretch px-1 pt-1">

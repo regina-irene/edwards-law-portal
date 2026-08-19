@@ -93,3 +93,103 @@ h1.page-title::before { content: var(--scheme-title-emoji, ""); }
   .nav-item:hover { background: transparent; }
   .nav-item.nav-item-active:hover { background: var(--nav-active-bg, #1B2D45); }
 }
+
+/* ---------------------------------------------------------------------------
+   Print (2026-08-18)
+
+   Clients print their case file — status updates, message transcripts, filing
+   lists — and hand them to accountants, mediators and courts. On screen the
+   portal is an app shell: a fixed sidebar, a full-height flex column and a
+   scrolling <main>. All three are wrong on paper.
+
+   Tailwind's `print:hidden` alone was not enough for the sidebar. Its variants
+   are emitted in a fixed order with responsive AFTER print, so `md:flex` beat
+   `print:hidden` at the same specificity and the icon rail printed on every
+   page. These rules are !important on purpose: they are the last word.
+--------------------------------------------------------------------------- */
+@media print {
+  @page {
+    margin: 0.6in;
+  }
+
+  /* Navigation, action buttons, and anything else that can't be acted on from
+     a sheet of paper. */
+  .no-print,
+  aside.no-print,
+  nav.no-print {
+    display: none !important;
+  }
+
+  /* A screen-height minimum on paper reserves a whole sheet whether or not
+     there is anything to put on it, which is where the stray blank pages and
+     the early breaks come from. */
+  [class*="min-h-screen"],
+  [class*="min-h-0"] {
+    min-height: 0 !important;
+  }
+
+  /* The app shell: stop it being a viewport-height flex row. Left as-is, the
+     content column keeps its own scrollbar and the browser prints one screen's
+     worth, then breaks wherever the box happened to end. */
+  body,
+  main {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+
+  /* Every scroll container becomes its full height, so nothing is clipped and
+     breaks fall where the content actually ends. This is the single biggest
+     cause of unnatural page breaks — a message thread pinned to 100dvh with
+     overflow-auto prints one screenful and silently drops the rest. */
+  [class*="overflow-auto"],
+  [class*="overflow-y-auto"],
+  [class*="overflow-hidden"] {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+
+  /* Paper is white; the scheme background and decorations are not printed. */
+  body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+
+  /* Keep a card, a message bubble, a table row or a history entry whole rather
+     than splitting it across two sheets. */
+  .print-block,
+  li,
+  tr,
+  blockquote,
+  figure,
+  details {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* A heading stranded at the foot of a page reads as a mistake. */
+  h1, h2, h3, h4 {
+    break-after: avoid-page;
+    page-break-after: avoid;
+  }
+
+  /* No single lines left behind at a page boundary. */
+  p, li, blockquote {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* Collapsed sections (earlier status updates) print in full — the point of
+     printing is the record, not the current view state. */
+  details > summary {
+    display: none;
+  }
+  details > *:not(summary) {
+    display: revert !important;
+  }
+}

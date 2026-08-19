@@ -17,7 +17,10 @@ export default function Sidebar({ pages, unreadChat, baseEmoji }: SidebarProps) 
   // exactly the same thing.
   return (
     <aside
-      className="w-24 shrink-0 hidden md:flex flex-col items-center py-4 gap-1.5 border-r print:hidden"
+      /* `no-print` as well as `print:hidden`: Tailwind emits responsive
+         variants after print ones, so `md:flex` was winning on paper and the
+         rail printed on every page. */
+      className="no-print w-24 shrink-0 hidden md:flex flex-col items-center py-4 gap-1.5 border-r print:hidden"
       style={{ borderColor: "#E8DFD2", background: "var(--sidebar-bg, #F5EEE3)" }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
