@@ -10,6 +10,7 @@
 import { unstable_cache, revalidateTag } from "next/cache"
 import { getAllClients, clientDisplayLabel } from "@/lib/airtable"
 import { archiveNotes, noteFor, type ArchiveNote } from "@/lib/admin-archive"
+import { getRichStatuses, hashOf } from "@/lib/status-rich"
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!
 const MAIN_BASE_ID = process.env.AIRTABLE_MAIN_BASE_ID!
@@ -223,6 +224,8 @@ export interface CaseStatusBoardRow {
   hasStatusRecord: boolean
   /** "Archived" on the Clients board — a former or closed case. */
   archived: boolean
+  /** The formatted status, when the stored formatting still matches Airtable. */
+  statusHtml: string
   /** "closed 12 days ago" / "access ended". Empty for an active case. */
   archiveNote: string
 }
@@ -275,6 +278,10 @@ export async function buildStatusBoard(options: StatusBoardOptions = {}): Promis
     ? await archiveNotes(wanted)
     : new Map<string, ArchiveNote>()
 
+  // Formatting for the client-facing text, in one query for the whole board.
+  const recordIds = wanted.map((c) => statusRecordId(c.clientId)).filter(Boolean)
+  const rich = await getRichStatuses(recordIds)
+
   const rows: CaseStatusBoardRow[] = []
   for (const c of wanted) {
     const recordId = statusRecordId(c.clientId)
@@ -282,6 +289,12 @@ export async function buildStatusBoard(options: StatusBoardOptions = {}): Promis
     const status = byRecordId.get(recordId)
     const stages = status?.stages ?? []
     const lastModified = status?.lastModified ?? null
+    const statusText = status?.statusText ?? ""
+    // Only honour stored formatting while it still matches Airtable's words —
+    // a status edited on the board must not show yesterday's styling.
+    const storedRich = rich.get(recordId)
+    const statusHtml =
+      storedRich && storedRich.hash === hashOf(statusText) ? storedRich.html : ""
     rows.push({
       recordId,
       clientId: String(c.clientId),
@@ -289,7 +302,8 @@ export async function buildStatusBoard(options: StatusBoardOptions = {}): Promis
       email: c.email,
       stages,
       plainStages: stages.map(plainStage),
-      statusText: status?.statusText ?? "",
+      statusText,
+      statusHtml,
       caseTypes: status?.caseTypes ?? [],
       county: status?.county ?? "",
       lastModified,

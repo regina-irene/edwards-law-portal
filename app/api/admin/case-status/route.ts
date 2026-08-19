@@ -4,6 +4,11 @@
 import { NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin"
 import { buildStatusBoard, updateCaseStatus, CASE_STAGE_CHOICES } from "@/lib/case-status"
+import { getCaseStatus } from "@/lib/airtable"
+import { appendStatusHistory, statusChangeNoteHtml } from "@/lib/status-history"
+import { createNote } from "@/lib/notes"
+import { saveRichStatus, statusHtmlToPlain } from "@/lib/status-rich"
+import { sanitizeNotesHtml } from "@/lib/sanitize"
 
 export const dynamic = "force-dynamic"
 
@@ -26,6 +31,7 @@ interface PatchBody {
   recordId?: unknown
   stages?: unknown
   statusText?: unknown
+  statusHtml?: unknown
 }
 
 export async function PATCH(req: Request) {
@@ -63,7 +69,19 @@ export async function PATCH(req: Request) {
     patch.stages = Array.from(new Set(stages))
   }
 
-  if (rawStatusText !== undefined) {
+  // The board sends formatted HTML; Airtable stores the plain text of it, and
+  // the formatting is kept portal-side. `statusText` is still accepted so any
+  // other caller keeps working. (2026-08-18)
+  const rawStatusHtml: unknown = body ? body.statusHtml : undefined
+  let statusHtml: string | null = null
+
+  if (rawStatusHtml !== undefined) {
+    if (typeof rawStatusHtml !== "string") {
+      return NextResponse.json({ error: "Status must be text." }, { status: 400 })
+    }
+    statusHtml = sanitizeNotesHtml(rawStatusHtml)
+    patch.statusText = statusHtmlToPlain(statusHtml)
+  } else if (rawStatusText !== undefined) {
     if (typeof rawStatusText !== "string") {
       return NextResponse.json({ error: "Status text must be text." }, { status: 400 })
     }
@@ -75,7 +93,50 @@ export async function PATCH(req: Request) {
   }
 
   try {
+    // Read the current values BEFORE writing, so the record of the change can
+    // say what it changed from. Fails soft: an unreadable "before" costs the
+    // note its comparison, never the save itself.
+    const before = await getCaseStatus(recordId).catch(() => null)
+
     await updateCaseStatus(recordId, patch)
+
+    // Retention (2026-08-18). Two writes, both non-blocking: the client's own
+    // status history, and the same change as a field note on the admin case
+    // log. If either fails the status is still saved — they record the change,
+    // they aren't the change.
+    const fromStages = before?.stages ?? []
+    const fromText = before?.statusText ?? ""
+    const toStages = patch.stages ?? fromStages
+    const toText = patch.statusText ?? fromText
+    const changed =
+      toText !== fromText ||
+      toStages.length !== fromStages.length ||
+      toStages.some((s, i) => s !== fromStages[i])
+
+    if (changed) {
+      // Formatting is stored against the plain text Airtable now holds, so an
+      // edit made directly on the board invalidates it rather than leaving old
+      // styling over new words.
+      if (statusHtml !== null) {
+        await saveRichStatus(recordId, statusHtml, toText)
+      }
+      // The portal's clientId IS the Status record id, so the same value keys
+      // the history and the field note.
+      await appendStatusHistory(recordId, {
+        statusText: toText,
+        statusHtml: statusHtml ?? undefined,
+        stages: toStages,
+        by: check.name || check.email,
+      })
+      await createNote(
+        recordId,
+        statusChangeNoteHtml({ fromStages, toStages, fromText, toText }),
+        { email: check.email, name: check.name }
+      ).catch((e) => {
+        console.error("[case-status] field note failed:", e)
+      })
+    }
+
     return NextResponse.json({ ok: true, recordId, ...patch })
   } catch (e) {
     console.error("[case-status] save failed:", e)

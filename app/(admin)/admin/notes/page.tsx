@@ -6,6 +6,7 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import PageTitle from "@/components/ui/PageTitle"
 import QuickNote from "@/components/notes/QuickNote"
+import { dayHeadingWithDate, timeOfDay } from "@/lib/dates"
 import CaseJump from "@/components/notes/CaseJump"
 import { taglineFor } from "@/lib/taglines"
 import { fetchAllClientsRaw, clientDisplayLabel } from "@/lib/airtable"
@@ -36,20 +37,11 @@ export const dynamic = "force-dynamic"
 
 const PAGE = 50
 
-// "Today" and "Yesterday" read faster than a date when you're scanning the
-// top of the log.
-function dayHeading(d: string): string {
-  const day = new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "America/New_York" })
-  const today = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "America/New_York" })
-  const yesterday = new Date(Date.now() - 86_400_000).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "America/New_York" })
-  if (day === today) return "Today"
-  if (day === yesterday) return "Yesterday"
-  return day
-}
-
-function timeOf(d: string): string {
-  return new Date(d).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" })
-}
+// "Today" and "Yesterday" read faster when scanning the top of the log, but
+// carry the real date with them — a heading that only says "Today" is useless
+// a week later, and worse once printed. (2026-08-18)
+const dayHeading = dayHeadingWithDate
+const timeOf = timeOfDay
 
 export default async function FieldNotesHub({
   searchParams,

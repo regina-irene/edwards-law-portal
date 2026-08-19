@@ -13,6 +13,10 @@
 // needs on its own — the stage's sort order — is the two lines below.
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { InlineError } from "@/components/ui/InlineError"
+import { fullStamp } from "@/lib/dates"
+import { RichTextEditor } from "@/components/ui/RichTextEditor"
+import { RichTextView } from "@/components/ui/RichTextView"
+import { bodyToPlainText, plainToHtml, isEmptyRich } from "@/lib/message-format"
 import ArchivedChip from "@/components/admin/ArchivedChip"
 import type { CaseStatusBoardRow, CaseFlag } from "@/lib/case-status"
 
@@ -71,6 +75,8 @@ export default function StatusBoard({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editStages, setEditStages] = useState<string[]>([])
   const [editText, setEditText] = useState("")
+  // Per-row "yes, I really mean to clear this" latch.
+  const [clearConfirm, setClearConfirm] = useState<Record<string, boolean>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
   const [draftingId, setDraftingId] = useState<string | null>(null)
   // Errors and confirmations are keyed by case, so a failure on one row can
@@ -146,7 +152,9 @@ export default function StatusBoard({
   function startEdit(row: CaseStatusBoardRow) {
     setEditingId(row.recordId)
     setEditStages(row.stages)
-    setEditText(row.statusText)
+    // The editor holds HTML. A row whose formatting no longer matches Airtable
+    // (edited on the board) opens with Airtable's words as plain paragraphs.
+    setEditText(row.statusHtml || plainToHtml(row.statusText))
     clearRow(row.recordId)
   }
 
@@ -155,13 +163,28 @@ export default function StatusBoard({
   }
 
   async function save(row: CaseStatusBoardRow) {
+    // Saving an empty box would blank what the client reads, silently, on one
+    // misclick. Clearing is possible, but it has to be deliberate.
+    if (isEmptyRich(editText) && row.statusText) {
+      if (!clearConfirm[row.recordId]) {
+        setClearConfirm((p) => ({ ...p, [row.recordId]: true }))
+        errorFor(
+          row.recordId,
+          "That would remove the update the client currently reads. Press Save again to confirm."
+        )
+        return
+      }
+      setClearConfirm((p) => ({ ...p, [row.recordId]: false }))
+    }
     setSavingId(row.recordId)
     clearRow(row.recordId)
     // Only send `stages` when this row actually has a Status record behind it.
     // Belt and braces against ever PATCHing an empty stage list over real data.
-    const body: { recordId: string; statusText: string; stages?: string[] } = {
+    // Send the HTML; the server derives the plain text Airtable stores, so the
+    // two can never drift apart.
+    const body: { recordId: string; statusHtml: string; stages?: string[] } = {
       recordId: row.recordId,
-      statusText: editText,
+      statusHtml: editText,
     }
     if (row.hasStatusRecord) body.stages = editStages
 
@@ -179,7 +202,11 @@ export default function StatusBoard({
     }
 
     const savedStages = [...editStages]
-    const savedText = editText.trim()
+    const savedHtml = editText
+    // Wrapped for the same reason the server wraps it — see statusHtmlToPlain.
+    // This must match what the server stored or the row would show one thing
+    // and the board another until the next reload.
+    const savedText = bodyToPlainText(`<p>${editText}</p>`)
     const now = new Date().toISOString()
     setRows((prev) =>
       prev.map((r) =>
@@ -189,6 +216,7 @@ export default function StatusBoard({
               stages: savedStages,
               plainStages: savedStages.map(plainOf),
               statusText: savedText,
+              statusHtml: savedHtml,
               lastModified: now,
               daysSinceUpdate: 0,
               hasStatusRecord: true,
@@ -232,7 +260,8 @@ export default function StatusBoard({
     // Drop it into the editor. It is a suggestion sitting in a text box: nothing
     // is saved and nothing is sent until Save is pressed.
     if (editingId !== row.recordId) startEdit(row)
-    setEditText(data.text)
+    // Claude returns plain sentences; the editor holds HTML.
+    setEditText(plainToHtml(data.text))
     noteFor(row.recordId, "Draft only — read it, edit it, then Save. Nothing has been saved or sent.")
   }
 
@@ -367,7 +396,14 @@ export default function StatusBoard({
                     <span className="ml-2 text-xs font-normal text-gray-400">no status record</span>
                   )}
                 </p>
-                <span className="shrink-0 text-xs text-gray-400">{ago(row.daysSinceUpdate)}</span>
+                {/* "updated today" is quick to scan; the exact stamp beside it
+                    is what makes the board a record rather than a snapshot. */}
+                <span className="shrink-0 text-xs text-gray-400">
+                  {ago(row.daysSinceUpdate)}
+                  {row.lastModified && (
+                    <span className="text-gray-300"> · {fullStamp(row.lastModified)}</span>
+                  )}
+                </span>
               </div>
 
               {reason && (
@@ -401,9 +437,15 @@ export default function StatusBoard({
               </div>
 
               {!editing && (
-                <p className={`mt-2 text-sm whitespace-pre-wrap ${row.statusText ? "text-gray-700" : "text-gray-400"}`}>
-                  {row.statusText || "No status written for this client yet."}
-                </p>
+                row.statusHtml ? (
+                  <div className="mt-2">
+                    <RichTextView html={row.statusHtml} className="text-gray-700" />
+                  </div>
+                ) : (
+                  <p className={`mt-2 text-sm whitespace-pre-wrap ${row.statusText ? "text-gray-700" : "text-gray-400"}`}>
+                    {row.statusText || "No status written for this client yet."}
+                  </p>
+                )
               )}
 
               {editing && (
@@ -431,13 +473,13 @@ export default function StatusBoard({
 
                   <div>
                     <p className="section-label mb-1.5">What the client reads</p>
-                    <textarea
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      rows={4}
-                      placeholder="Where things stand, in plain English…"
-                      className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    {/* Bold, colour and highlighting are kept portal-side;
+                        Airtable receives the plain text of whatever is typed
+                        here, so the board stays readable. */}
+                    <RichTextEditor value={editText} onChange={setEditText} />
+                    <p className="mt-1 text-[11px] text-gray-400">
+                      Formatting shows on the client&apos;s Status page. Airtable gets the plain text.
+                    </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">

@@ -22,6 +22,10 @@ import { getPleadings } from "@/lib/pleadings"
 import { getCaseEvents, nextCourtDate } from "@/lib/calendar"
 import BillingSection from "@/components/billing/BillingSection"
 import CaseDetailsCard from "@/components/status/CaseDetailsCard"
+import StatusHistory from "@/components/status/StatusHistory"
+import { getStatusHistory } from "@/lib/status-history"
+import { resolveStatusHtml } from "@/lib/status-rich"
+import { RichTextView } from "@/components/ui/RichTextView"
 import { paymentStatusColor } from "@/lib/airtable-colors"
 
 export default async function StatusPage() {
@@ -30,12 +34,19 @@ export default async function StatusPage() {
   const client = await getPortalClient()
   if (!client) redirect("/login")
 
-  const [pageContent, billing, caseStatus, pleadings, events] = await Promise.all([
+  // "Client ID" is a record link, so String() of it is comma-joined when a
+  // client has more than one. Everything on the write side keys off the FIRST
+  // id (see statusRecordId / getCaseStatus), so this must strip it the same
+  // way — otherwise formatting and history look up a key nobody ever wrote.
+  const statusKey = String(client.clientId).split(",")[0].trim()
+
+  const [pageContent, billing, caseStatus, pleadings, events, history] = await Promise.all([
     getPageContent(client.clientId, "status"),
     getClientBilling(client.id),
     getCaseStatus(String(client.clientId)),
     getPleadings(client.clientBaseId),
     getCaseEvents(String(client.clientId)),
+    getStatusHistory(statusKey),
   ])
   // pleadings come back newest-first; surface the last 3 filings in Case Details
   const recentFilings = (pleadings ?? []).slice(0, 3).map((p) => ({
@@ -49,6 +60,7 @@ export default async function StatusPage() {
   // The Status board's "Case Status - Dashboard" field is the case status for
   // all cases; the old "Status of Case" field on Clients is just a fallback.
   const statusText = caseStatus?.statusText || client.statusOfCase
+  const statusHtml = await resolveStatusHtml(statusKey, statusText)
   const statusUpdated = caseStatus?.lastModified
     ? new Date(caseStatus.lastModified).toLocaleString("en-US", {
         month: "long",
@@ -86,12 +98,19 @@ export default async function StatusPage() {
               </span>
             )}
           </div>
-          {statusText ? (
-            <p className="text-gray-800 whitespace-pre-wrap">{statusText}</p>
+          {statusHtml ? (
+            /* Formatting (bold, colour, highlight) is stored portal-side and
+               only used while it still matches the words Airtable holds — see
+               lib/status-rich. Edited on the board? You get the board's text. */
+            <RichTextView html={statusHtml} className="text-gray-800" />
           ) : (
             <p className="text-sm text-gray-500">No status update available. Please contact your attorney.</p>
           )}
       </div>
+
+      {/* Every earlier update, kept so the client can look back at what they
+          were told and when. Not the firm's field notes — those stay private. */}
+      <StatusHistory entries={history} />
 
       {caseStatus && (
         <CaseDetailsCard
