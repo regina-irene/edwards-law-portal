@@ -1,6 +1,6 @@
 // components/ui/PageHeader.tsx
 import type { PageContent } from "@/lib/page-content"
-import { RichTextView } from "@/components/ui/RichTextEditor"
+import { RichTextView } from "@/components/ui/RichTextView"
 import AirtableEmbed from "@/components/ui/AirtableEmbed"
 import PageTitle from "@/components/ui/PageTitle"
 import { taglineFor } from "@/lib/taglines"

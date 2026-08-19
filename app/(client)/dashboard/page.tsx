@@ -5,7 +5,7 @@ import { redirect } from "next/navigation"
 import { getPortalClient } from "@/lib/portal-client"
 import { getPageContent } from "@/lib/page-content"
 import { sql } from "@/lib/db"
-import { RichTextView } from "@/components/ui/RichTextEditor"
+import { RichTextView } from "@/components/ui/RichTextView"
 import AirtableEmbed from "@/components/ui/AirtableEmbed"
 import OutstandingTasks from "@/components/dashboard/OutstandingTasks"
 

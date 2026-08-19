@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react"
 import { groupByStage } from "@/lib/task-stages"
-import { RichTextView } from "@/components/ui/RichTextEditor"
+import { RichTextView } from "@/components/ui/RichTextView"
 import FormFill from "@/components/tasks/FormFill"
 import AirtableEmbed from "@/components/ui/AirtableEmbed"
 

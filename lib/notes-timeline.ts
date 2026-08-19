@@ -65,66 +65,139 @@ const PER_SOURCE_LIMIT = 500
 export type NameLookup = (clientId: string) => string
 
 async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: number): Promise<TimelineEvent[]> {
-  // An empty id means "every case" — the OR short-circuits the filter without
-  // needing a second set of queries to drift out of step with these.
+  // An empty id means "every case". Each source therefore has TWO shapes — an
+  // unfiltered read and one narrowed to a single client_id — picked here. The
+  // old single query used `(${cid} = '' OR client_id = ${cid})`, and that OR
+  // hides the client_id from the planner: it cannot use a client_id index and
+  // falls back to scanning the table even when a case is named.
   const cid = String(clientId ?? "")
+  const everyCase = cid === ""
   const [chat, legacy, taskFiles, firmTaskFiles, msgFiles, driveFiles, taskViews, msgViews, forms, doneTasks] = await Promise.all([
-    sql`SELECT id, client_id, sender, body, sms_status, created_at FROM chat_messages
-        WHERE (${cid} = '' OR client_id = ${cid})
-        ORDER BY created_at DESC LIMIT ${perSource}`.catch(() => ({ rows: [] as any[] })),
-    sql`SELECT id, client_id, body, created_at FROM messages
-        WHERE (${cid} = '' OR client_id = ${cid})
-        ORDER BY created_at DESC LIMIT ${perSource}`.catch(() => ({ rows: [] as any[] })),
+    (everyCase
+      ? sql`SELECT id, client_id, sender, body, sms_status, created_at FROM chat_messages
+            ORDER BY created_at DESC LIMIT ${perSource}`
+      : sql`SELECT id, client_id, sender, body, sms_status, created_at FROM chat_messages
+            WHERE client_id = ${cid}
+            ORDER BY created_at DESC LIMIT ${perSource}`
+    ).catch(() => ({ rows: [] as any[] })),
+    (everyCase
+      ? sql`SELECT id, client_id, body, created_at FROM messages
+            ORDER BY created_at DESC LIMIT ${perSource}`
+      : sql`SELECT id, client_id, body, created_at FROM messages
+            WHERE client_id = ${cid}
+            ORDER BY created_at DESC LIMIT ${perSource}`
+    ).catch(() => ({ rows: [] as any[] })),
     // Files on a client's own tasks. Who uploaded decides the wording: an
     // admin email means the firm sent it, anyone else is the client.
-    sql`SELECT ta.id, ta.client_id, ta.file_name, ta.created_at, ta.uploaded_by, ct.title,
-               (au.email IS NOT NULL) AS by_firm
-        FROM task_attachments ta
-        LEFT JOIN admin_users au ON au.email = ta.uploaded_by
-        LEFT JOIN client_tasks ct ON ct.id::text = ta.ref_id
-        WHERE ta.scope = 'client_task' AND ta.client_id IS NOT NULL
-          AND (${cid} = '' OR ta.client_id = ${cid})
-        ORDER BY ta.created_at DESC LIMIT ${perSource}`.catch(() => ({ rows: [] as any[] })),
+    // ct.id = ta.ref_id::uuid, not ct.id::text = ta.ref_id, so the client_tasks
+    // primary key index is usable. Safe here because ta.scope = 'client_task'
+    // is a restriction on the scanned table: it is applied before the join
+    // condition is ever evaluated, and client_task ref_ids are always a real
+    // client_tasks.id (the upload route verifies the task exists first).
+    (everyCase
+      ? sql`SELECT ta.id, ta.client_id, ta.file_name, ta.created_at, ta.uploaded_by, ct.title,
+                   (au.email IS NOT NULL) AS by_firm
+            FROM task_attachments ta
+            LEFT JOIN admin_users au ON au.email = ta.uploaded_by
+            LEFT JOIN client_tasks ct ON ct.id = ta.ref_id::uuid
+            WHERE ta.scope = 'client_task' AND ta.client_id IS NOT NULL
+            ORDER BY ta.created_at DESC LIMIT ${perSource}`
+      : sql`SELECT ta.id, ta.client_id, ta.file_name, ta.created_at, ta.uploaded_by, ct.title,
+                   (au.email IS NOT NULL) AS by_firm
+            FROM task_attachments ta
+            LEFT JOIN admin_users au ON au.email = ta.uploaded_by
+            LEFT JOIN client_tasks ct ON ct.id = ta.ref_id::uuid
+            WHERE ta.scope = 'client_task' AND ta.client_id IS NOT NULL
+              AND ta.client_id = ${cid}
+            ORDER BY ta.created_at DESC LIMIT ${perSource}`
+    ).catch(() => ({ rows: [] as any[] })),
     // Firm documents that reached a client through an assigned task: the file
     // hangs off the template, so it became available to them when the task was
     // assigned (whichever happened later).
-    sql`SELECT ta.id, ct.client_id, ta.file_name, ct.title,
-               GREATEST(ta.created_at, ct.created_at) AS available_at
-        FROM task_attachments ta
-        JOIN client_tasks ct ON ct.template_id::text = ta.ref_id
-        WHERE ta.scope = 'template' AND (${cid} = '' OR ct.client_id = ${cid})
-        ORDER BY GREATEST(ta.created_at, ct.created_at) DESC LIMIT ${perSource}`.catch(() => ({ rows: [] as any[] })),
-    sql`SELECT ma.id, cm.client_id, ma.file_name, ma.created_at, cm.sender
-        FROM message_attachments ma JOIN chat_messages cm ON cm.id = ma.message_id
-        WHERE (${cid} = '' OR cm.client_id = ${cid})
-        ORDER BY ma.created_at DESC LIMIT ${perSource}`.catch(() => ({ rows: [] as any[] })),
+    // The ::text cast stays on THIS one: these rows are ta.scope = 'template',
+    // and a template ref_id is whatever the uploader passed — it is not checked
+    // against task_templates, so ta.ref_id::uuid could throw at runtime.
+    (everyCase
+      ? sql`SELECT ta.id, ct.client_id, ta.file_name, ct.title,
+                   GREATEST(ta.created_at, ct.created_at) AS available_at
+            FROM task_attachments ta
+            JOIN client_tasks ct ON ct.template_id::text = ta.ref_id
+            WHERE ta.scope = 'template'
+            ORDER BY GREATEST(ta.created_at, ct.created_at) DESC LIMIT ${perSource}`
+      : sql`SELECT ta.id, ct.client_id, ta.file_name, ct.title,
+                   GREATEST(ta.created_at, ct.created_at) AS available_at
+            FROM task_attachments ta
+            JOIN client_tasks ct ON ct.template_id::text = ta.ref_id
+            WHERE ta.scope = 'template' AND ct.client_id = ${cid}
+            ORDER BY GREATEST(ta.created_at, ct.created_at) DESC LIMIT ${perSource}`
+    ).catch(() => ({ rows: [] as any[] })),
+    (everyCase
+      ? sql`SELECT ma.id, cm.client_id, ma.file_name, ma.created_at, cm.sender
+            FROM message_attachments ma JOIN chat_messages cm ON cm.id = ma.message_id
+            ORDER BY ma.created_at DESC LIMIT ${perSource}`
+      : sql`SELECT ma.id, cm.client_id, ma.file_name, ma.created_at, cm.sender
+            FROM message_attachments ma JOIN chat_messages cm ON cm.id = ma.message_id
+            WHERE cm.client_id = ${cid}
+            ORDER BY ma.created_at DESC LIMIT ${perSource}`
+    ).catch(() => ({ rows: [] as any[] })),
     // Files a client sent straight to the firm's Google Drive folder.
-    sql`SELECT id, uploaded_by AS client_id, file_name, drive_status, url, created_at FROM dropzone_files
-        WHERE uploaded_by IS NOT NULL AND (${cid} = '' OR uploaded_by = ${cid})
-        ORDER BY created_at DESC LIMIT ${perSource}`.catch(() => ({ rows: [] as any[] })),
+    (everyCase
+      ? sql`SELECT id, uploaded_by AS client_id, file_name, drive_status, url, created_at FROM dropzone_files
+            WHERE uploaded_by IS NOT NULL
+            ORDER BY created_at DESC LIMIT ${perSource}`
+      : sql`SELECT id, uploaded_by AS client_id, file_name, drive_status, url, created_at FROM dropzone_files
+            WHERE uploaded_by IS NOT NULL AND uploaded_by = ${cid}
+            ORDER BY created_at DESC LIMIT ${perSource}`
+    ).catch(() => ({ rows: [] as any[] })),
     // A client opening a document, grouped per file per day so someone who
     // opens the same PDF five times reads as one entry, not five.
-    sql`SELECT fv.file_id, fv.client_id, ta.file_name, COUNT(*)::int AS opens, MAX(fv.created_at) AS last_at,
-               to_char(MAX(fv.created_at) AT TIME ZONE 'America/New_York', 'YYYY-MM-DD') AS day
-        FROM file_views fv JOIN task_attachments ta ON ta.id::text = fv.file_id
-        WHERE fv.viewer_role = 'client' AND fv.scope = 'task' AND fv.client_id IS NOT NULL
-          AND (${cid} = '' OR fv.client_id = ${cid})
-        GROUP BY fv.file_id, fv.client_id, ta.file_name, (fv.created_at AT TIME ZONE 'America/New_York')::date
-        ORDER BY MAX(fv.created_at) DESC LIMIT ${perSource}`.catch(() => ({ rows: [] as any[] })),
-    sql`SELECT fv.file_id, fv.client_id, ma.file_name, COUNT(*)::int AS opens, MAX(fv.created_at) AS last_at,
-               to_char(MAX(fv.created_at) AT TIME ZONE 'America/New_York', 'YYYY-MM-DD') AS day
-        FROM file_views fv JOIN message_attachments ma ON ma.id::text = fv.file_id
-        WHERE fv.viewer_role = 'client' AND fv.scope = 'message' AND fv.client_id IS NOT NULL
-          AND (${cid} = '' OR fv.client_id = ${cid})
-        GROUP BY fv.file_id, fv.client_id, ma.file_name, (fv.created_at AT TIME ZONE 'America/New_York')::date
-        ORDER BY MAX(fv.created_at) DESC LIMIT ${perSource}`.catch(() => ({ rows: [] as any[] })),
-    sql`SELECT client_id, form_key, MAX(updated_at) AS updated_at, COUNT(*) AS answers
-        FROM form_responses WHERE (${cid} = '' OR client_id = ${cid})
-        GROUP BY client_id, form_key ORDER BY MAX(updated_at) DESC LIMIT ${perSource}`.catch(() => ({ rows: [] as any[] })),
-    sql`SELECT id, client_id, title, completed_at FROM client_tasks
-        WHERE status = 'done' AND completed_at IS NOT NULL
-          AND (${cid} = '' OR client_id = ${cid})
-        ORDER BY completed_at DESC LIMIT ${perSource}`.catch(() => ({ rows: [] as any[] })),
+    (everyCase
+      ? sql`SELECT fv.file_id, fv.client_id, ta.file_name, COUNT(*)::int AS opens, MAX(fv.created_at) AS last_at,
+                   to_char(MAX(fv.created_at) AT TIME ZONE 'America/New_York', 'YYYY-MM-DD') AS day
+            FROM file_views fv JOIN task_attachments ta ON ta.id::text = fv.file_id
+            WHERE fv.viewer_role = 'client' AND fv.scope = 'task' AND fv.client_id IS NOT NULL
+            GROUP BY fv.file_id, fv.client_id, ta.file_name, (fv.created_at AT TIME ZONE 'America/New_York')::date
+            ORDER BY MAX(fv.created_at) DESC LIMIT ${perSource}`
+      : sql`SELECT fv.file_id, fv.client_id, ta.file_name, COUNT(*)::int AS opens, MAX(fv.created_at) AS last_at,
+                   to_char(MAX(fv.created_at) AT TIME ZONE 'America/New_York', 'YYYY-MM-DD') AS day
+            FROM file_views fv JOIN task_attachments ta ON ta.id::text = fv.file_id
+            WHERE fv.viewer_role = 'client' AND fv.scope = 'task' AND fv.client_id IS NOT NULL
+              AND fv.client_id = ${cid}
+            GROUP BY fv.file_id, fv.client_id, ta.file_name, (fv.created_at AT TIME ZONE 'America/New_York')::date
+            ORDER BY MAX(fv.created_at) DESC LIMIT ${perSource}`
+    ).catch(() => ({ rows: [] as any[] })),
+    (everyCase
+      ? sql`SELECT fv.file_id, fv.client_id, ma.file_name, COUNT(*)::int AS opens, MAX(fv.created_at) AS last_at,
+                   to_char(MAX(fv.created_at) AT TIME ZONE 'America/New_York', 'YYYY-MM-DD') AS day
+            FROM file_views fv JOIN message_attachments ma ON ma.id::text = fv.file_id
+            WHERE fv.viewer_role = 'client' AND fv.scope = 'message' AND fv.client_id IS NOT NULL
+            GROUP BY fv.file_id, fv.client_id, ma.file_name, (fv.created_at AT TIME ZONE 'America/New_York')::date
+            ORDER BY MAX(fv.created_at) DESC LIMIT ${perSource}`
+      : sql`SELECT fv.file_id, fv.client_id, ma.file_name, COUNT(*)::int AS opens, MAX(fv.created_at) AS last_at,
+                   to_char(MAX(fv.created_at) AT TIME ZONE 'America/New_York', 'YYYY-MM-DD') AS day
+            FROM file_views fv JOIN message_attachments ma ON ma.id::text = fv.file_id
+            WHERE fv.viewer_role = 'client' AND fv.scope = 'message' AND fv.client_id IS NOT NULL
+              AND fv.client_id = ${cid}
+            GROUP BY fv.file_id, fv.client_id, ma.file_name, (fv.created_at AT TIME ZONE 'America/New_York')::date
+            ORDER BY MAX(fv.created_at) DESC LIMIT ${perSource}`
+    ).catch(() => ({ rows: [] as any[] })),
+    (everyCase
+      ? sql`SELECT client_id, form_key, MAX(updated_at) AS updated_at, COUNT(*) AS answers
+            FROM form_responses
+            GROUP BY client_id, form_key ORDER BY MAX(updated_at) DESC LIMIT ${perSource}`
+      : sql`SELECT client_id, form_key, MAX(updated_at) AS updated_at, COUNT(*) AS answers
+            FROM form_responses WHERE client_id = ${cid}
+            GROUP BY client_id, form_key ORDER BY MAX(updated_at) DESC LIMIT ${perSource}`
+    ).catch(() => ({ rows: [] as any[] })),
+    (everyCase
+      ? sql`SELECT id, client_id, title, completed_at FROM client_tasks
+            WHERE status = 'done' AND completed_at IS NOT NULL
+            ORDER BY completed_at DESC LIMIT ${perSource}`
+      : sql`SELECT id, client_id, title, completed_at FROM client_tasks
+            WHERE status = 'done' AND completed_at IS NOT NULL
+              AND client_id = ${cid}
+            ORDER BY completed_at DESC LIMIT ${perSource}`
+    ).catch(() => ({ rows: [] as any[] })),
   ])
 
   const events: TimelineEvent[] = []

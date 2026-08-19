@@ -7,6 +7,9 @@ jest.mock("@/components/ui/RichTextEditor", () => ({
   RichTextEditor: ({ value, onChange }: { value: string; onChange: (h: string) => void }) => (
     <textarea data-testid="editor" value={value} onChange={(e) => onChange(e.target.value)} />
   ),
+}))
+
+jest.mock("@/components/ui/RichTextView", () => ({
   RichTextView: ({ html }: { html: string }) => <div data-testid="view">{html}</div>,
 }))
 

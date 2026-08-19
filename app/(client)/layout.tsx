@@ -1,7 +1,7 @@
 // app/(client)/layout.tsx
 import { redirect } from "next/navigation"
-import { auth } from "@/auth"
-import { getPortalClient, getActivePreviewEmail } from "@/lib/portal-client"
+import { Suspense } from "react"
+import { getSession, getPortalClient, getActivePreviewEmail } from "@/lib/portal-client"
 import { stopPreview } from "@/app/preview-actions"
 import { sql } from "@/lib/db"
 import Sidebar from "@/components/nav/Sidebar"
@@ -12,7 +12,23 @@ import { resolveScheme } from "@/lib/color-schemes"
 import SchemeDecor from "@/components/ui/SchemeDecor"
 import { getJokeOfTheDay } from "@/lib/joke"
 import { getFirmAnnouncement } from "@/lib/firm-announcement"
-import { FirmAnnouncementView } from "@/components/announcement/FirmAnnouncementBanner"
+import { FirmAnnouncementView } from "@/components/announcement/FirmAnnouncementView"
+
+// The joke comes from an external API (icanhazdadjoke.com). Awaiting it in the
+// layout meant a third-party outage or slow response held up the whole portal.
+// As its own streamed component the page paints first and the joke drops in.
+async function JokeStrip() {
+  const joke = await getJokeOfTheDay().catch(() => null)
+  if (!joke) return null
+  return (
+    <div
+      className="px-6 py-1.5 text-center text-sm italic border-b print:hidden"
+      style={{ color: "#4b443b", background: "rgba(255,255,255,0.85)", borderColor: "#E8DFD2" }}
+    >
+      😄 {joke}
+    </div>
+  )
+}
 
 async function getUnreadCounts(clientId: string) {
   try {
@@ -30,16 +46,19 @@ async function getUnreadCounts(clientId: string) {
 }
 
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth()
+  const session = await getSession()
   if (!session?.user?.email) redirect("/login")
 
-  let client
-  try {
-    client = await getPortalClient()
-  } catch (e) {
-    console.error("[layout] getPortalClient failed:", e)
-  }
-  const previewEmail = await getActivePreviewEmail()
+  // These two used to be awaited one after the other, and each re-ran auth()
+  // internally. They're now deduped by React cache and started together.
+  const [clientResult, previewEmail] = await Promise.all([
+    getPortalClient().catch((e) => {
+      console.error("[layout] getPortalClient failed:", e)
+      return null
+    }),
+    getActivePreviewEmail(),
+  ])
+  const client = clientResult
   if (!client) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -72,7 +91,6 @@ export default async function ClientLayout({ children }: { children: React.React
     getClientPrefs(String(client.clientId)),
     getFirmAnnouncement(),
   ])
-  const joke = prefs.showJoke ? await getJokeOfTheDay() : null
   const scheme = resolveScheme(prefs.scheme, prefs.gradient)
 
   const today = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" })
@@ -114,13 +132,10 @@ export default async function ClientLayout({ children }: { children: React.React
           <span className="text-[12px]" style={{ color: "#334155" }}>{firstName}</span>
         </div>
         <FirmAnnouncementView html={firmAnnouncement} />
-        {joke && (
-          <div
-            className="px-6 py-1.5 text-center text-sm italic border-b print:hidden"
-            style={{ color: "#4b443b", background: "rgba(255,255,255,0.85)", borderColor: "#E8DFD2" }}
-          >
-            😄 {joke}
-          </div>
+        {prefs.showJoke && (
+          <Suspense fallback={null}>
+            <JokeStrip />
+          </Suspense>
         )}
         <main className="flex-1 px-6 py-8 md:px-10 overflow-auto relative z-10">{children}</main>
       </div>

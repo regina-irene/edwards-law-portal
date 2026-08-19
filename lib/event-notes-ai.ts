@@ -22,7 +22,10 @@ async function formatWithClaude(raw: string): Promise<string | null> {
   if (!process.env.ANTHROPIC_API_KEY) return null
   const client = new Anthropic()
   const response = await client.messages.create({
-    model: "claude-opus-4-8",
+    // Was "claude-opus-4-8", which is not a real model id — every call 404'd,
+    // so notes were never formatted and the page paid the latency anyway.
+    // Sonnet is the right tier for a reformatting task like this.
+    model: "claude-sonnet-5",
     max_tokens: 2000,
     system: `You reformat court-calendar event notes for a family-law client portal. Turn the raw text into clean, easy-to-scan HTML.
 
@@ -41,7 +44,66 @@ Rules:
   return text && text.type === "text" ? text.text.trim() : null
 }
 
+/**
+ * Cache-only read (2026-08-18). Never calls Claude, so it is safe on the render
+ * path — the calendar paints from whatever has already been formatted.
+ */
+export async function getCachedNotes(events: CaseEvent[]): Promise<Record<string, string>> {
+  const candidates = events.filter((e) => e.description.length >= MIN_LENGTH)
+  if (candidates.length === 0) return {}
+  const result: Record<string, string> = {}
+  try {
+    const cached = await sql.query(
+      "SELECT event_id, source_hash, html FROM event_note_ai WHERE event_id = ANY($1)",
+      [candidates.map((e) => e.id)]
+    )
+    const byId = new Map(cached.rows.map((r) => [r.event_id, r]))
+    for (const e of candidates) {
+      const hit = byId.get(e.id)
+      if (hit && hit.source_hash === hashOf(e.description)) result[e.id] = hit.html
+    }
+  } catch {
+    // fail soft — plain-text notes
+  }
+  return result
+}
+
+/**
+ * Formats any notes that aren't cached yet and stores them. Returns nothing:
+ * this is meant to run AFTER the response is sent (via next/server's `after`),
+ * so the work warms the cache for the next visit instead of making this visit
+ * wait on an LLM. Previously this was awaited during render, which meant a
+ * client with three unformatted court notices sat through three generations
+ * before the calendar appeared.
+ */
+export async function warmFormattedNotes(events: CaseEvent[]): Promise<void> {
+  const cached = await getCachedNotes(events)
+  const misses = events.filter(
+    (e) => e.description.length >= MIN_LENGTH && !cached[e.id]
+  )
+  await Promise.all(
+    misses.slice(0, MAX_PER_RENDER).map(async (e) => {
+      try {
+        const html = await formatWithClaude(e.description)
+        if (!html) return
+        const clean = sanitizeNotesHtml(html)
+        if (!clean) return
+        await sql`
+          INSERT INTO event_note_ai (event_id, source_hash, html, updated_at)
+          VALUES (${e.id}, ${hashOf(e.description)}, ${clean}, now())
+          ON CONFLICT (event_id)
+          DO UPDATE SET source_hash = EXCLUDED.source_hash, html = EXCLUDED.html, updated_at = now()
+        `
+      } catch {
+        // fail soft — this event keeps its plain-text notes
+      }
+    })
+  )
+}
+
 // Returns a map of event id → formatted HTML for events whose notes deserve it.
+// Kept for any caller that genuinely wants to block on formatting; the calendar
+// page no longer uses it.
 export async function getFormattedNotes(events: CaseEvent[]): Promise<Record<string, string>> {
   const candidates = events.filter((e) => e.description.length >= MIN_LENGTH)
   if (candidates.length === 0) return {}

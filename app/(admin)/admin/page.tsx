@@ -19,16 +19,32 @@ export default async function AdminHome() {
       FROM client_tasks WHERE status='pending'
       ORDER BY due_date ASC NULLS LAST, created_at ASC
     `.catch(() => ({ rows: [] as any[] })),
+    // Each branch is capped and sorted on its OWN table so it can ride that
+    // table's (created_at DESC) index and hand back 500 rows instead of the
+    // whole table; the outer sort then merges six small lists rather than
+    // sorting the entire union. NOT EXISTS (not NOT IN) so a NULL event_id in
+    // dismissed_activity can never blank the feed.
     sql`
       SELECT * FROM (
-        SELECT 'chat' AS kind, id::text AS id, client_id, body AS detail, sender, created_at FROM chat_messages
-        UNION ALL SELECT 'message', id::text, client_id, body, 'firm', created_at FROM messages
-        UNION ALL SELECT 'upload', id::text, client_id, file_name, 'client', created_at FROM task_attachments WHERE scope='client_task'
-        UNION ALL SELECT 'form', id::text, client_id, form_key, 'client', updated_at FROM form_responses
-        UNION ALL SELECT kind, id::text, email, COALESCE(provider, ''), 'system', created_at FROM auth_activity
-        UNION ALL SELECT 'note', id::text, client_id, body_text, 'firm', created_at FROM client_notes
+        (SELECT 'chat' AS kind, id::text AS id, client_id, body AS detail, sender, created_at FROM chat_messages
+           ORDER BY created_at DESC LIMIT 500)
+        UNION ALL
+        (SELECT 'message', id::text, client_id, body, 'firm', created_at FROM messages
+           ORDER BY created_at DESC LIMIT 500)
+        UNION ALL
+        (SELECT 'upload', id::text, client_id, file_name, 'client', created_at FROM task_attachments WHERE scope='client_task'
+           ORDER BY created_at DESC LIMIT 500)
+        UNION ALL
+        (SELECT 'form', id::text, client_id, form_key, 'client', updated_at FROM form_responses
+           ORDER BY updated_at DESC LIMIT 500)
+        UNION ALL
+        (SELECT kind, id::text, email, COALESCE(provider, ''), 'system', created_at FROM auth_activity
+           ORDER BY created_at DESC LIMIT 500)
+        UNION ALL
+        (SELECT 'note', id::text, client_id, body_text, 'firm', created_at FROM client_notes
+           ORDER BY created_at DESC LIMIT 500)
       ) a
-      WHERE a.id NOT IN (SELECT event_id FROM dismissed_activity)
+      WHERE NOT EXISTS (SELECT 1 FROM dismissed_activity d WHERE d.event_id = a.id)
       ORDER BY created_at DESC LIMIT 500
     `.catch(() => ({ rows: [] as any[] })),
   ])

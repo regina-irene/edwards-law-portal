@@ -335,6 +335,17 @@ export const MIGRATION_SQL = `
   CREATE INDEX IF NOT EXISTS client_tasks_pending_idx ON client_tasks (status, due_date) WHERE status = 'pending';
   CREATE INDEX IF NOT EXISTS auth_activity_created_idx ON auth_activity (created_at DESC);
   CREATE INDEX IF NOT EXISTS client_notes_created_idx ON client_notes (created_at DESC);
+
+  -- Dashboard activity feed (2026-08-18). Each branch of that UNION now carries
+  -- its own ORDER BY created_at DESC LIMIT 500, which only pays off if the
+  -- branch's table has a plain newest-first index to walk. auth_activity and
+  -- client_notes already have theirs above; these are the four that did not.
+  -- Not live until someone runs: npm run migrate
+  CREATE INDEX IF NOT EXISTS chat_messages_created_idx ON chat_messages (created_at DESC);
+  CREATE INDEX IF NOT EXISTS messages_created_idx ON messages (created_at DESC);
+  CREATE INDEX IF NOT EXISTS task_attachments_client_task_created_idx
+    ON task_attachments (created_at DESC) WHERE scope = 'client_task';
+  CREATE INDEX IF NOT EXISTS form_responses_updated_idx ON form_responses (updated_at DESC);
 `
 
 async function migrate(): Promise<void> {

@@ -223,12 +223,5 @@ export function RichTextEditor({
   )
 }
 
-// Renders sanitized rich content (read-only).
-export function RichTextView({ html, className = "" }: { html: string; className?: string }) {
-  return (
-    <div
-      className={`text-sm text-gray-700 [&_a]:text-blue-600 [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:text-base [&_h3]:font-semibold [&_img]:max-w-full [&_img]:rounded [&_img]:my-2 ${className}`}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
-  )
-}
+// RichTextView (the read-only renderer) lives in
+// components/ui/RichTextView.tsx so read-only pages don't pull in this editor.

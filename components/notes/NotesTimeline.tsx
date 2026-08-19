@@ -3,7 +3,8 @@
 // client's Field Notes. Manual notes are white cards with a navy edge (the
 // "important" entries); portal events are lighter compact rows. Newest first.
 import { useState } from "react"
-import { RichTextEditor, RichTextView } from "@/components/ui/RichTextEditor"
+import { RichTextEditor } from "@/components/ui/RichTextEditor"
+import { RichTextView } from "@/components/ui/RichTextView"
 import type { TimelineItem } from "@/lib/notes-timeline"
 import type { ClientNote } from "@/lib/notes"
 

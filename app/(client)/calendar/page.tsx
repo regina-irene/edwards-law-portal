@@ -6,8 +6,9 @@ import PageHeader from "@/components/ui/PageHeader"
 import RefreshButton from "@/components/ui/RefreshButton"
 import PrintButton from "@/components/ui/PrintButton"
 import { getPageContent } from "@/lib/page-content"
+import { after } from "next/server"
 import { getCaseEvents } from "@/lib/calendar"
-import { getFormattedNotes } from "@/lib/event-notes-ai"
+import { getCachedNotes, warmFormattedNotes } from "@/lib/event-notes-ai"
 import CalendarClient from "@/components/calendar/CalendarClient"
 import { refreshCalendarPage } from "./actions"
 
@@ -34,8 +35,12 @@ export default async function CalendarPage() {
   ])
   const refreshedAt = formatRefreshed(Date.now())
 
-  // AI-reformatted notes for long messy event descriptions (cached per event)
-  const notesHtml = events ? await getFormattedNotes(events) : {}
+  // AI-reformatted notes for long messy event descriptions. Read from cache
+  // only — anything not yet formatted is generated AFTER the response is sent,
+  // so the calendar never waits on an API call. Unformatted notes render as
+  // plain text this visit and are formatted by the next one. (2026-08-18)
+  const notesHtml = events ? await getCachedNotes(events) : {}
+  if (events) after(() => warmFormattedNotes(events))
   const enhancedEvents = events?.map((e) => ({ ...e, descriptionHtml: notesHtml[e.id] ?? null })) ?? null
 
   return (

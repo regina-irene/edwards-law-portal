@@ -48,6 +48,11 @@ export default function AirtableEmbed({ url, title, height = 600 }: AirtableEmbe
           className="block"
           frameBorder="0"
           allowFullScreen
+          // A third-party embed competing for bandwidth during first paint is
+          // a big chunk of why pages felt heavy. Only load it once it's near
+          // the viewport. (2026-08-18)
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
         />
       </div>
 
