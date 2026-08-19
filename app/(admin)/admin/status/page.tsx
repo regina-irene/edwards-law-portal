@@ -3,8 +3,10 @@
 // Editable in place. Admin layout gates auth; requireAdmin gates this page.
 import { redirect } from "next/navigation"
 import PageTitle from "@/components/ui/PageTitle"
+import RefreshButton from "@/components/ui/RefreshButton"
 import { taglineFor } from "@/lib/taglines"
 import { requireAdmin } from "@/lib/admin"
+import { refreshStatusBoard } from "./actions"
 import StatusBoard, { type StageOption } from "@/components/status/StatusBoard"
 import {
   buildStatusBoard,
@@ -17,6 +19,16 @@ import {
 } from "@/lib/case-status"
 
 export const dynamic = "force-dynamic"
+
+function formatRefreshed(ms: number): string {
+  return new Date(ms).toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
 
 export default async function AdminStatusPage() {
   const check = await requireAdmin()
@@ -40,9 +52,22 @@ export default async function AdminStatusPage() {
     .sort((a, b) => stageOrder(a) - stageOrder(b) || a.localeCompare(b))
     .map((value) => ({ value, label: plainStage(value) }))
 
+  // Rendered on the server at request time. The board is read through a 60s
+  // cache, so this is "when this page was built", and Refresh drops the cache
+  // before re-rendering — the timestamp only moves when the data actually did.
+  const refreshedAt = formatRefreshed(Date.now())
+
   return (
     <div className="space-y-6 max-w-5xl">
-      <PageTitle title="Case Status" tagline={taglineFor("admin:status")} />
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <PageTitle title="Case Status" tagline={taglineFor("admin:status")} />
+        <form action={refreshStatusBoard} className="shrink-0">
+          <RefreshButton label="Refresh from Airtable" />
+          <span className="block text-right text-xs text-gray-500 mt-1">
+            {loadError ? "Not synced — the last refresh failed" : `Last refreshed ${refreshedAt}`}
+          </span>
+        </form>
+      </div>
       <p className="text-sm text-gray-500 -mt-3">
         Anything you save here appears on that client&apos;s Status page. Stage names are shown in plain
         English; hover a pill to see the value on the Airtable board.

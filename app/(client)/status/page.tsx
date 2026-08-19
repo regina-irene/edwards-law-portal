@@ -1,7 +1,7 @@
 // app/(client)/status/page.tsx
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
-import { getPortalClient, getActivePreviewEmail } from "@/lib/portal-client"
+import { getPortalClient } from "@/lib/portal-client"
 import { getCaseStatus } from "@/lib/airtable"
 import RefreshButton from "@/components/ui/RefreshButton"
 import { refreshStatusPage } from "./actions"
@@ -46,9 +46,6 @@ export default async function StatusPage() {
   }))
   const nextCourt = events ? nextCourtDate(events) : null
   const refreshedAt = formatRefreshed(Date.now())
-  // Refresh button is admin-only (shown during preview-as-client); clients get
-  // fresh Airtable data on every page load anyway.
-  const isAdminPreview = Boolean(await getActivePreviewEmail())
   // The Status board's "Case Status - Dashboard" field is the case status for
   // all cases; the old "Status of Case" field on Clients is just a fallback.
   const statusText = caseStatus?.statusText || client.statusOfCase
@@ -65,17 +62,19 @@ export default async function StatusPage() {
 
   return (
     <div className="space-y-6">
-      {isAdminPreview && (
-        <div className="flex justify-start">
-          <form action={refreshStatusPage}>
-            <RefreshButton label="Refresh" />
-            <span className="block text-left text-xs text-gray-500 mt-1">Synced with EFL · Current data as of {refreshedAt}</span>
-          </form>
-        </div>
-      )}
-
       {/* Embed removed per Regina (2026-06-09) — the pulled-out info below replaces the Airtable embed view */}
       <PageHeader defaultTitle="Case Status" page="status" content={{ ...pageContent, embed_url: null }} />
+
+      {/* Everyone sees this, not just admins previewing (2026-08-18). Case data
+          is read through a 60-second cache, so "you're always current" was no
+          longer true, and a client checking after a call had no way to pull
+          again. Refresh drops the cache and re-reads. */}
+      <div className="flex items-center justify-between gap-3 flex-wrap print:hidden">
+        <span className="text-xs text-gray-500">Last checked {refreshedAt}</span>
+        <form action={refreshStatusPage}>
+          <RefreshButton label="Check for updates" />
+        </form>
+      </div>
 
       {/* Status of Your Case (highlighted, with last-modified label), Case Details below */}
       <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200 border-l-4" style={{ borderLeftColor: "#1b2d45" }}>

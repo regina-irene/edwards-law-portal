@@ -102,7 +102,13 @@ export async function getCaseStatus(clientId: string): Promise<CaseStatusInfo | 
     // Cached 60s for fast navigation; Refresh button revalidates the path.
     const res = await fetch(
       `https://api.airtable.com/v0/${MAIN_BASE_ID}/tbl3gCA0CQ0S6ewW6/${recordId}`,
-      { headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` }, next: { revalidate: 60 } }
+      {
+        headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
+        // Tagged "case-status" so both the client's Refresh button and a save
+        // on the admin Status board drop this straight away, instead of the
+        // client seeing up to 60s of stale text after the firm updates it.
+        next: { revalidate: 60, tags: ["case-status"] },
+      }
     )
     if (!res.ok) throw new Error(`Airtable error: ${res.status}`)
     const data = await res.json()

@@ -308,8 +308,17 @@ export async function updateCaseStatus(recordId: string, patch: CaseStatusPatch)
     const detail = await res.text().catch(() => "")
     throw new Error(`Airtable save failed: ${res.status}${detail ? ` ${detail.slice(0, 300)}` : ""}`)
   }
-  // Next 16 requires the second argument. `expire: 0` drops the entry outright
-  // so the next render refetches instead of serving one more stale board.
+  revalidateCaseStatus()
+}
+
+/**
+ * Drop the cached board so the next read goes back to Airtable. Called after a
+ * save and by the Refresh button.
+ *
+ * Next 16 requires the second argument; `expire: 0` evicts the entry outright
+ * rather than serving one more stale render.
+ */
+export function revalidateCaseStatus(): void {
   revalidateTag(CASE_STATUS_CACHE_TAG, { expire: 0 })
 }
 
