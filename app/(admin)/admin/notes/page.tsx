@@ -5,6 +5,7 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import PageTitle from "@/components/ui/PageTitle"
+import QuickNote from "@/components/notes/QuickNote"
 import CaseJump from "@/components/notes/CaseJump"
 import { taglineFor } from "@/lib/taglines"
 import { fetchAllClientsRaw, clientDisplayLabel } from "@/lib/airtable"
@@ -163,6 +164,14 @@ export default async function FieldNotesHub({
   return (
     <div className="space-y-6 max-w-6xl">
       <PageTitle title="Field Notes" tagline={taglineFor("admin:notes")} />
+
+      {/* This page searches every case; the running log for one case lives at
+          /admin/notes/[clientId]. Writing used to be possible only from there,
+          which meant noticing that a client's name was a link. */}
+      <QuickNote clients={cases.map((c) => ({ id: c.id, label: c.label, archived: c.archived }))} />
+      <p className="text-xs text-gray-400 -mt-3">
+        Searching every case below. Click a client&apos;s name to open their full running log.
+      </p>
 
       <form method="GET" action="/admin/notes" className="flex flex-wrap items-center gap-2">
         <input
