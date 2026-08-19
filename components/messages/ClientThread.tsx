@@ -1,4 +1,6 @@
 "use client"
+// components/messages/ClientThread.tsx — the client's two-way conversation with
+// the firm: transcript, export buttons and the composer.
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import UploadDocsButton from "@/components/messages/UploadDocsButton"
@@ -160,7 +162,11 @@ export default function ClientThread() {
 
   let lastDay = ""
   return (
-    <div className="flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden" style={{ height: "calc(100vh - 18rem)" }}>
+    // `dvh` rather than `vh` so the height accounts for the phone browser's own
+    // chrome, and a smaller subtraction on phones so the composer lands just
+    // above the bottom tab bar instead of below the fold. At `md` and up this
+    // is the old calc(100vh - 18rem); dvh and vh are the same on desktop.
+    <div className="flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden h-[calc(100dvh-14rem)] min-h-[20rem] md:h-[calc(100dvh-18rem)] md:min-h-0">
       <div className="border-b border-gray-200 bg-white px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-sm text-gray-500">Have documents for your legal team?</span>

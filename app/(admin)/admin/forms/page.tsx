@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import PageTitle from "@/components/ui/PageTitle"
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
 import FormBuilder, { type Draft } from "@/components/admin/forms/FormBuilder"
 
 interface FormRow {
@@ -34,6 +35,7 @@ export default function AdminFormsPage() {
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
+  const [pendingRemove, setPendingRemove] = useState<{ key: string; label: string } | null>(null)
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/forms").catch(() => null)
@@ -83,8 +85,8 @@ export default function AdminFormsPage() {
     setEditing(d.form as Draft)
   }
 
-  async function remove(key: string, label: string) {
-    if (!window.confirm(`Remove "${label}"? Clients' saved answers are kept, and any task linked to it stops showing the form.`)) return
+  async function remove(key: string) {
+    setPendingRemove(null)
     const res = await fetch(`/api/admin/forms?key=${encodeURIComponent(key)}`, { method: "DELETE" }).catch(() => null)
     if (!res?.ok) { setError("Couldn't remove that form."); return }
     await load()
@@ -186,7 +188,7 @@ export default function AdminFormsPage() {
                 <Link href={`/admin/forms/${encodeURIComponent(f.key)}`} className="text-sm text-blue-600 hover:underline">
                   Answers
                 </Link>
-                <button type="button" onClick={() => remove(f.key, f.label)} className="text-sm text-gray-400 hover:text-red-600 underline">
+                <button type="button" onClick={() => setPendingRemove({ key: f.key, label: f.label })} className="text-sm text-gray-400 hover:text-red-600 underline">
                   Remove
                 </button>
               </span>
@@ -202,6 +204,15 @@ export default function AdminFormsPage() {
           To put a form in front of a client: open <Link href="/admin/tasks" className="underline">Tasks</Link>, open the task on the board, and pick the form under “Linked intake form”.
         </p>
       )}
+
+      <ConfirmDialog
+        open={pendingRemove !== null}
+        title={pendingRemove ? `Remove “${pendingRemove.label}”?` : "Remove this form?"}
+        body="Clients' saved answers are kept, and any task linked to it stops showing the form."
+        confirmLabel="Remove form"
+        onConfirm={() => { if (pendingRemove) remove(pendingRemove.key) }}
+        onCancel={() => setPendingRemove(null)}
+      />
     </div>
   )
 }

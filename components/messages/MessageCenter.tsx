@@ -1,10 +1,13 @@
 "use client"
-
+// components/messages/MessageCenter.tsx — the firm side of Messages: the
+// conversation list, the thread, and the composer with attachments, drafts per
+// client and the "text me on reply" switch.
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
 import { collectDroppedFiles, dragHasFiles } from "@/lib/drop-files"
 import { RichTextEditor } from "@/components/ui/RichTextEditor"
 import MessageBody from "@/components/messages/MessageBody"
+import { PromptDialog } from "@/components/ui/PromptDialog"
 import { bodyToHtml, bodyToPlainText, escapeHtml, isEmptyRich } from "@/lib/message-format"
 
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
@@ -56,6 +59,10 @@ export default function MessageCenter() {
   const [smsNotice, setSmsNotice] = useState<string | null>(null)
   const [watchOn, setWatchOn] = useState(false)
   const [watchPhone, setWatchPhone] = useState("")
+  // Turning the watch on for the first time needs a cell number; asking for it
+  // in our own dialog rather than the browser's prompt box.
+  const [askingPhone, setAskingPhone] = useState(false)
+  const [watchError, setWatchError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   // Formatting mode swaps the one-line composer for the full rich-text editor.
   // Off by default so quick replies stay quick (Enter still sends).
@@ -79,27 +86,28 @@ export default function MessageCenter() {
       .catch(() => {})
   }, [selected])
 
-  async function toggleWatch() {
+  async function saveWatch(next: boolean, adminPhone?: string) {
     if (!selected) return
-    const next = !watchOn
-    let adminPhone: string | undefined
-    if (next && !watchPhone) {
-      const entered = window.prompt("What cell number should reply alerts go to? (one-time setup)")
-      if (!entered) return
-      adminPhone = entered
-    }
+    setWatchError(null)
     const res = await fetch("/api/admin/sms-watch", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ clientId: selected, enabled: next, ...(adminPhone ? { adminPhone } : {}) }),
-    })
-    if (res.ok) {
+    }).catch(() => null)
+    if (res?.ok) {
       setWatchOn(next)
       if (adminPhone) setWatchPhone(adminPhone)
     } else {
-      const d = await res.json().catch(() => null)
-      alert(d?.error ?? "Could not update the setting")
+      const d = await res?.json().catch(() => null)
+      setWatchError(d?.error ?? "Could not update the setting — try again.")
     }
+  }
+
+  function toggleWatch() {
+    if (!selected) return
+    const next = !watchOn
+    if (next && !watchPhone) { setWatchError(null); setAskingPhone(true); return }
+    void saveWatch(next)
   }
   const threadRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -434,6 +442,7 @@ export default function MessageCenter() {
               <div>
                 <div className="serif text-base font-semibold text-gray-900">{active.name}</div>
                 <div className="text-xs text-gray-400">{active.email}</div>
+                {watchError && <div className="text-xs text-red-600 mt-0.5">{watchError}</div>}
               </div>
               <div className="flex items-center gap-3">
                 <button
@@ -557,6 +566,17 @@ export default function MessageCenter() {
           </>
         )}
       </div>
+
+      <PromptDialog
+        open={askingPhone}
+        title="Where should reply alerts go?"
+        body="A one-time setup — we'll text this number whenever a client replies in the portal."
+        label="Cell number"
+        placeholder="(770) 555-0134"
+        confirmLabel="Turn alerts on"
+        onSubmit={(phone) => { setAskingPhone(false); void saveWatch(true, phone) }}
+        onCancel={() => setAskingPhone(false)}
+      />
     </div>
   )
 }

@@ -2,6 +2,8 @@
 // components/pleadings/PleadingsTable.tsx — sortable table of the client's
 // pleadings, all columns from the Airtable board but portal-styled.
 // Click a column header to sort; click again to flip direction.
+// Below `md` the same rows render as stacked cards so nothing scrolls sideways
+// on a phone and "View file" is always a full-width tap target.
 
 import { useMemo, useState } from "react"
 import type { PleadingDoc } from "@/lib/pleadings"
@@ -25,6 +27,9 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "filedBy", label: "Filed By" },
   { key: "notes", label: "Notes" },
 ]
+
+// label column of the phone cards, styled like the table's column headers
+const CARD_LABEL = "w-20 shrink-0 pt-0.5 text-[10px] uppercase tracking-wide text-gray-500 font-semibold"
 
 function sortValue(d: PleadingDoc, key: SortKey): string {
   if (key === "filedOn") return d.filedOn ?? (d.created ?? "").slice(0, 10)
@@ -67,7 +72,84 @@ export default function PleadingsTable({ docs }: { docs: PleadingDoc[] }) {
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+    <>
+      {/* Phones: one card per filing, in the same order the table is sorted in. */}
+      <ul className="md:hidden space-y-3">
+        {sorted.map((d) => {
+          const dateLabel = d.filedOn ? shortDate(d.filedOn) : "—"
+          const fc = d.folder ? folderColor(d.folder) : null
+          return (
+            <li
+              key={d.id}
+              className="rounded-xl border border-gray-200 bg-white p-4"
+              style={
+                fc
+                  ? {
+                      background: tint(fc.bg),
+                      WebkitPrintColorAdjust: "exact",
+                      printColorAdjust: "exact",
+                    }
+                  : undefined
+              }
+            >
+              <p className="text-[15px] font-semibold text-gray-900 break-words">{d.title}</p>
+              {d.folder && fc && (
+                <span
+                  className="mt-2 inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full border border-black/5"
+                  style={{
+                    background: fc.bg,
+                    color: fc.text,
+                    WebkitPrintColorAdjust: "exact",
+                    printColorAdjust: "exact",
+                  }}
+                >
+                  {d.folder}
+                </span>
+              )}
+              <dl className="mt-3 space-y-2 text-sm">
+                <div className="flex gap-3">
+                  <dt className={CARD_LABEL}>Date</dt>
+                  <dd className="font-medium text-gray-700">{dateLabel}</dd>
+                </div>
+                <div className="flex gap-3">
+                  <dt className={CARD_LABEL}>Filed By</dt>
+                  <dd>
+                    {d.filedBy ? (
+                      <span
+                        className="text-xs font-medium px-2 py-0.5 rounded-full border border-black/5"
+                        style={{ background: filedByColor(d.filedBy).bg, color: filedByColor(d.filedBy).text }}
+                      >
+                        {d.filedBy.replace(/\s+/g, " ").trim()}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
+                  </dd>
+                </div>
+                {d.notes && (
+                  <div className="flex gap-3">
+                    <dt className={CARD_LABEL}>Notes</dt>
+                    <dd className="text-gray-600 break-words whitespace-pre-wrap">{d.notes}</dd>
+                  </div>
+                )}
+              </dl>
+              {d.link && (
+                <a
+                  href={d.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 w-full min-h-[44px] px-4 rounded-lg text-white text-sm font-semibold flex items-center justify-center active:opacity-90 print:hidden"
+                  style={{ background: "#1b2d45" }}
+                >
+                  View file
+                </a>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+
+      <div className="hidden md:block bg-white rounded-lg border border-gray-200 overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-200">
@@ -157,6 +239,7 @@ export default function PleadingsTable({ docs }: { docs: PleadingDoc[] }) {
           })}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   )
 }

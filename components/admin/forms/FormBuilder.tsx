@@ -4,6 +4,12 @@
 // goes live. Nothing is saved until "Save form" is pressed.
 import { useState } from "react"
 import { FIELD_TYPES } from "@/lib/portal-forms"
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
+
+// What's waiting on a confirm — a whole section, or a single question.
+type PendingDelete =
+  | { kind: "section"; si: number; title: string; count: number }
+  | { kind: "field"; si: number; fi: number; label: string }
 
 interface DraftField {
   label: string
@@ -66,6 +72,7 @@ export default function FormBuilder({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
 
   async function convert() {
     setError(null)
@@ -108,6 +115,8 @@ export default function FormBuilder({
     })
   }
 
+  // Removing a question used to happen on a single stray click, with the ✕
+  // sitting right next to the move arrows — it asks first now.
   function removeField(si: number, fi: number) {
     setDraft((d) => {
       if (!d) return d
@@ -161,9 +170,15 @@ export default function FormBuilder({
     )
   }
 
-  function removeSection(si: number, title: string, count: number) {
-    if (!window.confirm(`Delete the “${title}” section and its ${count} ${count === 1 ? "question" : "questions"}?`)) return
+  function removeSection(si: number) {
     setDraft((d) => (d ? { ...d, sections: d.sections.filter((_, i) => i !== si) } : d))
+  }
+
+  function runPendingDelete() {
+    if (!pendingDelete) return
+    if (pendingDelete.kind === "section") removeSection(pendingDelete.si)
+    else removeField(pendingDelete.si, pendingDelete.fi)
+    setPendingDelete(null)
   }
 
   function addField(si: number) {
@@ -363,7 +378,7 @@ export default function FormBuilder({
                   />
                   <button type="button" onClick={() => moveSection(si, -1)} disabled={si === 0} aria-label="Move section up" title="Move section up" className="px-1.5 text-gray-400 hover:text-gray-800 disabled:opacity-30">↑</button>
                   <button type="button" onClick={() => moveSection(si, 1)} disabled={si === draft.sections.length - 1} aria-label="Move section down" title="Move section down" className="px-1.5 text-gray-400 hover:text-gray-800 disabled:opacity-30">↓</button>
-                  <button type="button" onClick={() => removeSection(si, section.title, section.fields.length)} aria-label="Delete section" title="Delete section" className="px-1.5 text-gray-400 hover:text-red-600">🗑️</button>
+                  <button type="button" onClick={() => setPendingDelete({ kind: "section", si, title: section.title, count: section.fields.length })} aria-label="Delete section" title="Delete section" className="px-1.5 text-gray-400 hover:text-red-600">🗑️</button>
                 </div>
                 <input
                   value={section.description ?? ""}
@@ -429,7 +444,7 @@ export default function FormBuilder({
                         <button type="button" onClick={() => moveField(si, fi, 1)} disabled={fi === section.fields.length - 1} aria-label={`Move ${field.label} down`} title="Move down" className="px-1.5 py-2 text-gray-400 hover:text-gray-800 disabled:opacity-30">↓</button>
                         <button
                           type="button"
-                          onClick={() => removeField(si, fi)}
+                          onClick={() => setPendingDelete({ kind: "field", si, fi, label: field.label })}
                           aria-label={`Remove ${field.label}`}
                           title="Remove question"
                           className="px-2 py-2 text-gray-400 hover:text-red-600"
@@ -506,6 +521,25 @@ export default function FormBuilder({
           </div>
         </section>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={
+          pendingDelete?.kind === "section"
+            ? `Delete the “${pendingDelete.title}” section?`
+            : "Delete this question?"
+        }
+        body={
+          pendingDelete?.kind === "section"
+            ? `Its ${pendingDelete.count} ${pendingDelete.count === 1 ? "question goes" : "questions go"} with it. Nothing is saved until you press “Save form”.`
+            : pendingDelete
+              ? `“${pendingDelete.label}” comes off the form. Nothing is saved until you press “Save form”.`
+              : ""
+        }
+        confirmLabel={pendingDelete?.kind === "section" ? "Delete section" : "Delete question"}
+        onConfirm={runPendingDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   )
 }

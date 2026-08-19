@@ -1,7 +1,10 @@
 "use client"
-
+// components/admin/PageContentEditor.tsx — edits the title, announcement,
+// embed, content and banner image of each portal page, globally or for one
+// client.
 import { useState, useEffect } from "react"
 import { RichTextEditor } from "@/components/ui/RichTextEditor"
+import { InlineError } from "@/components/ui/InlineError"
 
 interface PC {
   header: string
@@ -25,6 +28,9 @@ export default function PageContentEditor({ clientId, allowRename = false, layou
   const [saving, setSaving] = useState<string | null>(null)
   const [saved, setSaved] = useState<string | null>(null)
   const [uploading, setUploading] = useState<string | null>(null)
+  // Holds the page key whose banner image wouldn't upload, so the reason shows
+  // next to that page's upload button instead of in a browser alert.
+  const [imageError, setImageError] = useState<string | null>(null)
   const [renaming, setRenaming] = useState<string | null>(null)
   const [renameDraft, setRenameDraft] = useState("")
   const [hidden, setHidden] = useState<Set<string>>(new Set())
@@ -109,12 +115,13 @@ export default function PageContentEditor({ clientId, allowRename = false, layou
 
   async function uploadImage(page: string, file: File) {
     setUploading(page)
+    setImageError(null)
     const fd = new FormData()
     fd.append("file", file); fd.append("clientId", clientId); fd.append("page", page)
-    const res = await fetch("/api/admin/page-image", { method: "POST", body: fd })
+    const res = await fetch("/api/admin/page-image", { method: "POST", body: fd }).catch(() => null)
     setUploading(null)
-    if (res.ok) loadContent()
-    else alert("Image upload failed (images only, max 10MB).")
+    if (res?.ok) loadContent()
+    else setImageError(page)
   }
   async function removeImage(page: string) {
     await fetch("/api/admin/page-image", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId, page }) })
@@ -183,6 +190,7 @@ export default function PageContentEditor({ clientId, allowRename = false, layou
             <input type="file" accept="image/*" className="hidden" disabled={uploading === page}
               onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(page, f); e.target.value = "" }} />
           </label>
+          {imageError === page && <InlineError message="That image didn't upload — images only, up to 10 MB." />}
         </div>
         )}
         <div className="flex items-center gap-3 pt-1 border-t border-gray-100">

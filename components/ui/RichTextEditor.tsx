@@ -1,6 +1,11 @@
 "use client"
-
+// components/ui/RichTextEditor.tsx — the WYSIWYG editor used by notes, page
+// content and the firm's rich composer.
 import { useRef, useEffect, useState } from "react"
+import { PromptDialog } from "@/components/ui/PromptDialog"
+
+// Which URL the dialog is currently asking for; null when it's closed.
+type UrlAsk = "link" | "image"
 
 // Full WYSIWYG editor: formatting, alignment, color, highlight, font size,
 // indent, lists, headings, links, inline image upload + resize/position.
@@ -17,6 +22,8 @@ export function RichTextEditor({
   const [uploading, setUploading] = useState(false)
   const [imgEl, setImgEl] = useState<HTMLImageElement | null>(null)
   const [imgWidth, setImgWidth] = useState(100)
+  const [urlAsk, setUrlAsk] = useState<UrlAsk | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   // Sync external value changes (initial load + "Copy from global") into the
   // editor, but never while the user is typing in it (avoids caret jumps).
@@ -90,19 +97,24 @@ export function RichTextEditor({
     return `https://${t}`
   }
 
-  function addLink() {
-    saveSelection()
-    const url = window.prompt("Link URL (e.g. tinyurl.com/eflupload)")
-    if (url && url.trim()) { restoreSelection(); exec("createLink", normalizeUrl(url)) }
+  // The selection is saved before the dialog opens and put back when it closes,
+  // so the link lands on the words that were highlighted.
+  function submitUrl(raw: string) {
+    const ask = urlAsk
+    setUrlAsk(null)
+    if (!ask) return
+    restoreSelection()
+    exec(ask === "link" ? "createLink" : "insertImage", normalizeUrl(raw))
   }
 
   async function onImagePicked(file: File) {
     setUploading(true)
+    setUploadError(null)
     try {
       const fd = new FormData()
       fd.append("file", file)
-      const res = await fetch("/api/admin/content-image", { method: "POST", body: fd })
-      if (!res.ok) { alert("Image upload failed (images only, max 10MB)."); return }
+      const res = await fetch("/api/admin/content-image", { method: "POST", body: fd }).catch(() => null)
+      if (!res?.ok) { setUploadError("That image didn't upload — images only, up to 10 MB."); return }
       const { url } = await res.json()
       restoreSelection()
       exec("insertImage", url)
@@ -167,21 +179,24 @@ export function RichTextEditor({
         </select>
         <Divider />
 
-        <button type="button" title="Add link" onMouseDown={hold(addLink)} className={btn}>🔗 Link</button>
+        <button type="button" title="Add link" onMouseDown={hold(() => { saveSelection(); setUrlAsk("link") })} className={btn}>🔗 Link</button>
         <button type="button" title="Remove link" onMouseDown={hold(() => exec("unlink"))} className={btn}>⛌</button>
         <button type="button" title="Upload image" onMouseDown={hold(() => { saveSelection(); fileRef.current?.click() })} className={btn}>
           {uploading ? "Uploading…" : "🖼️ Upload"}
         </button>
-        <button type="button" title="Insert image by link/URL" onMouseDown={hold(() => {
-          saveSelection()
-          const url = window.prompt("Image link (https://...)")
-          if (url && url.trim()) { restoreSelection(); exec("insertImage", normalizeUrl(url)) }
-        })} className={btn}>🔗 Image</button>
+        <button type="button" title="Insert image by link/URL" onMouseDown={hold(() => { saveSelection(); setUrlAsk("image") })} className={btn}>🔗 Image</button>
         <button type="button" title="Clear formatting" onMouseDown={hold(() => exec("removeFormat"))} className={`${btn} text-gray-400`}>Clear</button>
 
         <input ref={fileRef} type="file" accept="image/*" className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) onImagePicked(f); e.target.value = "" }} />
       </div>
+
+      {uploadError && (
+        <div className="flex items-center gap-2 border-b border-red-200 bg-red-50 px-3 py-1.5">
+          <p className="text-xs text-red-700 flex-1">{uploadError}</p>
+          <button type="button" onMouseDown={hold(() => setUploadError(null))} aria-label="Dismiss" className="text-red-500 hover:text-red-800 text-xs">✕</button>
+        </div>
+      )}
 
       {/* Image controls — appear when an image is selected */}
       {imgEl && (
@@ -218,6 +233,21 @@ export function RichTextEditor({
           }
         }}
         className="min-h-[140px] px-3 py-2 text-sm text-gray-800 focus:outline-none [&_a]:text-blue-600 [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:text-base [&_h3]:font-semibold [&_img]:max-w-full [&_img]:rounded [&_img]:my-2"
+      />
+
+      <PromptDialog
+        open={urlAsk !== null}
+        title={urlAsk === "image" ? "Insert an image by link" : "Add a link"}
+        body={
+          urlAsk === "image"
+            ? "Paste the web address of the image you want to show here."
+            : "Paste or type the web address the highlighted text should open."
+        }
+        label={urlAsk === "image" ? "Image address" : "Link address"}
+        placeholder={urlAsk === "image" ? "https://…" : "tinyurl.com/eflupload"}
+        confirmLabel={urlAsk === "image" ? "Insert image" : "Add link"}
+        onSubmit={submitUrl}
+        onCancel={() => setUrlAsk(null)}
       />
     </div>
   )

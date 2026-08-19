@@ -1,9 +1,15 @@
 "use client"
 // components/admin/tasks/bits.tsx — the small shared pieces of the Tasks
-// screen: badges, status pills, icon buttons and the confirm dialog. Kept
-// together so the tabs stay readable.
-import { useEffect, useRef, useState } from "react"
+// screen: badges, status pills and icon buttons. Kept together so the tabs stay
+// readable. The confirm dialog, inline error and undo banner now live in
+// components/ui/ (the whole portal uses them) and are re-exported here so the
+// Tasks tabs can keep importing them from "./bits".
+import { useEffect, useRef } from "react"
 import { STATE_CLASS, STATE_LABEL, type TaskState } from "@/lib/task-progress"
+
+export { ConfirmDialog } from "@/components/ui/ConfirmDialog"
+export { InlineError } from "@/components/ui/InlineError"
+export { UndoBanner } from "@/components/ui/UndoBanner"
 
 export function StatusPill({ state }: { state: TaskState }) {
   return (
@@ -73,64 +79,6 @@ export function IconButton({
   )
 }
 
-// A confirm step that names what's being deleted, replacing window.confirm.
-export function ConfirmDialog({
-  open,
-  title,
-  body,
-  confirmLabel = "Delete",
-  onConfirm,
-  onCancel,
-}: {
-  open: boolean
-  title: string
-  body: string
-  confirmLabel?: string
-  onConfirm: () => void
-  onCancel: () => void
-}) {
-  const confirmRef = useRef<HTMLButtonElement>(null)
-  useEffect(() => {
-    if (open) confirmRef.current?.focus()
-  }, [open])
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onCancel() }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [open, onCancel])
-
-  if (!open) return null
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(15,23,42,0.35)" }} role="dialog" aria-modal="true" aria-label={title}>
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-lg max-w-md w-full p-5">
-        <h3 className="serif text-lg font-semibold text-gray-900">{title}</h3>
-        <p className="text-sm text-gray-600 mt-1.5">{body}</p>
-        <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={onCancel} className="px-3.5 py-2 rounded-lg text-sm font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50">
-            Cancel
-          </button>
-          <button ref={confirmRef} type="button" onClick={onConfirm} className="px-3.5 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Inline error with a retry, used wherever a save can fail.
-export function InlineError({ message, onRetry }: { message: string; onRetry?: () => void }) {
-  return (
-    <p className="text-xs text-red-600 mt-1">
-      {message}
-      {onRetry && (
-        <button type="button" onClick={onRetry} className="ml-2 underline hover:text-red-800">Try again</button>
-      )}
-    </p>
-  )
-}
-
 export function SkeletonRows({ rows = 4 }: { rows?: number }) {
   return (
     <div className="space-y-2" aria-hidden="true">
@@ -167,41 +115,5 @@ export function TriStateCheckbox({
       aria-label={label}
       className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
     />
-  )
-}
-
-// A banner that reports what just happened and offers an undo for a while.
-export function UndoBanner({
-  message,
-  seconds = 10,
-  onUndo,
-  onDismiss,
-}: {
-  message: string
-  seconds?: number
-  onUndo: () => void
-  onDismiss: () => void
-}) {
-  // The caller gives this a key per message, so a fresh banner remounts with a
-  // fresh countdown and the effect only has to own the interval.
-  const [left, setLeft] = useState(seconds)
-  useEffect(() => {
-    const t = setInterval(() => {
-      setLeft((n) => {
-        if (n <= 1) { clearInterval(t); onDismiss(); return 0 }
-        return n - 1
-      })
-    }, 1000)
-    return () => clearInterval(t)
-  }, [onDismiss])
-
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5">
-      <span className="text-sm text-green-900 font-medium">✅ {message}</span>
-      <button type="button" onClick={onUndo} className="text-sm font-semibold text-green-900 underline hover:text-green-700">
-        Undo ({left}s)
-      </button>
-      <button type="button" onClick={onDismiss} aria-label="Dismiss" className="ml-auto text-green-700 hover:text-green-900">✕</button>
-    </div>
   )
 }

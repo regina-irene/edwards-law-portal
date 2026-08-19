@@ -2,9 +2,11 @@
 // components/notes/NotesTimeline.tsx — composer + merged timeline for one
 // client's Field Notes. Manual notes are white cards with a navy edge (the
 // "important" entries); portal events are lighter compact rows. Newest first.
-import { useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import { RichTextEditor } from "@/components/ui/RichTextEditor"
 import { RichTextView } from "@/components/ui/RichTextView"
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
+import { UndoBanner } from "@/components/ui/UndoBanner"
 import type { TimelineItem } from "@/lib/notes-timeline"
 import type { ClientNote } from "@/lib/notes"
 
@@ -28,6 +30,12 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState("")
   const [error, setError] = useState("")
+  // Deleting a field note can't be taken back, so it happens in two beats: the
+  // confirm names what's going, then the note is hidden for ten seconds while
+  // the undo is on offer. The DELETE only goes out when that window closes.
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const deletingRef = useRef<string | null>(null)
 
   async function save() {
     const hasText = Boolean(draft.replace(/<[^>]*>/g, "").trim())
@@ -59,11 +67,27 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
     setEditingId(null)
   }
 
-  async function remove(id: string) {
-    if (!window.confirm("Delete this note? This can't be undone.")) return
+  // Guarded by a ref so the countdown firing twice can't send two DELETEs.
+  const runDelete = useCallback(async (id: string) => {
+    if (deletingRef.current === id) return
+    deletingRef.current = id
     const res = await fetch(`/api/admin/notes?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => null)
-    if (!res?.ok) { setError("Couldn't delete the note — try again.") ; return }
-    setItems(items.filter((i) => !(i.type === "note" && i.note.id === id)))
+    deletingRef.current = null
+    setPendingDeleteId(null)
+    // On a failure the note simply comes back into the list — nothing is lost.
+    if (!res?.ok) { setError("Couldn't delete the note — try again."); return }
+    setItems((prev) => prev.filter((i) => !(i.type === "note" && i.note.id === id)))
+  }, [])
+
+  const commitPendingDelete = useCallback(() => {
+    if (pendingDeleteId) void runDelete(pendingDeleteId)
+  }, [pendingDeleteId, runDelete])
+
+  function askRemove(id: string) {
+    // Only one note can be waiting at a time — see the other one out first.
+    commitPendingDelete()
+    setError("")
+    setConfirmingId(id)
   }
 
   // Everyone who wrote a note on this client, for the "written by" menu.
@@ -73,6 +97,7 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
 
   // Picking a person implies "just my notes" — portal events have no author.
   const visible = items.filter((i) => {
+    if (pendingDeleteId && i.type === "note" && i.note.id === pendingDeleteId) return false
     if (author) return i.type === "note" && i.note.author_name === author
     return notesOnly ? i.type === "note" : true
   })
@@ -80,6 +105,17 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
 
   return (
     <div className="space-y-5 max-w-3xl">
+      {pendingDeleteId && (
+        <div className="print:hidden">
+          <UndoBanner
+            key={pendingDeleteId}
+            message="Note deleted"
+            onUndo={() => setPendingDeleteId(null)}
+            onDismiss={commitPendingDelete}
+          />
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border border-gray-200 p-4 print:hidden">
         <p className="section-label mb-2">New note</p>
         <RichTextEditor value={draft} onChange={setDraft} />
@@ -151,7 +187,7 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
                 </p>
                 <span className="flex gap-2 print:hidden">
                   <button type="button" className="text-xs text-gray-400 hover:text-gray-700 underline" onClick={() => { setEditingId(item.note.id); setEditDraft(item.note.body) }}>Edit</button>
-                  <button type="button" className="text-xs text-gray-400 hover:text-red-600 underline" onClick={() => remove(item.note.id)}>Delete</button>
+                  <button type="button" className="text-xs text-gray-400 hover:text-red-600 underline" onClick={() => askRemove(item.note.id)}>Delete</button>
                 </span>
               </div>
               {editingId === item.note.id ? (
@@ -193,6 +229,15 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
           Show older
         </button>
       )}
+
+      <ConfirmDialog
+        open={confirmingId !== null}
+        title="Delete this note?"
+        body="This note is only kept here — deleting it removes it from the case log for good. You'll have ten seconds to undo."
+        confirmLabel="Delete note"
+        onConfirm={() => { setPendingDeleteId(confirmingId); setConfirmingId(null) }}
+        onCancel={() => setConfirmingId(null)}
+      />
     </div>
   )
 }

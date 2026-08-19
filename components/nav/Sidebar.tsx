@@ -1,19 +1,9 @@
-// components/nav/Sidebar.tsx
+// components/nav/Sidebar.tsx — the desktop icon rail. Hidden below `md`, where
+// BottomNav takes over; unchanged at `md` and above.
 import NavItem from "./NavItem"
 import SignOutButton from "./SignOutButton"
+import { navIcon, navUnread } from "./nav-meta"
 import type { NavPage } from "@/lib/portal-pages"
-
-const ICONS: Record<string, string> = {
-  dashboard: "🏠",
-  pleadings: "⚖️",
-  discovery: "🔎",
-  status: "📊",
-  tasks: "✅",
-  calendar: "📅",
-  messages: "✉️",
-  chat: "💬",
-  settings: "⚙️",
-}
 
 interface SidebarProps {
   pages: NavPage[]
@@ -22,19 +12,12 @@ interface SidebarProps {
   baseEmoji?: string | null
 }
 
-export default function Sidebar({ pages, unreadMessages, unreadChat, baseEmoji }: SidebarProps) {
-  // The Messages page reads chat_messages, so its badge must count chat_messages
-  // too. It previously counted the legacy `messages` table, which meant a real
-  // reply from the firm produced no badge while a legacy row produced one the
-  // client could never clear by reading anything. (2026-08-18)
-  // Deliberately NOT counting the legacy `messages` table: nothing in the
-  // client UI reads it any more, so those rows could never be cleared and the
-  // badge would stick forever.
-  const getUnread = (key: string) => (key === "messages" || key === "chat" ? unreadChat : 0)
-
+export default function Sidebar({ pages, unreadChat, baseEmoji }: SidebarProps) {
+  // Icons and the unread-badge rule live in ./nav-meta so the bottom bar shows
+  // exactly the same thing.
   return (
     <aside
-      className="w-24 shrink-0 flex flex-col items-center py-4 gap-1.5 border-r print:hidden"
+      className="w-24 shrink-0 hidden md:flex flex-col items-center py-4 gap-1.5 border-r print:hidden"
       style={{ borderColor: "#E8DFD2", background: "var(--sidebar-bg, #F5EEE3)" }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -46,7 +29,7 @@ export default function Sidebar({ pages, unreadMessages, unreadChat, baseEmoji }
       />
       <nav className="flex-1 flex flex-col items-center gap-1">
         {pages.map((p) => (
-          <NavItem key={p.key} href={p.href} label={p.label} icon={ICONS[p.key] ?? "📄"} unreadCount={getUnread(p.key)} />
+          <NavItem key={p.key} href={p.href} label={p.label} icon={navIcon(p.key)} unreadCount={navUnread(p.key, unreadChat)} />
         ))}
       </nav>
       {baseEmoji && <div aria-hidden="true" className="text-2xl pb-1">{baseEmoji}</div>}

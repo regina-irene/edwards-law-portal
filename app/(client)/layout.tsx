@@ -5,6 +5,7 @@ import { getSession, getPortalClient, getActivePreviewEmail } from "@/lib/portal
 import { stopPreview } from "@/app/preview-actions"
 import { sql } from "@/lib/db"
 import Sidebar from "@/components/nav/Sidebar"
+import BottomNav from "@/components/nav/BottomNav"
 import Motif from "@/components/ui/Motif"
 import { getClientNav } from "@/lib/portal-pages"
 import { getClientPrefs } from "@/lib/client-prefs"
@@ -114,6 +115,9 @@ export default async function ClientLayout({ children }: { children: React.React
       }}
     >
       <Sidebar pages={pages} unreadMessages={unread.messages} unreadChat={unread.chat} baseEmoji={scheme.titleEmoji} />
+      {/* Phones only: the icon rail is hidden below `md`, so the same pages sit
+          in a fixed bottom tab bar instead. */}
+      <BottomNav pages={pages} unreadChat={unread.chat} />
       <Motif />
       <SchemeDecor scheme={scheme} />
       <div className="flex-1 flex flex-col min-h-0">
@@ -137,7 +141,9 @@ export default async function ClientLayout({ children }: { children: React.React
             <JokeStrip />
           </Suspense>
         )}
-        <main className="flex-1 px-6 py-8 md:px-10 overflow-auto relative z-10">{children}</main>
+        {/* pb-24 below `md` keeps page content and the message composer clear
+            of the fixed bottom tab bar; pt-8 + md:pb-8 is the old py-8. */}
+        <main className="flex-1 px-6 pt-8 pb-24 md:px-10 md:pb-8 overflow-auto relative z-10">{children}</main>
       </div>
     </div>
   )

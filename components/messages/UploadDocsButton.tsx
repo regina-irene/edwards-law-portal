@@ -1,5 +1,7 @@
 "use client"
-
+// components/messages/UploadDocsButton.tsx — the "send files" modal: drop or
+// browse for documents, watch each one upload, and get a plain confirmation
+// that they reached the legal team.
 import { useState, useEffect } from "react"
 import FileDropzone, { DropFile } from "@/components/ui/FileDropzone"
 
@@ -10,6 +12,7 @@ export default function UploadDocsButton({
   heading = "Upload documents",
   blurb = "Files are saved to the firm's Google Drive folder.",
   actionLabel = "Upload to Drive",
+  successNote = "You'll also see them listed in your messages, so you can check back any time on what you sent.",
 }: {
   endpoint?: string
   label?: string
@@ -17,10 +20,14 @@ export default function UploadDocsButton({
   heading?: string
   blurb?: string
   actionLabel?: string
+  successNote?: string
 } = {}) {
   const [open, setOpen] = useState(false)
   const [files, setFiles] = useState<DropFile[]>([])
   const [uploading, setUploading] = useState(false)
+  // What the last run actually managed, so the modal can say so instead of
+  // leaving the client guessing whether anything arrived.
+  const [result, setResult] = useState<{ sent: number; failed: number } | null>(null)
 
   // While files are uploading, warn the user if they try to close or navigate away.
   useEffect(() => {
@@ -60,13 +67,19 @@ export default function UploadDocsButton({
 
   async function upload() {
     setUploading(true)
+    setResult(null)
+    let sent = 0
+    let failed = 0
     for (const f of files) {
       if (f.status !== "ready") continue
       setFiles((prev) => prev.map((x) => (x.id === f.id ? { ...x, status: "uploading", progress: 0 } : x)))
       const { ok, msg } = await uploadOne(f)
+      if (ok) sent++
+      else failed++
       setFiles((prev) => prev.map((x) => (x.id === f.id ? { ...x, status: ok ? "done" : "error", progress: ok ? 100 : x.progress, errorMessage: ok ? undefined : msg } : x)))
     }
     setUploading(false)
+    setResult({ sent, failed })
   }
 
   const pending = files.filter((f) => f.status === "ready").length
@@ -93,6 +106,29 @@ export default function UploadDocsButton({
                 <span className="text-base leading-none">⏳</span>
                 <p className="text-xs text-amber-800">
                   Uploading… please keep this window open and don&apos;t close or leave the page until your files finish.
+                </p>
+              </div>
+            )}
+
+            {!uploading && result && result.sent > 0 && (
+              <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5">
+                <p className="text-sm font-semibold text-green-900">
+                  ✅ {result.sent} {result.sent === 1 ? "file" : "files"} sent — your legal team has {result.sent === 1 ? "it" : "them"}.
+                </p>
+                <p className="text-xs text-green-800 mt-0.5">{successNote}</p>
+                {result.failed > 0 && (
+                  <p className="text-xs text-amber-800 mt-1.5">
+                    {result.failed} {result.failed === 1 ? "file didn't" : "files didn't"} go through — {result.failed === 1 ? "it's" : "they're"} marked above. You can try again.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {!uploading && result && result.sent === 0 && result.failed > 0 && (
+              <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5">
+                <p className="text-sm font-semibold text-red-900">Nothing was sent.</p>
+                <p className="text-xs text-red-800 mt-0.5">
+                  Please check your connection and try again. If it keeps failing, email us and we&apos;ll sort it out.
                 </p>
               </div>
             )}

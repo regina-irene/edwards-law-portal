@@ -81,3 +81,15 @@ h1, h2.serif {
 }
 .nav-item.nav-item-active:hover { background: var(--nav-active-bg, #1B2D45); }
 h1.page-title::before { content: var(--scheme-title-emoji, ""); }
+
+/* Phone bottom tab bar (2026-08-18): clears the iOS home indicator so the last
+   row of tabs is not sitting under it. */
+.bottom-nav-safe { padding-bottom: max(0.25rem, env(safe-area-inset-bottom)); }
+
+/* On a touchscreen the :hover wash sticks after a tap, which left the last tab
+   the client touched looking like the page they were on. Pointer devices keep
+   the hover behaviour exactly as it is. */
+@media (hover: none) {
+  .nav-item:hover { background: transparent; }
+  .nav-item.nav-item-active:hover { background: var(--nav-active-bg, #1B2D45); }
+}

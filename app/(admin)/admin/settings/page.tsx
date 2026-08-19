@@ -19,6 +19,7 @@ import { CSS } from "@dnd-kit/utilities"
 import PageTitle from "@/components/ui/PageTitle"
 import { taglineFor } from "@/lib/taglines"
 import SchemePicker from "@/components/settings/SchemePicker"
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
 import { DEFAULT_SCHEME_KEY } from "@/lib/color-schemes"
 
 const BUILTIN_LABELS: Record<string, string> = {
@@ -60,6 +61,7 @@ export default function AdminSettingsPage() {
   const [scheme, setScheme] = useState(DEFAULT_SCHEME_KEY)
   const [gradient, setGradient] = useState(false)
   const [themeStatus, setThemeStatus] = useState<"idle" | "saving" | "saved">("idle")
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null)
 
   const sensors = useSensors(useSensor(PointerSensor))
 
@@ -125,7 +127,7 @@ export default function AdminSettingsPage() {
   }
 
   async function deletePage(slug: string) {
-    if (!confirm("Delete this page? Its content will be removed.")) return
+    setPendingDelete(null)
     await fetch("/api/admin/custom-pages", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug }) })
     loadAll()
   }
@@ -177,7 +179,7 @@ export default function AdminSettingsPage() {
           <SortableContext items={pages} strategy={verticalListSortingStrategy}>
             <div className="space-y-2">
               {pages.map((page) => (
-                <SortableItem key={page} id={page} label={labels[page] ?? page} isCustom={customKeys.has(page)} onDelete={deletePage} />
+                <SortableItem key={page} id={page} label={labels[page] ?? page} isCustom={customKeys.has(page)} onDelete={setPendingDelete} />
               ))}
             </div>
           </SortableContext>
@@ -187,6 +189,15 @@ export default function AdminSettingsPage() {
         </button>
         <p className="text-xs text-gray-400">Turn pages on/off (default for all clients) with the checkboxes in <strong>Global Pages</strong>; override per client in each client&apos;s Pages editor.</p>
       </section>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={pendingDelete ? `Delete the “${labels[pendingDelete] ?? pendingDelete}” page?` : "Delete this page?"}
+        body="The page comes out of the navigation and everything written on it is removed. This can't be undone."
+        confirmLabel="Delete page"
+        onConfirm={() => { if (pendingDelete) deletePage(pendingDelete) }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   )
 }
