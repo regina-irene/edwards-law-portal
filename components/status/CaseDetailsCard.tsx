@@ -300,6 +300,17 @@ export default function CaseDetailsCard({
                         </span>
                       ))}
                     </span>
+                  ) : f.display.kind === "link" ? (
+                    <a
+                      href={f.display.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline break-all hover:opacity-75"
+                      style={{ color: "#1b2d45" }}
+                      title={f.display.href}
+                    >
+                      {f.display.label}
+                    </a>
                   ) : (
                     f.display.text
                   )}

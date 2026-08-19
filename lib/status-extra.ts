@@ -7,6 +7,7 @@
 // than guessed at - a client should never be shown "[object Object]", and a
 // field the portal can't describe is better left off the page entirely.
 import { longDate, fullStamp } from "@/lib/dates"
+import { isUrlLike, hrefFor, shortenUrl } from "@/lib/linkify"
 import { STATUS_TABLE_ID } from "@/lib/status-fields"
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!
@@ -16,6 +17,8 @@ const MAIN_BASE_ID = process.env.AIRTABLE_MAIN_BASE_ID!
 export type ExtraFieldDisplay =
   | { kind: "text"; text: string }
   | { kind: "chips"; values: string[] }
+  /** A URL field, or a value that is nothing but a URL. Rendered as an anchor. */
+  | { kind: "link"; href: string; label: string }
 
 export interface ExtraField {
   name: string
@@ -56,6 +59,11 @@ export function renderFieldValue(value: unknown): ExtraFieldDisplay | null {
     }
     if (DATE_TIME.test(text) && isRealDate(text)) {
       return { kind: "text", text: fullStamp(text) }
+    }
+    // A whole-value URL (an Airtable url field, a Drive link) becomes a real
+    // link rather than an address the client has to select and copy.
+    if (isUrlLike(text)) {
+      return { kind: "link", href: hrefFor(text), label: shortenUrl(text) }
     }
     return { kind: "text", text }
   }
