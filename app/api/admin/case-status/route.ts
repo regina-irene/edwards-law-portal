@@ -1,0 +1,87 @@
+// app/api/admin/case-status/route.ts — the admin Status board: read every
+// client's case stage + client-facing status text, and save changes back to
+// the Airtable Status table. Admin-only; this writes to Regina's live base.
+import { NextResponse } from "next/server"
+import { requireAdmin } from "@/lib/admin"
+import { buildStatusBoard, updateCaseStatus, CASE_STAGE_CHOICES } from "@/lib/case-status"
+
+export const dynamic = "force-dynamic"
+
+export async function GET() {
+  const check = await requireAdmin()
+  if (check.status !== "ok") return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  try {
+    // Joins the client roster to the Status board on clientId === record id, and
+    // keeps clients with no Status row so nobody silently disappears.
+    const rows = await buildStatusBoard()
+    return NextResponse.json({ rows })
+  } catch (e) {
+    console.error("[case-status] load failed:", e)
+    return NextResponse.json({ error: "Couldn't load the case board right now." }, { status: 500 })
+  }
+}
+
+interface PatchBody {
+  recordId?: unknown
+  stages?: unknown
+  statusText?: unknown
+}
+
+export async function PATCH(req: Request) {
+  const check = await requireAdmin()
+  if (check.status !== "ok") return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const body = (await req.json().catch(() => null)) as PatchBody | null
+  const recordId = typeof body?.recordId === "string" ? body.recordId.trim() : ""
+  if (!recordId.startsWith("rec")) {
+    return NextResponse.json({ error: "A valid case record id is required." }, { status: 400 })
+  }
+
+  const patch: { stages?: string[]; statusText?: string } = {}
+  const rawStages: unknown = body ? body.stages : undefined
+  const rawStatusText: unknown = body ? body.statusText : undefined
+
+  if (rawStages !== undefined) {
+    if (!Array.isArray(rawStages)) {
+      return NextResponse.json({ error: "Stages must be a list." }, { status: 400 })
+    }
+    const stages = rawStages
+      .map((s: unknown) => (typeof s === "string" ? s.trim() : ""))
+      .filter((s: string) => s.length > 0)
+    // Validate against the board's real option list. Airtable would happily
+    // create a brand-new select option from a typo, so reject rather than write
+    // junk into the live base.
+    const unknownStages = stages.filter((s) => !CASE_STAGE_CHOICES.includes(s))
+    if (unknownStages.length > 0) {
+      return NextResponse.json(
+        { error: `Unknown case stage: ${unknownStages.join(", ")}` },
+        { status: 400 }
+      )
+    }
+    // De-duplicate; a multi-select can't hold the same option twice.
+    patch.stages = Array.from(new Set(stages))
+  }
+
+  if (rawStatusText !== undefined) {
+    if (typeof rawStatusText !== "string") {
+      return NextResponse.json({ error: "Status text must be text." }, { status: 400 })
+    }
+    patch.statusText = rawStatusText.trim()
+  }
+
+  if (patch.stages === undefined && patch.statusText === undefined) {
+    return NextResponse.json({ error: "Nothing to save." }, { status: 400 })
+  }
+
+  try {
+    await updateCaseStatus(recordId, patch)
+    return NextResponse.json({ ok: true, recordId, ...patch })
+  } catch (e) {
+    console.error("[case-status] save failed:", e)
+    return NextResponse.json(
+      { error: "Airtable wouldn't accept that save — nothing was changed." },
+      { status: 502 }
+    )
+  }
+}

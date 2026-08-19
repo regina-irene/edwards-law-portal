@@ -3,6 +3,7 @@
 // the case dates in the middle in date order (oldest first), and the
 // court/case facts on the right. Chips use the Airtable board colors.
 import type { CaseStatusInfo } from "@/lib/airtable"
+import { plainStage } from "@/lib/case-status"
 import {
   stageColor,
   caseTypeColor,
@@ -18,15 +19,14 @@ function shortDate(d: string): string {
   return new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 }
 
-// "4 - Post Answer Dis." → "Post Answer Dis." (internal ordering prefix)
-function prettyStage(name: string): string {
-  return name.replace(/^\d+\s*-\s*/, "").trim()
-}
-
-function Chip({ value, color }: { value: string; color: ChipColor }) {
+// Stage chips read as plain English ("Gathering information from both sides"),
+// never the board's internal shorthand ("4 - Post Answer Dis."). See
+// STAGE_PLAIN in lib/case-status.ts. `soft` just lets those longer labels wrap
+// without the pill looking broken.
+function Chip({ value, color, soft = false }: { value: string; color: ChipColor; soft?: boolean }) {
   return (
     <span
-      className="inline-block px-2.5 py-0.5 rounded-full text-sm font-semibold border border-black/5"
+      className={`inline-block px-2.5 py-0.5 text-sm font-semibold border border-black/5 ${soft ? "rounded-2xl leading-snug" : "rounded-full"}`}
       style={{ background: color.bg, color: color.text }}
     >
       {value}
@@ -101,7 +101,7 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
           <ColumnTitle>Stage</ColumnTitle>
           {info.stages.length > 0 ? (
             <div className="flex flex-col items-start gap-1.5">
-              {info.stages.map((s) => <Chip key={s} value={prettyStage(s)} color={stageColor(s)} />)}
+              {info.stages.map((s) => <Chip key={s} value={plainStage(s)} color={stageColor(s)} soft />)}
             </div>
           ) : (
             <p className="text-sm text-gray-400">—</p>
