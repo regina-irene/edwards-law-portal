@@ -3,6 +3,8 @@
 // the case dates in the middle in date order (oldest first), and the
 // court/case facts on the right. Chips use the Airtable board colors.
 import type { CaseStatusInfo } from "@/lib/airtable"
+// Type-only — nothing from lib reaches the browser through this import.
+import type { ExtraField } from "@/lib/status-extra"
 import { plainStage } from "@/lib/case-status"
 import {
   stageColor,
@@ -65,20 +67,52 @@ interface CaseDetailsCardProps {
   info: CaseStatusInfo
   recentFilings?: RecentFiling[]
   nextCourt?: NextCourtDate | null
+  /**
+   * Airtable field names this client is allowed to see (lib/status-fields).
+   * Omitted means "everything below", which is what the card did before the
+   * setting existed — so a page that doesn't pass it is unchanged.
+   */
+  visibleFields?: readonly string[]
+  /** Extra board fields switched on for this client, already formatted. */
+  extraFields?: ExtraField[]
 }
 
-export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }: CaseDetailsCardProps) {
+export default function CaseDetailsCard({
+  info,
+  recentFilings = [],
+  nextCourt,
+  visibleFields,
+  extraFields = [],
+}: CaseDetailsCardProps) {
+  const allowed = visibleFields ? new Set(visibleFields) : null
+  // Field names are the board's own, two spaces in "Plf /  Dft" and all.
+  const shows = (field: string): boolean => (allowed ? allowed.has(field) : true)
+
   // middle column, in Regina's fixed order
-  const rows: { label: string; value: string; done: boolean }[] = [
-    { label: "Case Filed", value: info.caseFiled ? shortDate(info.caseFiled) : "—", done: Boolean(info.caseFiled) },
-    { label: "Service Perfected", value: info.servicePerfected ? "Yes" : "Not yet", done: info.servicePerfected },
-    { label: "Date of Service", value: info.dateOfService ? shortDate(info.dateOfService) : "—", done: Boolean(info.dateOfService) },
+  const allRows: { label: string; value: string; done: boolean; field: string; alt?: string }[] = [
+    { label: "Case Filed", value: info.caseFiled ? shortDate(info.caseFiled) : "—", done: Boolean(info.caseFiled), field: "Case Filed" },
+    { label: "Service Perfected", value: info.servicePerfected ? "Yes" : "Not yet", done: info.servicePerfected, field: "Service Perfected?" },
+    { label: "Date of Service", value: info.dateOfService ? shortDate(info.dateOfService) : "—", done: Boolean(info.dateOfService), field: "Date of Service" },
     {
       label: "Answer Filed",
       value: info.dateAnswerFiled ? shortDate(info.dateAnswerFiled) : info.answerFiled ? "Yes" : "Not yet",
       done: Boolean(info.dateAnswerFiled) || info.answerFiled,
+      // One row, two board fields — it shows while either is switched on.
+      field: "Answer Filed?",
+      alt: "Date Answer Filed",
     },
   ]
+  const rows = allRows.filter((r) => shows(r.field) || (r.alt !== undefined && shows(r.alt)))
+
+  const showCounty = Boolean(info.county) && shows("County")
+  const showJudge = Boolean(info.judge) && shows("Judge")
+  const showCaseTypes = info.caseTypes.length > 0 && shows("Case Type")
+  const showPlfDft = Boolean(info.plfDft) && shows("Plf /  Dft")
+
+  const showKeyDates = rows.length > 0
+  const showCaseInfo = showCounty || showJudge || showCaseTypes || showPlfDft || recentFilings.length > 0
+  // Keep today's 2/3-column behaviour: nothing hidden means nothing moves.
+  const columnCount = [showKeyDates, showCaseInfo, Boolean(nextCourt)].filter(Boolean).length
 
   return (
     <div>
@@ -96,21 +130,32 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
       {/* Stage sits across the top rather than owning a whole column of its own
           (2026-08-18). It is usually one chip, so a full column left three
           quarters of that space empty and squeezed everything else. */}
-      <div className="mb-4">
-        <ColumnTitle>Stage</ColumnTitle>
+      {shows("Case Stage") && (
+      /* Label and chip sit on ONE line. Using the column heading here put a
+         full-width rule under the word "Stage" with a lone chip stranded
+         beneath it, which read as a broken column rather than a banner. */
+      <div
+        className="mb-4 flex items-baseline gap-3 flex-wrap border-b-2 pb-2"
+        style={{ borderColor: "#E0CD9E" }}
+      >
+        <h3 className="text-[13px] uppercase tracking-wider font-bold shrink-0" style={{ color: "#5b451c" }}>
+          Stage
+        </h3>
         {info.stages.length > 0 ? (
-          <div className="flex flex-wrap items-start gap-1.5">
+          <div className="flex flex-wrap items-baseline gap-1.5">
             {info.stages.map((s) => <Chip key={s} value={plainStage(s)} color={stageColor(s)} soft />)}
           </div>
         ) : (
           <p className="text-sm text-gray-400">—</p>
         )}
       </div>
+      )}
 
       {/* Equal-width columns: 1 per row on phones, 2 on tablets, side-by-side on desktop */}
-      <div className={`grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2 ${nextCourt ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
+      <div className={`grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2 ${columnCount >= 3 ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
 
         {/* Key dates in fixed order */}
+        {showKeyDates && (
         <div>
           <ColumnTitle>Key Dates</ColumnTitle>
           <ul>
@@ -123,30 +168,32 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
             ))}
           </ul>
         </div>
+        )}
 
         {/* Court + case facts */}
-        <div className={`${COL_DIVIDER} sm:border-t-0 sm:pt-0 sm:border-l sm:pl-5`}>
+        {showCaseInfo && (
+        <div className={showKeyDates ? `${COL_DIVIDER} sm:border-t-0 sm:pt-0 sm:border-l sm:pl-5` : ""}>
           <ColumnTitle>Case Info</ColumnTitle>
           <div className="space-y-2">
-            {info.county && (
+            {showCounty && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500 w-16 shrink-0">County</span>
                 <Chip value={info.county.replace(/^\*/, "")} color={countyColor(info.county)} />
               </div>
             )}
-            {info.judge && (
+            {showJudge && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500 w-16 shrink-0">Judge</span>
                 <Chip value={info.judge} color={judgeColor(info.judge)} />
               </div>
             )}
-            {info.caseTypes.length > 0 && (
+            {showCaseTypes && (
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm text-gray-500 w-16 shrink-0">Type</span>
                 {info.caseTypes.map((t) => <Chip key={t} value={t} color={caseTypeColor(t)} />)}
               </div>
             )}
-            {info.plfDft && (
+            {showPlfDft && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500 w-16 shrink-0">You are</span>
                 <Chip value={info.plfDft} color={plfDftColor(info.plfDft)} />
@@ -191,10 +238,11 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
             </div>
           )}
         </div>
+        )}
 
         {/* Next court date — full title, never cut off */}
         {nextCourt && (
-          <div className={COL_DIVIDER}>
+          <div className={showKeyDates || showCaseInfo ? COL_DIVIDER : ""}>
             <ColumnTitle>Next Important Calendar Date</ColumnTitle>
             <p className="text-lg font-bold" style={{ color: "#1b2d45" }}>
               {new Date(nextCourt.start).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
@@ -209,6 +257,41 @@ export default function CaseDetailsCard({ info, recentFilings = [], nextCourt }:
         )}
 
       </div>
+
+      {/* Extra board fields the firm has explicitly switched on for this client
+          (Settings → Case Status fields, or the per-client override). Everything
+          already drawn above is filtered out upstream, so nothing repeats, and
+          this whole section disappears when nothing is switched on — which is
+          the default for every field the portal didn't already show. */}
+      {extraFields.length > 0 && (
+        <div className="mt-5 pt-4 border-t" style={{ borderColor: "#E8D9B5" }}>
+          <ColumnTitle>More Case Information</ColumnTitle>
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-2">
+            {extraFields.map((f) => (
+              <div key={f.name} className="flex items-baseline gap-2">
+                <dt className="text-sm text-gray-500 shrink-0">{f.name}</dt>
+                <dd className="text-sm font-semibold text-gray-900 break-words min-w-0">
+                  {f.display.kind === "chips" ? (
+                    <span className="flex flex-wrap gap-1.5">
+                      {f.display.values.map((v, i) => (
+                        <span
+                          key={`${v}-${i}`}
+                          className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold border border-black/5"
+                          style={{ background: "#F3E3BF", color: "#5b451c" }}
+                        >
+                          {v}
+                        </span>
+                      ))}
+                    </span>
+                  ) : (
+                    f.display.text
+                  )}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
       </div>
     </div>
   )

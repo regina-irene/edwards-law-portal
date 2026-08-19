@@ -19,6 +19,7 @@ import { CSS } from "@dnd-kit/utilities"
 import PageTitle from "@/components/ui/PageTitle"
 import { taglineFor } from "@/lib/taglines"
 import SchemePicker from "@/components/settings/SchemePicker"
+import StatusFieldsEditor from "@/components/admin/StatusFieldsEditor"
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
 import { DEFAULT_SCHEME_KEY } from "@/lib/color-schemes"
 
@@ -162,6 +163,19 @@ export default function AdminSettingsPage() {
           </button>
           {themeStatus === "saved" && <span className="text-sm text-green-700 font-medium">Saved! ✓</span>}
         </div>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-gray-800">Case Status fields clients see</h2>
+        <p className="text-xs text-gray-500">
+          The Case Status board is the firm&apos;s internal board — payment status, the judge,
+          drafting reminders, notes. Tick a field to put it on the client&apos;s Case Status page.
+          <strong> Anything left unticked stays hidden</strong>, and any field added to the board
+          later starts hidden until somebody ticks it here. This applies to{" "}
+          <strong>every client</strong>; override it for one client in that client&apos;s Pages
+          editor.
+        </p>
+        <StatusFieldsEditor />
       </section>
 
       <section className="space-y-3 max-w-md">

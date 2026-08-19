@@ -27,6 +27,8 @@ import { getStatusHistory } from "@/lib/status-history"
 import { resolveStatusHtml } from "@/lib/status-rich"
 import { RichTextView } from "@/components/ui/RichTextView"
 import { paymentStatusColor } from "@/lib/airtable-colors"
+import { resolveVisibleFields, ALREADY_ON_PAGE } from "@/lib/status-fields"
+import { getExtraFields } from "@/lib/status-extra"
 
 export default async function StatusPage() {
   const session = await auth()
@@ -40,14 +42,26 @@ export default async function StatusPage() {
   // way — otherwise formatting and history look up a key nobody ever wrote.
   const statusKey = String(client.clientId).split(",")[0].trim()
 
-  const [pageContent, billing, caseStatus, pleadings, events, history] = await Promise.all([
+  const [pageContent, billing, caseStatus, pleadings, events, history, visibleFields] = await Promise.all([
     getPageContent(client.clientId, "status"),
     getClientBilling(client.id),
     getCaseStatus(String(client.clientId)),
     getPleadings(client.clientBaseId),
     getCaseEvents(String(client.clientId)),
     getStatusHistory(statusKey),
+    // Which Status-board fields this client may see. Falls back to exactly the
+    // set the page has always shown if the settings can't be read, so a
+    // database problem can only ever show LESS, never more. See
+    // lib/status-fields.ts — anything not switched on is hidden.
+    resolveVisibleFields(statusKey),
   ])
+
+  // The additional switched-on fields, minus everything the page already draws
+  // so nothing appears twice. Alphabetical: the board has no order to inherit.
+  const extraFieldNames = [...visibleFields]
+    .filter((name) => !ALREADY_ON_PAGE.has(name))
+    .sort((a, b) => a.localeCompare(b))
+  const extraFields = caseStatus ? await getExtraFields(statusKey, extraFieldNames) : []
   // pleadings come back newest-first; surface the last 3 filings in Case Details
   const recentFilings = (pleadings ?? []).slice(0, 3).map((p) => ({
     title: p.title,
@@ -117,10 +131,12 @@ export default async function StatusPage() {
           info={caseStatus}
           recentFilings={recentFilings}
           nextCourt={nextCourt ? { title: nextCourt.title, start: nextCourt.start, allDay: nextCourt.allDay } : null}
+          visibleFields={[...visibleFields]}
+          extraFields={extraFields}
         />
       )}
 
-      {caseStatus?.paymentStatus && (
+      {caseStatus?.paymentStatus && visibleFields.has("Payment Status") && (
         <div className="flex items-center gap-2">
           <span className="text-xs uppercase tracking-wide font-semibold" style={{ color: "#1b2d45" }}>Payment Status</span>
           <span
