@@ -94,10 +94,19 @@ function escapeHtml(s: string): string {
 /**
  * The field-note body for a status change. Written into the admin-only case
  * log so the change is retained alongside everything else on the file.
+ *
+ * The quoted blocks carry the client-facing text as HTML, so bold, colour and
+ * highlighting survive into the note. Escaping the plain text here (the first
+ * version of this) meant the log recorded the words but threw away every bit
+ * of the emphasis they were written with. Callers pass already-sanitized HTML;
+ * plain text should be run through plainToHtml first.
  */
 export function statusChangeNoteHtml(args: {
   fromStages: string[]
   toStages: string[]
+  fromHtml: string
+  toHtml: string
+  /** Plain text, used only to decide whether the wording actually changed. */
   fromText: string
   toText: string
 }): string {
@@ -114,11 +123,11 @@ export function statusChangeNoteHtml(args: {
 
   if (args.fromText !== args.toText) {
     if (args.fromText) {
-      parts.push(`<p>Previous update to the client:</p><blockquote>${escapeHtml(args.fromText)}</blockquote>`)
+      parts.push(`<p>Previous update to the client:</p><blockquote>${args.fromHtml}</blockquote>`)
     }
     parts.push(
       args.toText
-        ? `<p>Now reads to the client:</p><blockquote>${escapeHtml(args.toText)}</blockquote>`
+        ? `<p>Now reads to the client:</p><blockquote>${args.toHtml}</blockquote>`
         : "<p>The client-facing update was cleared.</p>"
     )
   }

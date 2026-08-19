@@ -7,7 +7,8 @@ import { buildStatusBoard, updateCaseStatus, CASE_STAGE_CHOICES } from "@/lib/ca
 import { getCaseStatus } from "@/lib/airtable"
 import { appendStatusHistory, statusChangeNoteHtml } from "@/lib/status-history"
 import { createNote } from "@/lib/notes"
-import { saveRichStatus, statusHtmlToPlain } from "@/lib/status-rich"
+import { saveRichStatus, statusHtmlToPlain, getRichStatus, hashOf } from "@/lib/status-rich"
+import { plainToHtml } from "@/lib/message-format"
 import { sanitizeNotesHtml } from "@/lib/sanitize"
 
 export const dynamic = "force-dynamic"
@@ -94,9 +95,13 @@ export async function PATCH(req: Request) {
 
   try {
     // Read the current values BEFORE writing, so the record of the change can
-    // say what it changed from. Fails soft: an unreadable "before" costs the
-    // note its comparison, never the save itself.
-    const before = await getCaseStatus(recordId).catch(() => null)
+    // say what it changed from — including the formatting it was written with.
+    // Fails soft: an unreadable "before" costs the note its comparison, never
+    // the save itself.
+    const [before, beforeRich] = await Promise.all([
+      getCaseStatus(recordId).catch(() => null),
+      getRichStatus(recordId).catch(() => null),
+    ])
 
     await updateCaseStatus(recordId, patch)
 
@@ -128,9 +133,17 @@ export async function PATCH(req: Request) {
         stages: toStages,
         by: check.name || check.email,
       })
+      // Use the stored formatting for the "before" quote only while it still
+      // matches the words it was saved against; otherwise quote plain text.
+      const fromHtml =
+        beforeRich && beforeRich.hash === hashOf(fromText)
+          ? beforeRich.html
+          : plainToHtml(fromText)
+      const toHtml = statusHtml ?? plainToHtml(toText)
+
       await createNote(
         recordId,
-        statusChangeNoteHtml({ fromStages, toStages, fromText, toText }),
+        statusChangeNoteHtml({ fromStages, toStages, fromHtml, toHtml, fromText, toText }),
         { email: check.email, name: check.name }
       ).catch((e) => {
         console.error("[case-status] field note failed:", e)
