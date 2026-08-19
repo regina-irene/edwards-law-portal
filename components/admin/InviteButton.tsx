@@ -5,6 +5,11 @@
 
 import { useState } from "react"
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
+import {
+  CLIENT_ACTION_CLS,
+  CLIENT_ACTION_ICON_CLS,
+  CLIENT_ACTION_LABEL_CLS,
+} from "@/components/admin/client-action-style"
 
 type Status = "idle" | "sending" | "sent" | "error"
 
@@ -32,10 +37,10 @@ export default function InviteButton({ email, firstName }: { email: string; firs
         onClick={() => setConfirming(true)}
         disabled={status === "sending" || status === "sent"}
         title={`Email portal login instructions to ${email}`}
-        className="flex flex-col items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors w-[4.5rem] disabled:opacity-70"
+        className={CLIENT_ACTION_CLS}
       >
-        <span className="text-2xl leading-none">{status === "sent" ? "✅" : "✉️"}</span>
-        <span className={`text-[11px] font-medium ${status === "error" ? "text-red-600" : "text-gray-600"}`}>
+        <span className={CLIENT_ACTION_ICON_CLS}>{status === "sent" ? "✅" : "✉️"}</span>
+        <span className={status === "error" ? "text-[11px] font-medium text-red-600" : CLIENT_ACTION_LABEL_CLS}>
           {status === "sending" ? "Sending…" : status === "sent" ? "Sent" : status === "error" ? "Retry" : "Invite"}
         </span>
       </button>

@@ -9,6 +9,11 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
+import {
+  CLIENT_ACTION_CLS,
+  CLIENT_ACTION_ICON_CLS,
+  CLIENT_ACTION_LABEL_CLS,
+} from "@/components/admin/client-action-style"
 
 export default function ArchiveButton({
   recordId,
@@ -65,9 +70,9 @@ export default function ArchiveButton({
 
   return (
     <>
-      {/* The failure message sits under the button rather than in a toast, so
-          the row that didn't change is the row that says so. */}
-      <span className="flex flex-col items-center">
+      {/* The failure message sits beside the button rather than under it, so a
+          failed row stays the same height as every other row. */}
+      <span className="inline-flex items-center gap-1 min-w-0">
         <button
           type="button"
           onClick={() => { setError(null); setConfirming(true) }}
@@ -79,15 +84,15 @@ export default function ArchiveButton({
                 ? `Restore ${who} to the active client list`
                 : `Archive ${who} — closed case, read-only for ${graceDays} days`
           }
-          className="flex flex-col items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors w-[4.5rem] disabled:opacity-70"
+          className={CLIENT_ACTION_CLS}
         >
-          <span className="text-2xl leading-none">{saving ? "⏳" : archived ? "♻️" : "🗄️"}</span>
-          <span className={`text-[11px] font-medium ${error ? "text-red-600" : "text-gray-600"}`}>
+          <span className={CLIENT_ACTION_ICON_CLS}>{saving ? "⏳" : archived ? "♻️" : "🗄️"}</span>
+          <span className={error ? "text-[11px] font-medium text-red-600" : CLIENT_ACTION_LABEL_CLS}>
             {saving ? "Saving…" : error ? "Retry" : archived ? "Restore" : "Archive"}
           </span>
         </button>
         {error && (
-          <span role="status" className="mt-0.5 max-w-[10rem] text-center text-[10px] leading-tight text-red-600">
+          <span role="status" title={error} className="max-w-[9rem] truncate text-[10px] leading-tight text-red-600">
             {error}
           </span>
         )}
