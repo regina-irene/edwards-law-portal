@@ -8,6 +8,7 @@ import { taglineFor } from "@/lib/taglines"
 import { requireAdmin } from "@/lib/admin"
 import { refreshStatusBoard } from "./actions"
 import StatusBoard, { type StageOption } from "@/components/status/StatusBoard"
+import ArchiveToggle from "@/components/admin/ArchiveToggle"
 import {
   buildStatusBoard,
   computeStuckFlags,
@@ -30,15 +31,24 @@ function formatRefreshed(ms: number): string {
   })
 }
 
-export default async function AdminStatusPage() {
+export default async function AdminStatusPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ archived?: string }>
+}) {
   const check = await requireAdmin()
   if (check.status !== "ok") redirect("/login")
+
+  // In the URL so it survives a refresh. buildStatusBoard defaults to hiding
+  // archived cases, so only this page's toggle ever asks for them.
+  const { archived: archivedParam } = await searchParams
+  const includeArchived = archivedParam === "1"
 
   // A failed read must show an explicit error, never a false "no cases".
   let rows: CaseStatusBoardRow[] = []
   let loadError = false
   try {
-    rows = await buildStatusBoard()
+    rows = await buildStatusBoard({ includeArchived })
   } catch {
     loadError = true
   }
@@ -72,6 +82,14 @@ export default async function AdminStatusPage() {
         Anything you save here appears on that client&apos;s Status page. Stage names are shown in plain
         English; hover a pill to see the value on the Airtable board.
       </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <ArchiveToggle basePath="/admin/status" includeArchived={includeArchived} />
+        <span className="text-xs text-gray-400">
+          {includeArchived
+            ? "Closed cases are shown, marked Archived. They're never flagged as stuck."
+            : "Closed cases are hidden."}
+        </span>
+      </div>
       <StatusBoard
         initialRows={rows}
         stageOptions={stageOptions}

@@ -9,6 +9,7 @@
 // decides what a human actually reads.
 import { unstable_cache, revalidateTag } from "next/cache"
 import { getAllClients, clientDisplayLabel } from "@/lib/airtable"
+import { archiveNotes, noteFor, type ArchiveNote } from "@/lib/admin-archive"
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!
 const MAIN_BASE_ID = process.env.AIRTABLE_MAIN_BASE_ID!
@@ -220,6 +221,20 @@ export interface CaseStatusBoardRow {
   daysSinceUpdate: number | null
   /** false when this client has no row on the Status board at all. */
   hasStatusRecord: boolean
+  /** "Archived" on the Clients board — a former or closed case. */
+  archived: boolean
+  /** "closed 12 days ago" / "access ended". Empty for an active case. */
+  archiveNote: string
+}
+
+export interface StatusBoardOptions {
+  /**
+   * Archived cases are OFF by default, so every existing caller — the board
+   * page, the GET route and the assist endpoint — hides closed cases without
+   * needing a change. Only a screen with an explicit "Include archived" toggle
+   * should pass true.
+   */
+  includeArchived?: boolean
 }
 
 // The portal's clientId is the Status record id ("Client ID" on Clients is a
@@ -233,8 +248,12 @@ function statusRecordId(clientId: string): string {
  * Clients joined to their Status row. Clients with no Status record are still
  * returned (empty stages, hasStatusRecord false) so nobody silently vanishes
  * from the board.
+ *
+ * Archived (former) clients are left out unless `includeArchived` is set — a
+ * closed case shouldn't sit on the working board, or be counted as stuck.
  */
-export async function buildStatusBoard(): Promise<CaseStatusBoardRow[]> {
+export async function buildStatusBoard(options: StatusBoardOptions = {}): Promise<CaseStatusBoardRow[]> {
+  const includeArchived = options.includeArchived === true
   // Deliberately NOT fail-soft. If either read fails, this THROWS so the page
   // and the API route show "couldn't load". Swallowing the error produced a
   // board where every case read "no stage set", and saving such a row sent
@@ -247,8 +266,17 @@ export async function buildStatusBoard(): Promise<CaseStatusBoardRow[]> {
   const byRecordId = new Map<string, CaseStatusRow>()
   for (const s of statuses) if (s.recordId) byRecordId.set(s.recordId, s)
 
+  const wanted = includeArchived ? clients : clients.filter((c) => !c.archived)
+
+  // Only worth a database round-trip when archived rows are actually going to
+  // be shown; the notes are just the "closed 12 days ago" line beside the chip.
+  // Fails soft inside archiveNotes, so a stamp problem can't blank the board.
+  const notes: Map<string, ArchiveNote> = includeArchived
+    ? await archiveNotes(wanted)
+    : new Map<string, ArchiveNote>()
+
   const rows: CaseStatusBoardRow[] = []
-  for (const c of clients) {
+  for (const c of wanted) {
     const recordId = statusRecordId(c.clientId)
     if (!recordId) continue
     const status = byRecordId.get(recordId)
@@ -267,6 +295,8 @@ export async function buildStatusBoard(): Promise<CaseStatusBoardRow[]> {
       lastModified,
       daysSinceUpdate: daysSince(lastModified),
       hasStatusRecord: Boolean(status),
+      archived: c.archived,
+      archiveNote: c.archived ? noteFor(notes, String(c.clientId)).note : "",
     })
   }
   rows.sort((a, b) => a.name.localeCompare(b.name))
@@ -349,12 +379,18 @@ function median(values: number[]): number | null {
  *  2. nothing written in the client-facing status box
  *  3. sat noticeably longer than every other case at the same stage
  * One reason per case — the first that applies — so the marker stays readable.
+ *
+ * Archived cases are skipped entirely, and are also kept out of the stage
+ * medians: a closed case sitting untouched for a year is not stuck, and letting
+ * it into the comparison would drag the "everyone else moved" bar the wrong way.
  */
 export function computeStuckFlags(rows: CaseStatusBoardRow[]): CaseFlag[] {
+  const live = rows.filter((r) => !r.archived)
+
   // Median staleness of each stage group, so "everyone else moved" is measured
   // against comparable cases rather than the whole board.
   const groups = new Map<string, number[]>()
-  for (const row of rows) {
+  for (const row of live) {
     if (row.daysSinceUpdate === null) continue
     const key = row.stages.length > 0 ? row.stages[0] : "(none)"
     const bucket = groups.get(key)
@@ -363,7 +399,7 @@ export function computeStuckFlags(rows: CaseStatusBoardRow[]): CaseFlag[] {
   }
 
   const flags: CaseFlag[] = []
-  for (const row of rows) {
+  for (const row of live) {
     const days = row.daysSinceUpdate
 
     if (days !== null && days >= STALE_DAYS) {

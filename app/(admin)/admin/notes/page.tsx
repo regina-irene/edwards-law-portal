@@ -9,6 +9,8 @@ import CaseJump from "@/components/notes/CaseJump"
 import { taglineFor } from "@/lib/taglines"
 import { fetchAllClientsRaw, clientDisplayLabel } from "@/lib/airtable"
 import { getClientLabels } from "@/lib/client-labels"
+import { archiveNotes, noteFor } from "@/lib/admin-archive"
+import ArchivedChip from "@/components/admin/ArchivedChip"
 import { requireAdmin } from "@/lib/admin"
 import { latestNoteByClient, searchNotes, listNoteAuthors, countNotes, type NoteSearchHit } from "@/lib/notes"
 import { fetchAllEvents, clientProseName, type TimelineEvent } from "@/lib/notes-timeline"
@@ -51,17 +53,20 @@ function timeOf(d: string): string {
 export default async function FieldNotesHub({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; author?: string; case?: string; limit?: string; show?: string }>
+  searchParams: Promise<{ q?: string; author?: string; case?: string; limit?: string; show?: string; archived?: string }>
 }) {
   const check = await requireAdmin()
   if (check.status !== "ok") redirect("/login")
 
-  const { q, author, case: caseId, limit, show } = await searchParams
+  const { q, author, case: caseId, limit, show, archived } = await searchParams
   const query = (q ?? "").trim()
   const writer = (author ?? "").trim()
   const forCase = (caseId ?? "").trim()
   const kind = KINDS.some((k) => k.key === (show ?? "")) ? (show ?? "") : ""
   const shown = Math.min(Math.max(Number(limit) || PAGE, PAGE), 500)
+  // Rides along in the same GET form as the other filters, so it survives a
+  // refresh and stays put while you page through the log.
+  const includeArchived = archived === "1"
 
   // A failed read must show an explicit error, never a false "nothing here",
   // so carry the outcome rather than flattening it to an empty list.
@@ -81,12 +86,24 @@ export default async function FieldNotesHub({
   const labelOf = (id: string, fallbackName?: string) =>
     labels[id] || (fallbackName ? clientDisplayLabel(fallbackName) : "") || id
 
+  // Archived (former) clients drop out of the log and the case picker unless
+  // asked for. The label lookups above still cover them, so a row that IS shown
+  // never falls back to a raw record id.
+  const stamps = await archiveNotes(clients)
+  const archivedIds = new Set(clients.filter((c) => c.archived).map((c) => String(c.clientId)))
+  const archivedCount = archivedIds.size
+  const isArchived = (id: string) => archivedIds.has(id)
+  const archiveNoteOf = (id: string) => noteFor(stamps, id).note
+  const isHiddenCase = (id: string) => !includeArchived && isArchived(id)
+
   const cases = clients
     .filter((c) => c.clientId)
+    .filter((c) => includeArchived || !c.archived)
     .map((c) => ({
       id: String(c.clientId),
       label: labelOf(String(c.clientId), c.name),
       hasNotes: latest.has(String(c.clientId)),
+      archived: c.archived,
     }))
     .sort((a, b) => a.label.localeCompare(b.label))
 
@@ -103,18 +120,21 @@ export default async function FieldNotesHub({
   const kindMatch = KINDS.find((k) => k.key === kind) ?? KINDS[0]
   const eventRows: LogRow[] = events
     .filter((e) => e.clientId)
+    .filter((e) => !isHiddenCase(e.clientId!))
     .filter((e) => !forCase || e.clientId === forCase)
     .filter((e) => (kind ? kindMatch.match(e) : true))
     .filter((e) => !query || e.detail.toLowerCase().includes(query.toLowerCase()) || caseLabel(e.clientId!).toLowerCase().includes(query.toLowerCase()))
     .map((e) => ({ type: "event" as const, at: e.at, clientId: e.clientId!, key: e.id, event: e }))
 
-  const noteRows: LogRow[] = logResult.rows.map((n) => ({
-    type: "note" as const,
-    at: n.created_at,
-    clientId: n.clientId,
-    key: `note-${n.noteId}`,
-    note: n,
-  }))
+  const noteRows: LogRow[] = logResult.rows
+    .filter((n) => !isHiddenCase(n.clientId))
+    .map((n) => ({
+      type: "note" as const,
+      at: n.created_at,
+      clientId: n.clientId,
+      key: `note-${n.noteId}`,
+      note: n,
+    }))
 
   const merged = [...noteRows, ...eventRows]
     .sort((a, b) => {
@@ -137,6 +157,7 @@ export default async function FieldNotesHub({
   if (writer) params.set("author", writer)
   if (forCase) params.set("case", forCase)
   if (kind) params.set("show", kind)
+  if (includeArchived) params.set("archived", "1")
   params.set("limit", String(shown + PAGE))
 
   return (
@@ -182,6 +203,19 @@ export default async function FieldNotesHub({
         <button type="submit" className="px-4 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90" style={{ background: "#1b2d45" }}>
           Search
         </button>
+        {/* Submits with the rest of the filters, so ?archived=1 lands in the URL
+            and survives a refresh. */}
+        <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer select-none" title="Show former and closed cases as well">
+          <input
+            type="checkbox"
+            name="archived"
+            value="1"
+            defaultChecked={includeArchived}
+            className="h-3.5 w-3.5 rounded border-gray-300"
+          />
+          Include archived
+          {archivedCount > 0 && <span className="text-gray-400">({archivedCount})</span>}
+        </label>
         {filtered && (
           <Link href="/admin/notes" className="text-sm text-gray-400 hover:text-gray-700 underline">Clear</Link>
         )}
@@ -199,6 +233,7 @@ export default async function FieldNotesHub({
               {writer && ` · notes by ${writer}`}
               {forCase && ` · ${caseLabel(forCase)}`}
               {kind && ` · ${kindMatch.label.toLowerCase()}`}
+              {!includeArchived && archivedCount > 0 && ` · ${archivedCount} archived ${archivedCount === 1 ? "case" : "cases"} hidden`}
             </span>
           </div>
 
@@ -229,7 +264,10 @@ export default async function FieldNotesHub({
                       style={{ borderLeft: "3px solid #1b2d45" }}
                     >
                       <p className="flex items-baseline justify-between gap-3">
-                        <span className="text-sm font-semibold text-gray-900 truncate">📌 {caseLabel(entry.clientId)}</span>
+                        <span className="text-sm font-semibold text-gray-900 truncate">
+                          📌 {caseLabel(entry.clientId)}
+                          {isArchived(entry.clientId) && <ArchivedChip note={archiveNoteOf(entry.clientId)} className="ml-2" />}
+                        </span>
                         <span className="shrink-0 text-xs text-gray-400">
                           {timeOf(entry.at)}{entry.note.author_name && ` · ${entry.note.author_name}`}
                         </span>
@@ -239,9 +277,12 @@ export default async function FieldNotesHub({
                   ) : (
                     <div key={entry.key} className="px-5 py-2.5 hover:bg-gray-50" style={{ borderLeft: "3px solid transparent" }}>
                       <p className="flex items-baseline justify-between gap-3">
-                        <Link href={`/admin/notes/${encodeURIComponent(entry.clientId)}`} className="text-sm font-semibold text-gray-700 truncate hover:underline">
-                          {EVENT_ICONS[entry.event.kind] ?? "•"} {caseLabel(entry.clientId)}
-                        </Link>
+                        <span className="min-w-0 truncate">
+                          <Link href={`/admin/notes/${encodeURIComponent(entry.clientId)}`} className="text-sm font-semibold text-gray-700 hover:underline">
+                            {EVENT_ICONS[entry.event.kind] ?? "•"} {caseLabel(entry.clientId)}
+                          </Link>
+                          {isArchived(entry.clientId) && <ArchivedChip note={archiveNoteOf(entry.clientId)} className="ml-2" />}
+                        </span>
                         <span className="shrink-0 text-xs text-gray-400">{timeOf(entry.at)}</span>
                       </p>
                       <p className="text-[13px] text-gray-600 mt-0.5">

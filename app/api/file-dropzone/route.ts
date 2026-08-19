@@ -1,6 +1,6 @@
 // app/api/file-dropzone/route.ts — client: upload a dropped file to the firm's
 // Google Drive folder, and leave a note in the conversation saying it arrived.
-import { getPortalClient } from "@/lib/portal-client"
+import { assertClientCanWrite } from "@/lib/client-write-guard"
 import { deliverClientUpload, driveConfigured } from "@/lib/client-uploads"
 import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
@@ -55,8 +55,10 @@ async function recordUploadReceipt(clientId: string, fileName: string): Promise<
 }
 
 export async function POST(req: Request) {
-  const client = await getPortalClient()
-  if (!client) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  // Archived clients keep read access but can't send anything in.
+  const gate = await assertClientCanWrite()
+  if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status })
+  const client = gate.client
 
   const form = await req.formData().catch(() => null)
   const file = form?.get("file")

@@ -2,6 +2,8 @@ import { unstable_cache, revalidateTag } from "next/cache"
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!
 const MAIN_BASE_ID = process.env.AIRTABLE_MAIN_BASE_ID!
+// By id rather than name, so renaming the table on the board can't break writes.
+const CLIENTS_TABLE_ID = "tblPPcVwWJ3IjBRLu"
 
 export interface AirtableClient {
   id: string
@@ -13,6 +15,8 @@ export interface AirtableClient {
   statusOfCase: string
   smsReminders: boolean
   noMessageEmails: boolean
+  /** "Archived" checkbox on the Clients board. Closed/former clients. */
+  archived: boolean
 }
 
 export interface AirtableTask {
@@ -36,7 +40,37 @@ function mapClientRecord(r: any): AirtableClient {
     smsReminders: r.fields["SMS Reminders"] === true,
     // Opt-OUT checkbox: unchecked (default) = email the client on every firm message
     noMessageEmails: r.fields["No Message Emails"] === true,
+    // Airtable omits unchecked checkboxes entirely, so absent === not archived.
+    archived: r.fields["Archived"] === true,
   }
+}
+
+/**
+ * Tick or untick "Archived" on the Clients board (2026-08-18). Archiving is
+ * equally possible directly in Airtable — this just means the portal doesn't
+ * have to be a one-way mirror.
+ *
+ * Throws on failure so the caller can show a real error; a silent no-op here
+ * would leave the admin believing a client was archived when they weren't.
+ */
+export async function setClientArchived(recordId: string, archived: boolean): Promise<void> {
+  if (!recordId.startsWith("rec")) throw new Error("Invalid client record id")
+  const res = await fetch(
+    `https://api.airtable.com/v0/${MAIN_BASE_ID}/${CLIENTS_TABLE_ID}/${encodeURIComponent(recordId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ fields: { Archived: archived } }),
+    }
+  )
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "")
+    throw new Error(`Airtable save failed: ${res.status}${detail ? ` ${detail.slice(0, 300)}` : ""}`)
+  }
+  revalidateClients()
 }
 
 async function airtableFetch(url: string) {

@@ -1,5 +1,6 @@
 // app/api/chat/route.ts — client side of the two-way conversation
 import { getPortalClient } from "@/lib/portal-client"
+import { assertClientCanWrite } from "@/lib/client-write-guard"
 import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
 import { getWatch, getAdminPhone } from "@/lib/sms-watch"
@@ -43,8 +44,11 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const client = await getPortalClient()
-  if (!client?.clientId) return NextResponse.json({ error: "Client not found" }, { status: 404 })
+  // A closed client can still read the thread above (GET); they just can't add
+  // to it. UI-only gating is bypassable, so the refusal lives here.
+  const gate = await assertClientCanWrite()
+  if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status })
+  const client = gate.client
   const cid = String(client.clientId)
 
   let body: string

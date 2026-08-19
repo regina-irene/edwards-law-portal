@@ -1,6 +1,7 @@
 // Upload a file attachment for a message (admin or the owning client).
 import { requireAdmin } from "@/lib/admin"
 import { getPortalClient } from "@/lib/portal-client"
+import { assertClientCanWrite } from "@/lib/client-write-guard"
 import { sql } from "@/lib/db"
 import { deliverClientUpload } from "@/lib/client-uploads"
 import { put } from "@vercel/blob"
@@ -33,6 +34,10 @@ export async function POST(req: Request) {
     if (!client?.clientId || String(client.clientId) !== messageClientId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
+    // Client branch only — the firm can still attach files to an archived
+    // client's conversation.
+    const gate = await assertClientCanWrite()
+    if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status })
     isClientUpload = true
   }
 

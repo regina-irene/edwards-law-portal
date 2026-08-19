@@ -11,7 +11,9 @@ interface DashTask {
   due_date: string | null
 }
 
-export default function OutstandingTasks({ initialTasks }: { initialTasks: DashTask[] }) {
+// `readOnly` mirrors the Tasks page: the case is closed, so the list is still
+// worth reading but nothing can be ticked off from here either.
+export default function OutstandingTasks({ initialTasks, readOnly = false }: { initialTasks: DashTask[]; readOnly?: boolean }) {
   const [tasks] = useState(initialTasks)
   const [doneIds, setDoneIds] = useState<Set<string>>(new Set())
 
@@ -20,6 +22,7 @@ export default function OutstandingTasks({ initialTasks }: { initialTasks: DashT
   const openCount = tasks.filter((t) => !doneIds.has(t.id)).length
 
   async function toggle(task: DashTask) {
+    if (readOnly) return
     const wasDone = doneIds.has(task.id)
     const newStatus = wasDone ? "pending" : "done"
     setDoneIds((prev) => {
@@ -54,6 +57,11 @@ export default function OutstandingTasks({ initialTasks }: { initialTasks: DashT
         </h2>
         <Link href="/tasks" className="text-xs text-blue-600 hover:underline">View all tasks →</Link>
       </div>
+      {readOnly && tasks.length > 0 && (
+        <p className="px-4 pt-3 text-xs text-gray-500">
+          Your case is closed, so these can no longer be checked off. They&apos;re here for your records.
+        </p>
+      )}
       {tasks.length === 0 ? (
         <p className="px-4 py-4 text-sm text-gray-400">You're all caught up — no outstanding tasks. 🎉</p>
       ) : (
@@ -65,9 +73,11 @@ export default function OutstandingTasks({ initialTasks }: { initialTasks: DashT
               <li key={t.id} className="flex items-center gap-3 px-4 py-2.5">
                 <button
                   onClick={() => toggle(t)}
+                  disabled={readOnly}
+                  title={readOnly ? "Your case is closed, so tasks can't be changed." : undefined}
                   className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
                     done ? "bg-green-600 border-green-600 text-white" : "border-gray-300 hover:border-green-400"
-                  }`}
+                  } ${readOnly ? "opacity-60 cursor-default hover:border-gray-300" : ""}`}
                   aria-label={done ? "Mark not done" : "Mark done"}
                 >
                   {done && (

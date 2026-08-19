@@ -5,6 +5,7 @@
 // those falls back to FileFlow, so tasks linked before the builder existed
 // keep working.
 import { getPortalClient } from "@/lib/portal-client"
+import { assertClientCanWrite } from "@/lib/client-write-guard"
 import { getForm } from "@/lib/fileflow"
 import { getPortalForm } from "@/lib/portal-forms"
 import { sql } from "@/lib/db"
@@ -34,8 +35,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ formKey
 }
 
 export async function PUT(req: Request, { params }: { params: Promise<{ formKey: string }> }) {
-  const client = await getPortalClient()
-  if (!client?.clientId) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  // Saved answers stay readable (GET) after a case closes; they just stop
+  // accepting changes.
+  const gate = await assertClientCanWrite()
+  if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status })
+  const client = gate.client
   const { formKey } = await params
 
   const body = (await req.json().catch(() => null)) as { values?: Record<string, string> } | null

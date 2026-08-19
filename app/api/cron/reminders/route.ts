@@ -30,7 +30,9 @@ export async function GET(req: Request) {
   }
 
   const today = new Date()
-  const clients = await getAllClients()
+  // Archived clients are closed cases. Nothing here should text or email a
+  // former client about a task on a file we've finished. (2026-08-18)
+  const clients = (await getAllClients()).filter((c) => !c.archived)
   const results: { clientId: string; sent: number; errors: number }[] = []
 
   for (const client of clients) {

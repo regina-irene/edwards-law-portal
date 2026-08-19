@@ -9,6 +9,8 @@ export interface CaseOption {
   id: string
   label: string
   hasNotes: boolean
+  /** Former / closed case. Only ever present when "Include archived" is on. */
+  archived?: boolean
 }
 
 export default function CaseJump({ cases }: { cases: CaseOption[] }) {
@@ -57,7 +59,8 @@ export default function CaseJump({ cases }: { cases: CaseOption[] }) {
                 onClick={() => go(c.id)}
                 className="w-full text-left px-2 py-1.5 -mx-2 rounded-lg text-sm text-gray-800 hover:bg-gray-50"
               >
-                {c.label}
+                <span className={c.archived ? "text-gray-500" : undefined}>{c.label}</span>
+                {c.archived && <span className="text-xs text-gray-400"> · archived</span>}
                 {!c.hasNotes && <span className="text-xs text-gray-400"> · no notes yet</span>}
               </button>
             </li>

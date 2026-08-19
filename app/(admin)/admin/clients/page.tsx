@@ -1,12 +1,18 @@
-// app/(admin)/admin/clients/page.tsx
+// app/(admin)/admin/clients/page.tsx — the client roster. Archived (former)
+// clients are hidden unless ?archived=1, and can be archived / restored here.
 import { sql } from "@/lib/db"
 import { clientDisplayLabel, fetchAllClientsRaw } from "@/lib/airtable"
 import { getClientLabels } from "@/lib/client-labels"
+import { archiveNotes, noteFor } from "@/lib/admin-archive"
+import { ARCHIVE_GRACE_DAYS } from "@/lib/client-archive"
 import { refreshClients } from "../actions"
 import { startPreview } from "@/app/preview-actions"
 import ClientLabelEditor from "../ClientLabelEditor"
 import RefreshButton from "@/components/ui/RefreshButton"
 import InviteButton from "@/components/admin/InviteButton"
+import ArchiveButton from "@/components/admin/ArchiveButton"
+import ArchivedChip from "@/components/admin/ArchivedChip"
+import ArchiveToggle from "@/components/admin/ArchiveToggle"
 import Link from "next/link"
 import PageTitle from "@/components/ui/PageTitle"
 import { taglineFor } from "@/lib/taglines"
@@ -23,7 +29,15 @@ function formatRefreshed(ms: number): string {
   })
 }
 
-export default async function ClientsPage() {
+export default async function ClientsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ archived?: string }>
+}) {
+  // The toggle lives in the URL so it survives a refresh and the Back button.
+  const { archived: archivedParam } = await searchParams
+  const includeArchived = archivedParam === "1"
+
   const [clientsRaw, labels, activityResult] = await Promise.all([
     fetchAllClientsRaw(),
     getClientLabels(),
@@ -46,12 +60,28 @@ export default async function ClientsPage() {
 
   const fetchedAt = Date.now()
 
+  // Read-only: this never creates a stamp, so opening this page can't start
+  // anyone's 30-day clock.
+  const notes = await archiveNotes(clientsRaw)
+
   const clients = clientsRaw
     .map((c) => {
       const id = String(c.clientId)
-      return { ...c, id, label: labels[id] || clientDisplayLabel(c.name) }
+      // `id` shadows the Airtable record id below, so keep that one under its
+      // own name: the archive PATCH targets the CLIENTS-table record, while
+      // everything else on this row is keyed on the linked Status record id.
+      return {
+        ...c,
+        recordId: c.id,
+        id,
+        label: labels[id] || clientDisplayLabel(c.name),
+        archiveNote: noteFor(notes, id).note,
+      }
     })
     .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }))
+
+  const archivedCount = clients.filter((c) => c.archived).length
+  const visible = includeArchived ? clients : clients.filter((c) => !c.archived)
 
   const refreshedAt = formatRefreshed(fetchedAt)
 
@@ -77,18 +107,33 @@ export default async function ClientsPage() {
           </form>
         }
       />
+
+      <div className="flex flex-wrap items-center gap-3">
+        <ArchiveToggle basePath="/admin/clients" includeArchived={includeArchived} archivedCount={archivedCount} />
+        <span className="text-xs text-gray-400">
+          {visible.length} {visible.length === 1 ? "client" : "clients"}
+          {!includeArchived && archivedCount > 0 && ` · ${archivedCount} archived hidden`}
+        </span>
+      </div>
+
       {clients.length === 0 ? (
         <p className="text-gray-500">No clients found in Airtable.</p>
+      ) : visible.length === 0 ? (
+        <p className="text-gray-500">Every client on the board is archived — switch to “Include archived” to see them.</p>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
-          {clients.map((c) => {
+          {visible.map((c) => {
             const activity = activityMap.get(c.id) ?? { unread_chat: 0, unread_messages: 0 }
             const actionCls = "flex flex-col items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors w-[4.5rem]"
             return (
-              <div key={c.id} className="flex items-center justify-between px-6 py-3.5 flex-wrap gap-3">
+              <div
+                key={c.id}
+                className={`flex items-center justify-between px-6 py-3.5 flex-wrap gap-3 ${c.archived ? "bg-gray-50/70" : ""}`}
+              >
                 <div className="min-w-[14rem]">
                   <ClientLabelEditor clientId={c.id} label={c.label} />
                   <p className="text-xs text-gray-400">{c.email}</p>
+                  {c.archived && <p className="mt-1"><ArchivedChip note={c.archiveNote} /></p>}
                   {activity.unread_chat > 0 && (
                     <span className="inline-block mt-1 text-xs bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full font-medium">{activity.unread_chat} unread</span>
                   )}
@@ -125,6 +170,13 @@ export default async function ClientsPage() {
                       <span className="text-[11px] font-medium text-gray-600">Preview</span>
                     </button>
                   </form>
+                  <ArchiveButton
+                    recordId={c.recordId}
+                    clientId={c.id}
+                    name={c.label}
+                    archived={c.archived}
+                    graceDays={ARCHIVE_GRACE_DAYS}
+                  />
                 </div>
               </div>
             )

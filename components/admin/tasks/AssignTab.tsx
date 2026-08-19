@@ -36,6 +36,18 @@ export default function AssignTab({
   const [undo, setUndo] = useState<{ message: string; ids: string[] } | null>(null)
   const [confirm, setConfirm] = useState<{ title: string; body: string; run: () => void } | null>(null)
   const [expandedPreview, setExpandedPreview] = useState(true)
+  // Archived (former) clients are off the picker by default — a closed case is
+  // not somebody you mean to hand new work to. Local state, like the tabs: this
+  // page keeps all of its view state in React and never in the URL.
+  const [includeArchived, setIncludeArchived] = useState(false)
+
+  const archivedCount = clients.filter((c) => c.archived).length
+  // Anyone already picked stays picked even if the toggle goes back off, so
+  // flipping it can never quietly drop a client out of an assignment.
+  const pickable = useMemo(
+    () => clients.filter((c) => includeArchived || !c.archived || selectedClients.includes(c.id)),
+    [clients, includeArchived, selectedClients]
+  )
 
   // The global search box narrows the picker too, so a search takes you
   // straight to the task you meant to assign.
@@ -151,7 +163,22 @@ export default function AssignTab({
 
           <div className="flex flex-wrap gap-4 items-start">
             <div className="flex-1 min-w-[16rem]">
-              <ClientCombobox clients={clients} selected={selectedClients} onChange={setSelectedClients} />
+              <ClientCombobox clients={pickable} selected={selectedClients} onChange={setSelectedClients} />
+              <label className="mt-1.5 flex items-center gap-1.5 text-[11px] text-gray-500 cursor-pointer select-none" title="Show former and closed cases in the picker">
+                <input
+                  type="checkbox"
+                  checked={includeArchived}
+                  onChange={(e) => setIncludeArchived(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-gray-300"
+                />
+                Include archived
+                {archivedCount > 0 && <span className="text-gray-400">({archivedCount})</span>}
+              </label>
+              {selectedClients.some((id) => clients.find((c) => c.id === id)?.archived) && (
+                <p className="mt-1 text-[11px] text-amber-700">
+                  One of the clients you&apos;ve picked is archived — they may not be able to open a new task.
+                </p>
+              )}
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="assign-due" className="text-xs font-semibold text-gray-500">Due date (optional)</label>

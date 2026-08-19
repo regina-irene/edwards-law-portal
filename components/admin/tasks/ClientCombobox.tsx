@@ -8,6 +8,10 @@ import { useEffect, useMemo, useRef, useState } from "react"
 export interface ClientOption {
   id: string
   label: string
+  /** Former / closed case. Kept out of the picker unless "Include archived" is on. */
+  archived?: boolean
+  /** "closed 12 days ago" / "access ended", when the stamp is known. */
+  archiveNote?: string
 }
 
 export default function ClientCombobox({
@@ -137,6 +141,11 @@ export default function ClientCombobox({
                   className={`w-full text-left px-3 py-2 text-sm ${i === highlight ? "bg-blue-50 text-blue-900" : "text-gray-800 hover:bg-gray-50"}`}
                 >
                   {c.label}
+                  {c.archived && (
+                    <span className="ml-2 text-[11px] text-gray-400">
+                      · archived{c.archiveNote ? `, ${c.archiveNote}` : ""}
+                    </span>
+                  )}
                 </button>
               </li>
             ))}

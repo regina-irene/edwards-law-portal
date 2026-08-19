@@ -2,6 +2,7 @@
 import { auth } from "@/auth"
 import { getClientByEmail } from "@/lib/airtable"
 import { getPortalClient } from "@/lib/portal-client"
+import { assertClientCanWrite } from "@/lib/client-write-guard"
 import { sql } from "@/lib/db"
 import { getTemplateAttachments, getClientTaskAttachments } from "@/lib/task-attachments"
 import { NextResponse } from "next/server"
@@ -48,6 +49,10 @@ export async function PATCH(req: Request) {
 
   const client = await getClientByEmail(session.user.email)
   if (!client?.clientId) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+
+  // Ticking a task off is a write: an archived client's checklist is frozen.
+  const gate = await assertClientCanWrite()
+  if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status })
 
   let id: unknown, status: unknown
   try {

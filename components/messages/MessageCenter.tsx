@@ -8,6 +8,7 @@ import { collectDroppedFiles, dragHasFiles } from "@/lib/drop-files"
 import { RichTextEditor } from "@/components/ui/RichTextEditor"
 import MessageBody from "@/components/messages/MessageBody"
 import { PromptDialog } from "@/components/ui/PromptDialog"
+import ArchivedChip from "@/components/admin/ArchivedChip"
 import { bodyToHtml, bodyToPlainText, escapeHtml, isEmptyRich } from "@/lib/message-format"
 
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
@@ -19,6 +20,10 @@ interface Conversation {
   preview: string
   lastAt: string | null
   unread: number
+  /** Former / closed case. Hidden from this list unless "Include archived" is on. */
+  archived?: boolean
+  /** "closed 12 days ago" / "access ended", when the stamp is known. */
+  archiveNote?: string
 }
 interface Msg {
   id: string
@@ -69,6 +74,10 @@ export default function MessageCenter() {
   const [rich, setRich] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [sendError, setSendError] = useState<string | null>(null)
+  // Archived (former) clients are off by default, so the inbox is live cases
+  // only. The list is refetched when this flips — the filtering is server-side.
+  const [showArchived, setShowArchived] = useState(false)
+  const [archivedCount, setArchivedCount] = useState(0)
 
   // Drafts are per client (2026-08-18). Previously the composer, the queued
   // attachments and the "also send as text" checkbox were single pieces of
@@ -146,16 +155,18 @@ export default function MessageCenter() {
 
   const loadConvos = useCallback(async () => {
     try {
-      const r = await fetch("/api/admin/conversations")
+      const r = await fetch(`/api/admin/conversations${showArchived ? "?archived=1" : ""}`)
       if (!r.ok) throw new Error(String(r.status))
-      setConvos((await r.json()).conversations ?? [])
+      const d = await r.json()
+      setConvos(d.conversations ?? [])
+      setArchivedCount(typeof d.archivedCount === "number" ? d.archivedCount : 0)
       setLoadError(null)
     } catch {
       // Never let a failed fetch render as "No conversations." — that reads as
       // "there is nothing here", which is a different and wrong statement.
       setLoadError("Couldn't load conversations. Check your connection.")
     }
-  }, [])
+  }, [showArchived])
 
   useEffect(() => { loadConvos() }, [loadConvos])
 
@@ -368,6 +379,16 @@ export default function MessageCenter() {
             <h2 className="serif text-lg font-semibold text-gray-900">Messages</h2>
           </div>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search messages…" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <label className="mt-2 flex items-center gap-1.5 text-[11px] text-gray-500 cursor-pointer select-none" title="Show former and closed cases as well">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+              className="h-3.5 w-3.5 rounded border-gray-300"
+            />
+            Include archived
+            {archivedCount > 0 && <span className="text-gray-400">({archivedCount})</span>}
+          </label>
         </div>
         <div className="flex-1 overflow-auto">
           {filtered.map((c) => (
@@ -375,9 +396,10 @@ export default function MessageCenter() {
               <span className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0" style={{ background: "#1B2D45", color: "#fff" }}>{initials(c.name)}</span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-semibold text-gray-900 truncate">{c.name}</span>
+                  <span className={`text-sm font-semibold truncate ${c.archived ? "text-gray-500" : "text-gray-900"}`}>{c.name}</span>
                   <span className="text-[10px] text-gray-400 shrink-0">{c.lastAt ? relDay(c.lastAt) : ""}</span>
                 </div>
+                {c.archived && <div className="mt-0.5"><ArchivedChip note={c.archiveNote} /></div>}
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-gray-500 truncate">{c.preview || "No messages yet"}</span>
                   <span className="flex items-center gap-1 shrink-0">
@@ -393,7 +415,12 @@ export default function MessageCenter() {
           {loadError ? (
             <p className="text-sm text-amber-700 text-center py-8 px-3">{loadError}</p>
           ) : (
-            filtered.length === 0 && <p className="text-sm text-gray-400 text-center py-8">No conversations.</p>
+            filtered.length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-8 px-3">
+                No conversations.
+                {!showArchived && archivedCount > 0 && ` ${archivedCount} archived ${archivedCount === 1 ? "client is" : "clients are"} hidden.`}
+              </p>
+            )
           )}
         </div>
       </div>
@@ -440,7 +467,10 @@ export default function MessageCenter() {
           <>
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
               <div>
-                <div className="serif text-base font-semibold text-gray-900">{active.name}</div>
+                <div className="serif text-base font-semibold text-gray-900">
+                  {active.name}
+                  {active.archived && <ArchivedChip note={active.archiveNote} className="ml-2" />}
+                </div>
                 <div className="text-xs text-gray-400">{active.email}</div>
                 {watchError && <div className="text-xs text-red-600 mt-0.5">{watchError}</div>}
               </div>

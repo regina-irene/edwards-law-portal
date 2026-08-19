@@ -26,7 +26,9 @@ interface FormDefinition {
   sections: FormSection[]
 }
 
-export default function FormFill({ formKey }: { formKey: string }) {
+// `readOnly` means the client's case is closed: their answers stay visible, but
+// nothing can be changed or submitted.
+export default function FormFill({ formKey, readOnly = false }: { formKey: string; readOnly?: boolean }) {
   const [form, setForm] = useState<FormDefinition | null>(null)
   const [values, setValues] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
@@ -59,6 +61,7 @@ export default function FormFill({ formKey }: { formKey: string }) {
   }
 
   async function save() {
+    if (readOnly) return
     setSaving(true)
     setError(null)
     const res = await fetch(`/api/forms/${encodeURIComponent(formKey)}`, {
@@ -101,15 +104,21 @@ export default function FormFill({ formKey }: { formKey: string }) {
                 value={values[f.fieldKey] ?? ""}
                 onChange={(v) => set(f.fieldKey, v)}
                 flagged={missing.includes(f.fieldKey)}
+                disabled={readOnly}
               />
             ))}
           </div>
         </div>
       ))}
-      <div className="flex items-center gap-3 pt-2 border-t border-gray-200">
-        <button onClick={save} disabled={saving} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50">
+      <div className="flex items-center gap-3 pt-2 border-t border-gray-200 flex-wrap">
+        <button onClick={save} disabled={saving || readOnly} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50">
           {saving ? "Saving…" : "Save answers"}
         </button>
+        {readOnly && (
+          <span className="text-xs text-gray-500">
+            Your case is closed, so this form can no longer be changed. Your answers are still here.
+          </span>
+        )}
         {saved && missing.length === 0 && <span className="text-xs text-green-600 font-medium">Saved ✓</span>}
         {error && <span className="text-xs text-red-500">{error}</span>}
       </div>
@@ -129,17 +138,20 @@ function Field({
   value,
   onChange,
   flagged = false,
+  disabled = false,
 }: {
   field: FormField
   value: string
   onChange: (v: string) => void
   // True when this required question was left blank at the last save.
   flagged?: boolean
+  // True while the client's case is closed: readable, not editable.
+  disabled?: boolean
 }) {
   const full = field.width !== "half"
   const base = `w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
     flagged ? "border-red-400 bg-red-50" : "border-gray-300"
-  }`
+  }${disabled ? " bg-gray-50 text-gray-600" : ""}`
   const label = (
     <label className={`block text-xs font-medium mb-1 ${flagged ? "text-red-700" : "text-gray-600"}`}>
       {field.label}{field.required && <span className="text-red-500"> *</span>}
@@ -149,10 +161,10 @@ function Field({
 
   let input
   if (field.type === "textarea") {
-    input = <textarea value={value} onChange={(e) => onChange(e.target.value)} placeholder={field.placeholder ?? ""} rows={3} className={`${base} resize-none`} />
+    input = <textarea value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} placeholder={field.placeholder ?? ""} rows={3} className={`${base} resize-none`} />
   } else if (field.type === "select") {
     input = (
-      <select value={value} onChange={(e) => onChange(e.target.value)} className={base}>
+      <select value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} className={base}>
         <option value="">Select…</option>
         {(field.options ?? []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
@@ -162,7 +174,7 @@ function Field({
       <div className="flex flex-wrap gap-3 pt-1">
         {(field.options ?? []).map((o) => (
           <label key={o.value} className="flex items-center gap-1.5 text-sm text-gray-700">
-            <input type="radio" name={field.fieldKey} checked={value === o.value} onChange={() => onChange(o.value)} />
+            <input type="radio" name={field.fieldKey} checked={value === o.value} disabled={disabled} onChange={() => onChange(o.value)} />
             {o.label}
           </label>
         ))}
@@ -172,7 +184,7 @@ function Field({
     return (
       <div className={full ? "sm:col-span-2" : ""}>
         <label className={`flex items-center gap-2 text-sm ${flagged ? "text-red-700" : "text-gray-700"}`}>
-          <input type="checkbox" checked={value === "true"} onChange={(e) => onChange(e.target.checked ? "true" : "false")} />
+          <input type="checkbox" checked={value === "true"} disabled={disabled} onChange={(e) => onChange(e.target.checked ? "true" : "false")} />
           {field.label}{field.required && <span className="text-red-500"> *</span>}
           {flagged && <span className="font-normal">— needs an answer</span>}
         </label>
@@ -181,7 +193,7 @@ function Field({
     )
   } else {
     const type = ["email", "tel", "date", "number"].includes(field.type) ? field.type : field.type === "currency" ? "number" : "text"
-    input = <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={field.placeholder ?? ""} className={base} />
+    input = <input type={type} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} placeholder={field.placeholder ?? ""} className={base} />
   }
 
   return (

@@ -11,6 +11,7 @@ import AssignTab from "@/components/admin/tasks/AssignTab"
 import TemplatesTab from "@/components/admin/tasks/TemplatesTab"
 import ProgressTab from "@/components/admin/tasks/ProgressTab"
 import { SkeletonRows, InlineError } from "@/components/admin/tasks/bits"
+import type { ClientOption } from "@/components/admin/tasks/ClientCombobox"
 import type { Template, ClientTask, Attachment, FormSummary, TabKey } from "@/components/admin/tasks/types"
 
 const TABS: { key: TabKey; label: string }[] = [
@@ -24,7 +25,10 @@ export default function AdminTasksPage() {
   const [tasks, setTasks] = useState<ClientTask[]>([])
   const [attachments, setAttachments] = useState<Record<string, Attachment[]>>({})
   const [forms, setForms] = useState<FormSummary[]>([])
-  const [clientList, setClientList] = useState<{ id: string; label: string }[]>([])
+  // The WHOLE roster, archived included: labelOf below names every assigned
+  // task, and a task assigned before a case closed still needs its client's
+  // name. AssignTab is the one that hides archived clients from the picker.
+  const [clientList, setClientList] = useState<ClientOption[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
 

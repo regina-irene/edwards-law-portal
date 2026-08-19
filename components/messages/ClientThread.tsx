@@ -97,7 +97,10 @@ function ExportButtons({ messages }: { messages: Msg[] }) {
   )
 }
 
-export default function ClientThread() {
+// `readOnly` comes from the server page (the client's case is closed and they
+// are inside the 30-day wind-down). The transcript and the export buttons stay
+// exactly as they were — only the ways of adding to the thread go away.
+export default function ClientThread({ readOnly = false }: { readOnly?: boolean } = {}) {
   const [messages, setMessages] = useState<Msg[]>([])
   const [body, setBody] = useState("")
   const [sending, setSending] = useState(false)
@@ -149,7 +152,7 @@ export default function ClientThread() {
     setSending(false)
   }
 
-  const sendFilesButton = (
+  const sendFilesButton = readOnly ? null : (
     <UploadDocsButton
       endpoint="/api/file-dropzone"
       label="📎 Send files"
@@ -169,8 +172,16 @@ export default function ClientThread() {
     <div className="flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden h-[calc(100dvh-14rem)] min-h-[20rem] md:h-[calc(100dvh-18rem)] md:min-h-0">
       <div className="border-b border-gray-200 bg-white px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-sm text-gray-500">Have documents for your legal team?</span>
-          {sendFilesButton}
+          {readOnly ? (
+            <span className="text-sm text-gray-500">
+              Sending files is turned off because your case is closed. Everything you sent before is still here.
+            </span>
+          ) : (
+            <>
+              <span className="text-sm text-gray-500">Have documents for your legal team?</span>
+              {sendFilesButton}
+            </>
+          )}
         </div>
         <ExportButtons messages={messages} />
       </div>
@@ -203,10 +214,19 @@ export default function ClientThread() {
           </div>
         )}
         {loaded && !loadFailed && messages.length === 0 && (
-          <p className="text-sm text-gray-400 text-center py-10">No messages yet. Send a message to your legal team below.</p>
+          <p className="text-sm text-gray-400 text-center py-10">
+            {readOnly ? "There are no messages in this conversation." : "No messages yet. Send a message to your legal team below."}
+          </p>
         )}
       </div>
       <div className="border-t border-gray-200 p-3 bg-white">
+        {readOnly ? (
+          <p className="text-sm text-gray-600 text-center py-1">
+            Your case is closed, so new messages are turned off. You can still read and save this
+            whole conversation above. If you need anything, please contact the office.
+          </p>
+        ) : (
+          <>
         {sendError && (
           <div className="mb-2 flex items-center justify-between gap-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2">
             <p className="text-xs text-red-800">Your message wasn&apos;t sent. It&apos;s still here — check your connection and try again.</p>
@@ -218,6 +238,8 @@ export default function ClientThread() {
           <textarea value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() } }} rows={1} placeholder="Send a message to your legal team…" className="flex-1 resize-none px-3 py-2 text-sm text-gray-900 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32" />
           <button onClick={send} disabled={!body.trim() || sending} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 disabled:opacity-50">{sending ? "…" : "Send"}</button>
         </div>
+          </>
+        )}
       </div>
     </div>
   )

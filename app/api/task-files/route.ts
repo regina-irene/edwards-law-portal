@@ -2,6 +2,7 @@
 import { auth } from "@/auth"
 import { requireAdmin } from "@/lib/admin"
 import { getClientByEmail } from "@/lib/airtable"
+import { assertClientCanWrite } from "@/lib/client-write-guard"
 import { sql } from "@/lib/db"
 import { deliverClientUpload } from "@/lib/client-uploads"
 import { put } from "@vercel/blob"
@@ -45,6 +46,10 @@ export async function POST(req: Request) {
     const client = await getClientByEmail(session.user.email)
     if (!client?.clientId) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     if (scope !== "client_task") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    // Client branch only — the admin branch above stays open, because the firm
+    // must still be able to work an archived client's file.
+    const gate = await assertClientCanWrite()
+    if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status })
     const cid = String(client.clientId)
     const r = await sql`SELECT id FROM client_tasks WHERE id = ${refId} AND client_id = ${cid}`
     if (r.rows.length === 0) return NextResponse.json({ error: "Forbidden" }, { status: 403 })

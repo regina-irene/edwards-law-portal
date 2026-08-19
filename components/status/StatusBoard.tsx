@@ -13,6 +13,7 @@
 // needs on its own — the stage's sort order — is the two lines below.
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { InlineError } from "@/components/ui/InlineError"
+import ArchivedChip from "@/components/admin/ArchivedChip"
 import type { CaseStatusBoardRow, CaseFlag } from "@/lib/case-status"
 
 const NAVY = "#1b2d45"
@@ -355,12 +356,13 @@ export default function StatusBoard({
           return (
             <div
               key={row.recordId}
-              className="bg-white rounded-xl border border-gray-200 p-4"
-              style={{ borderLeft: `4px solid ${reason ? "#c2410c" : NAVY}` }}
+              className={`rounded-xl border border-gray-200 p-4 ${row.archived ? "bg-gray-50" : "bg-white"}`}
+              style={{ borderLeft: `4px solid ${row.archived ? "#cbd5e1" : reason ? "#c2410c" : NAVY}` }}
             >
               <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <p className="text-sm font-semibold text-gray-900 min-w-0 truncate">
                   {row.name}
+                  {row.archived && <ArchivedChip note={row.archiveNote} className="ml-2" />}
                   {!row.hasStatusRecord && (
                     <span className="ml-2 text-xs font-normal text-gray-400">no status record</span>
                   )}

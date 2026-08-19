@@ -42,7 +42,10 @@ function TagBadge({ tag }: { tag: string }) {
   )
 }
 
-export default function TasksClient() {
+// `readOnly` comes from the server page: the client's case is closed and they
+// are inside the 30-day wind-down. The whole list stays readable and every
+// existing file stays downloadable — only ticking, uploading and removing go.
+export default function TasksClient({ readOnly = false }: { readOnly?: boolean } = {}) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [openId, setOpenId] = useState<string | null>(null)
@@ -71,6 +74,7 @@ export default function TasksClient() {
   }, [])
 
   async function uploadMyFile(taskId: string, file: File) {
+    if (readOnly) return
     setUploadingId(taskId)
     const fd = new FormData()
     fd.append("file", file)
@@ -87,6 +91,7 @@ export default function TasksClient() {
   }
 
   async function deleteMyFile(id: string) {
+    if (readOnly) return
     const res = await fetch(`/api/task-files/${id}`, { method: "DELETE" }).catch(() => null)
     if (!res?.ok) setActionError("Couldn't remove that file. Please try again.")
     else setActionError(null)
@@ -94,6 +99,7 @@ export default function TasksClient() {
   }
 
   async function toggleStatus(task: Task) {
+    if (readOnly) return
     const newStatus = task.status === "pending" ? "done" : "pending"
     setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, status: newStatus } : t))
     const res = await fetch("/api/tasks", {
@@ -146,6 +152,13 @@ export default function TasksClient() {
           <button type="button" onClick={() => setActionError(null)} aria-label="Dismiss" className="text-red-800 text-sm font-semibold shrink-0">✕</button>
         </div>
       )}
+      {readOnly && (
+        <p className="rounded-lg border px-4 py-3 text-sm" style={{ background: "#FDF6EC", borderColor: "#E8DFD2", color: "#4b443b" }}>
+          Your case is closed, so tasks can no longer be checked off and new files can&apos;t be
+          uploaded. Everything below stays here for you to read, and your documents are still
+          yours to download.
+        </p>
+      )}
       {/* At-a-glance: open tasks + deadlines */}
       <div className="rounded-xl border border-blue-200 bg-blue-50 keep-ink p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
@@ -195,11 +208,13 @@ export default function TasksClient() {
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => toggleStatus(task)}
+                      disabled={readOnly}
+                      title={readOnly ? "Your case is closed, so tasks can't be changed." : undefined}
                       className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
                         task.status === "done"
                           ? "bg-green-600 border-green-600 text-white"
                           : "border-gray-300 hover:border-green-400"
-                      }`}
+                      } ${readOnly ? "opacity-60 cursor-default hover:border-gray-300" : ""}`}
                       aria-label={task.status === "done" ? "Mark not done" : "Mark done"}
                     >
                       {task.status === "done" && (
@@ -230,7 +245,7 @@ export default function TasksClient() {
 
                       {task.form_key && (
                         <div className="rounded-lg bg-white border border-gray-200 p-3">
-                          <FormFill formKey={task.form_key} />
+                          <FormFill formKey={task.form_key} readOnly={readOnly} />
                         </div>
                       )}
 
@@ -260,22 +275,30 @@ export default function TasksClient() {
                             {(task.myFiles ?? []).map((f) => (
                               <li key={f.id} className="flex items-center gap-3">
                                 <a href={`/api/task-files/${f.id}`} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">📎 {f.file_name}</a>
-                                <button onClick={() => deleteMyFile(f.id)} className="text-xs text-gray-300 hover:text-red-600">Remove</button>
+                                {!readOnly && (
+                                  <button onClick={() => deleteMyFile(f.id)} className="text-xs text-gray-300 hover:text-red-600">Remove</button>
+                                )}
                               </li>
                             ))}
                           </ul>
                         ) : (
                           <p className="text-xs text-gray-400 mb-1">No files uploaded yet.</p>
                         )}
-                        <label className="inline-flex items-center gap-2 text-sm text-blue-600 cursor-pointer hover:underline">
-                          {uploadingId === task.id ? "Uploading…" : "+ Upload a file"}
-                          <input
-                            type="file"
-                            className="hidden"
-                            disabled={uploadingId === task.id}
-                            onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadMyFile(task.id, f); e.target.value = "" }}
-                          />
-                        </label>
+                        {readOnly ? (
+                          <p className="text-xs text-gray-500">
+                            Uploading is turned off because your case is closed. Anything you sent before is still above.
+                          </p>
+                        ) : (
+                          <label className="inline-flex items-center gap-2 text-sm text-blue-600 cursor-pointer hover:underline">
+                            {uploadingId === task.id ? "Uploading…" : "+ Upload a file"}
+                            <input
+                              type="file"
+                              className="hidden"
+                              disabled={uploadingId === task.id}
+                              onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadMyFile(task.id, f); e.target.value = "" }}
+                            />
+                          </label>
+                        )}
                       </div>
                     </div>
                   )}

@@ -1,7 +1,10 @@
-// app/(admin)/admin/page.tsx — admin Home / dashboard with activity
+// app/(admin)/admin/page.tsx — admin Home / dashboard with activity.
+// Archived (former) clients are left out of the count, the open-task list and
+// the activity feed unless ?archived=1.
 import { sql } from "@/lib/db"
 import { fetchAllClientsRaw, clientDisplayLabel } from "@/lib/airtable"
 import { getClientLabels } from "@/lib/client-labels"
+import ArchiveToggle from "@/components/admin/ArchiveToggle"
 import Link from "next/link"
 import PageTitle from "@/components/ui/PageTitle"
 import { taglineFor } from "@/lib/taglines"
@@ -9,7 +12,14 @@ import ActivityFeed from "@/components/admin/ActivityFeed"
 
 const num = (r: any) => parseInt(r?.rows?.[0]?.count ?? "0", 10) || 0
 
-export default async function AdminHome() {
+export default async function AdminHome({
+  searchParams,
+}: {
+  searchParams: Promise<{ archived?: string }>
+}) {
+  const { archived: archivedParam } = await searchParams
+  const includeArchived = archivedParam === "1"
+
   const [clients, labels, unreadMessages, openTasksRes, activity] = await Promise.all([
     fetchAllClientsRaw().catch(() => []),
     getClientLabels().catch(() => ({} as Record<string, string>)),
@@ -49,8 +59,15 @@ export default async function AdminHome() {
     `.catch(() => ({ rows: [] as any[] })),
   ])
 
+  // Names are looked up from the WHOLE roster on purpose. Filtering the roster
+  // here instead would leave any archived row that IS shown reading
+  // "A client" — worse than showing it, not better.
   const labelById = new Map(clients.map((c) => [String(c.clientId), labels[String(c.clientId)] || clientDisplayLabel(c.name)]))
   const nameFor = (id: string) => labelById.get(id) || "A client"
+
+  const archivedIds = new Set(clients.filter((c) => c.archived).map((c) => String(c.clientId)))
+  const archivedCount = archivedIds.size
+  const activeClients = clients.filter((c) => !c.archived)
 
   // auth_activity rows carry an EMAIL in the client_id slot — map it back to
   // the client where possible; otherwise show the raw address (e.g. Regina's).
@@ -95,12 +112,25 @@ export default async function AdminHome() {
     return `/admin/clients/${id}/pages`
   }
 
-  const openTasks = openTasksRes.rows
+  // A closed case's leftover task isn't work waiting to be done, so it neither
+  // shows in the list nor counts towards "Pending tasks".
+  const openTasks = (openTasksRes.rows as any[]).filter(
+    (t: any) => includeArchived || !archivedIds.has(String(t.client_id))
+  )
+  const activityRows = (activity.rows as any[]).filter((a: any) => {
+    if (includeArchived) return true
+    const cid = clientIdOf(a)
+    return !cid || !archivedIds.has(cid)
+  })
   const today = new Date(new Date().toLocaleDateString("en-US", { timeZone: "America/New_York" }))
   const fmtDue = (d: string | Date) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 
   const stats = [
-    { label: "Clients", value: clients.length, href: "/admin/clients" },
+    {
+      label: "Clients",
+      value: includeArchived ? clients.length : activeClients.length,
+      href: includeArchived ? "/admin/clients?archived=1" : "/admin/clients",
+    },
     { label: "Unread messages", value: num(unreadMessages), href: "/admin/messages" },
     { label: "Pending tasks", value: openTasks.length, href: "/admin/tasks" },
   ]
@@ -110,6 +140,15 @@ export default async function AdminHome() {
       <div>
         <p className="section-label">Welcome back</p>
         <PageTitle title="Dashboard" tagline={taglineFor("admin:dashboard")} />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <ArchiveToggle basePath="/admin" includeArchived={includeArchived} archivedCount={archivedCount} />
+        {!includeArchived && archivedCount > 0 && (
+          <span className="text-xs text-gray-400">
+            {archivedCount} archived {archivedCount === 1 ? "client is" : "clients are"} hidden from these counts.
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -159,10 +198,10 @@ export default async function AdminHome() {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
           <h2 className="serif text-base font-semibold text-gray-900">Activity</h2>
-          <span className="text-xs text-gray-400">{activity.rows.length === 500 ? "Latest 500" : `${activity.rows.length} total`}</span>
+          <span className="text-xs text-gray-400">{activityRows.length === 500 ? "Latest 500" : `${activityRows.length} total`}</span>
         </div>
         <ActivityFeed
-          items={activity.rows.map((a) => ({
+          items={activityRows.map((a) => ({
             id: String(a.id),
             kind: String(a.kind),
             name: displayName(a),

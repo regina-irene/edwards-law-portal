@@ -1,4 +1,5 @@
-// app/(client)/layout.tsx
+// app/(client)/layout.tsx — the shell every client page renders inside, and the
+// place the archived-client wind-down is enforced for the whole portal.
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
 import { getSession, getPortalClient, getActivePreviewEmail } from "@/lib/portal-client"
@@ -14,6 +15,7 @@ import SchemeDecor from "@/components/ui/SchemeDecor"
 import { getJokeOfTheDay } from "@/lib/joke"
 import { getFirmAnnouncement } from "@/lib/firm-announcement"
 import { FirmAnnouncementView } from "@/components/announcement/FirmAnnouncementView"
+import { getPortalArchiveState } from "@/lib/client-write-guard"
 
 // The joke comes from an external API (icanhazdadjoke.com). Awaiting it in the
 // layout meant a third-party outage or slow response held up the whole portal.
@@ -86,6 +88,31 @@ export default async function ClientLayout({ children }: { children: React.React
     )
   }
 
+  // The 30-day wind-down. getPortalArchiveState fails SAFE — a database problem
+  // resolves to "active", because locking a current client out of their own
+  // case file is far worse than one extra day of access for a closed one.
+  const archive = await getPortalArchiveState(client)
+
+  if (archive.accessClosed) {
+    // Past the grace period: no sidebar, no nav, no children. Just a kind
+    // ending and a way back to a human.
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="text-center max-w-md">
+          <h1 className="text-xl font-semibold text-gray-900">Your portal access has ended</h1>
+          <p className="mt-2 text-gray-600">
+            Thank you for letting our office be part of your case. Your case is closed, and this
+            portal is now closed with it.
+          </p>
+          <p className="mt-3 text-gray-600">
+            If you would like a copy of your file, or there is anything at all we can help with,
+            please contact the office. We are glad to hear from you any time.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   const [pages, unread, prefs, firmAnnouncement] = await Promise.all([
     getClientNav(String(client.clientId)),
     getUnreadCounts(client.clientId),
@@ -136,6 +163,23 @@ export default async function ClientLayout({ children }: { children: React.React
           <span className="text-[12px]" style={{ color: "#334155" }}>{firstName}</span>
         </div>
         <FirmAnnouncementView html={firmAnnouncement} />
+        {/* Read-only wind-down. Calm and warm on purpose — these are divorce
+            clients, and a hard-edged notice here reads like a collections
+            letter. Never mentions money. */}
+        {archive.readOnly && (
+          <div
+            className="px-6 py-3 border-b print:hidden"
+            style={{ background: "#FDF6EC", borderColor: "#E8DFD2", color: "#4b443b" }}
+          >
+            <p className="text-sm max-w-3xl mx-auto text-center">
+              <strong className="font-semibold">Your case with our office is closed.</strong>{" "}
+              You can still read everything here for another {archive.daysLeft}{" "}
+              {archive.daysLeft === 1 ? "day" : "days"} — messages, documents, tasks and your case
+              status. Please save anything you would like to keep. New messages and uploads are
+              turned off, so if you need something, please contact the office.
+            </p>
+          </div>
+        )}
         {prefs.showJoke && (
           <Suspense fallback={null}>
             <JokeStrip />

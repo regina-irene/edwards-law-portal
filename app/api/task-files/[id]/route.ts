@@ -2,6 +2,7 @@
 import { auth } from "@/auth"
 import { requireAdmin } from "@/lib/admin"
 import { getClientByEmail } from "@/lib/airtable"
+import { assertClientCanWrite } from "@/lib/client-write-guard"
 import { sql } from "@/lib/db"
 import { recordFileView } from "@/lib/file-views"
 import { get, del } from "@vercel/blob"
@@ -81,6 +82,13 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   } else {
     const cid = await clientIdForRequest()
     allowed = att.scope === "client_task" && cid != null && att.client_id === cid
+    // Removing a file is a write. An archived client keeps the download link
+    // (GET above) but can no longer take anything back out of their file. The
+    // firm's own DELETE is unaffected.
+    if (allowed) {
+      const gate = await assertClientCanWrite()
+      if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status })
+    }
   }
   if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 

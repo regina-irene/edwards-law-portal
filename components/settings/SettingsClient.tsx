@@ -21,10 +21,14 @@ export default function SettingsClient({
   initialShowJoke,
   initialScheme,
   initialGradient,
+  readOnly = false,
 }: {
   initialShowJoke: boolean
   initialScheme: string
   initialGradient: boolean
+  // True while the client's case is closed: they can look around, but the
+  // portal stays exactly as they left it.
+  readOnly?: boolean
 }) {
   const router = useRouter()
   const [showJoke, setShowJoke] = useState(initialShowJoke)
@@ -34,6 +38,7 @@ export default function SettingsClient({
   const [saved, setSaved] = useState(false)
 
   async function save() {
+    if (readOnly) return
     setSaving(true)
     setSaved(false)
     const res = await fetch("/api/settings", {
@@ -71,16 +76,21 @@ export default function SettingsClient({
         </label>
       </Section>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <button
           type="button"
           onClick={save}
-          disabled={saving}
+          disabled={saving || readOnly}
           className="px-6 py-2.5 rounded-lg text-white text-sm font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity"
           style={{ background: "var(--scheme-accent, #1b2d45)" }}
         >
           {saving ? "Saving…" : "Save settings"}
         </button>
+        {readOnly && (
+          <span className="text-sm text-gray-600">
+            Your case is closed, so your settings stay as they are.
+          </span>
+        )}
         {saved && <span className="text-sm text-green-700 font-medium">Saved! ✓</span>}
       </div>
     </div>
