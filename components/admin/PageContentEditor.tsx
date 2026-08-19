@@ -133,7 +133,7 @@ export default function PageContentEditor({ clientId, allowRename = false, layou
 
   // Pages that render their own live content don't need a content section or
   // banner image on the GLOBAL editor (per Regina).
-  const GLOBAL_TITLE_ANNOUNCEMENT_ONLY = new Set(["pleadings", "discovery", "status", "tasks", "messages", "calendar"])
+  const GLOBAL_TITLE_ANNOUNCEMENT_ONLY = new Set(["pleadings", "correspondence", "discovery", "status", "tasks", "messages", "calendar"])
 
   // the editor fields for one page — shared by the accordion and tab layouts.
   // The embed field is hidden on the GLOBAL editor (per Regina) — pages render

@@ -2,6 +2,7 @@
 export const PORTAL_PAGES = [
   "dashboard",
   "pleadings",
+  "correspondence",
   "discovery",
   "status",
   "tasks",

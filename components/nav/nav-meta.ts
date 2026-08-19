@@ -5,6 +5,7 @@
 export const NAV_ICONS: Record<string, string> = {
   dashboard: "🏠",
   pleadings: "⚖️",
+  correspondence: "📬",
   discovery: "🔎",
   status: "📊",
   tasks: "✅",

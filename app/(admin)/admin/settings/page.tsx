@@ -25,6 +25,7 @@ import { DEFAULT_SCHEME_KEY } from "@/lib/color-schemes"
 const BUILTIN_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
   pleadings: "Pleadings",
+  correspondence: "Correspondence",
   discovery: "Discovery",
   status: "Case Status",
   tasks: "Tasks",

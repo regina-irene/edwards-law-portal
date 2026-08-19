@@ -9,6 +9,7 @@ const { auth } = NextAuth(authConfig)
 const PROTECTED_PATHS = [
   "/dashboard",
   "/pleadings",
+  "/correspondence",
   "/discovery",
   "/calendar",
   "/messages",
@@ -35,6 +36,7 @@ export const config = {
   matcher: [
     "/dashboard/:path*",
     "/pleadings/:path*",
+    "/correspondence/:path*",
     "/discovery/:path*",
     "/calendar/:path*",
     "/messages/:path*",

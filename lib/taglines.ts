@@ -4,6 +4,7 @@
 const TAGLINES: Record<string, string> = {
   dashboard: "Your case, at a glance",
   pleadings: "Every document filed in your case",
+  correspondence: "Letters sent and received in your case",
   discovery: "Requests and responses, both directions",
   status: "Where things stand — and what's been paid",
   tasks: "What needs doing, and when",

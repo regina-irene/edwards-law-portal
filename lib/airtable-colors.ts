@@ -194,6 +194,41 @@ export function filedByColor(name: string): ChipColor {
   return GRAY
 }
 
+// "Sent by:" on the per-client Correspondence tables. The real choices are
+// "Us" / "Them " (trailing space on the board) / "Court" / "Mediator", with
+// these colors. filedByColor doesn't fit — it matches party words like
+// "plaintiff", so everything except Court would have come out gray.
+const SENT_BY: Record<string, string> = {
+  us: "greenLight2",
+  them: "yellowLight2",
+  court: "redBright",
+  mediator: "purpleLight1",
+}
+
+export function sentByColor(name: string): ChipColor {
+  return fromName(SENT_BY[name.trim().toLowerCase()])
+}
+
+/**
+ * "Us" and "Them" are the firm's shorthand on the board. A client reading their
+ * own correspondence log shouldn't have to work out who "Them" is, so the chip
+ * says it plainly. Anything unrecognised is shown as-is rather than guessed at.
+ */
+export function sentByLabel(name: string): string {
+  switch (name.trim().toLowerCase()) {
+    case "us":
+      return "Your legal team"
+    case "them":
+      return "Opposing counsel"
+    case "court":
+      return "Court"
+    case "mediator":
+      return "Mediator"
+    default:
+      return name.trim()
+  }
+}
+
 // Pleadings that live in a Drive subfolder ("TPO", "FV matter") get a tag and a
 // tinted row. Folder names are free-form per client, so pick a stable color from
 // a light rotation by hashing the name — the same folder is always the same color.

@@ -4,6 +4,7 @@ import { sql } from "@/lib/db"
 export const BUILTIN_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
   pleadings: "Pleadings",
+  correspondence: "Correspondence",
   discovery: "Discovery",
   status: "Case Status",
   tasks: "Tasks",
