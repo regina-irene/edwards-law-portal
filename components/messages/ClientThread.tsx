@@ -99,16 +99,33 @@ export default function ClientThread() {
   const [messages, setMessages] = useState<Msg[]>([])
   const [body, setBody] = useState("")
   const [sending, setSending] = useState(false)
+  // A failed load must never render as "No messages yet" — that tells a client
+  // their attorney hasn't written, which may be false. (2026-08-18)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+  const [sendError, setSendError] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   const load = useCallback(async () => {
-    const r = await fetch("/api/chat")
-    if (r.ok) setMessages((await r.json()).messages ?? [])
+    try {
+      const r = await fetch("/api/chat")
+      if (!r.ok) throw new Error(String(r.status))
+      setMessages((await r.json()).messages ?? [])
+      setLoadFailed(false)
+    } catch {
+      setLoadFailed(true)
+    } finally {
+      setLoaded(true)
+    }
   }, [])
 
   useEffect(() => {
     load()
-    const t = setInterval(load, 30_000)
+    // Pause polling while the tab is hidden — it was polling forever in the
+    // background, and each poll costs a round trip.
+    const t = setInterval(() => {
+      if (document.visibilityState === "visible") load()
+    }, 30_000)
     return () => clearInterval(t)
   }, [load])
 
@@ -117,10 +134,15 @@ export default function ClientThread() {
   async function send() {
     if (!body.trim()) return
     setSending(true)
-    const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body: body.trim() }) })
-    if (res.ok) {
+    setSendError(false)
+    const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body: body.trim() }) }).catch(() => null)
+    if (res?.ok) {
       setBody("")
       await load()
+    } else {
+      // Keep the draft and say so. Silently doing nothing leaves the client
+      // unsure whether their attorney received the message.
+      setSendError(true)
     }
     setSending(false)
   }
@@ -167,9 +189,24 @@ export default function ClientThread() {
             </div>
           )
         })}
-        {messages.length === 0 && <p className="text-sm text-gray-400 text-center py-10">No messages yet. Send a message to your legal team below.</p>}
+        {loadFailed && messages.length === 0 && (
+          <div className="text-center py-10 px-4">
+            <p className="text-sm text-gray-700">We couldn&apos;t load your messages just now.</p>
+            <p className="text-xs text-gray-500 mt-1">This is a connection problem, not a sign that your messages are gone.</p>
+            <button type="button" onClick={load} className="mt-3 px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white hover:border-gray-500">Try again</button>
+          </div>
+        )}
+        {loaded && !loadFailed && messages.length === 0 && (
+          <p className="text-sm text-gray-400 text-center py-10">No messages yet. Send a message to your legal team below.</p>
+        )}
       </div>
       <div className="border-t border-gray-200 p-3 bg-white">
+        {sendError && (
+          <div className="mb-2 flex items-center justify-between gap-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2">
+            <p className="text-xs text-red-800">Your message wasn&apos;t sent. It&apos;s still here — check your connection and try again.</p>
+            <button type="button" onClick={send} disabled={sending} className="text-xs font-semibold text-red-800 underline disabled:opacity-50">Try again</button>
+          </div>
+        )}
         <div className="flex items-end gap-2">
           {sendFilesButton}
           <textarea value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() } }} rows={1} placeholder="Send a message to your legal team…" className="flex-1 resize-none px-3 py-2 text-sm text-gray-900 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32" />

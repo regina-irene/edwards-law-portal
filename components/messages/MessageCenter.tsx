@@ -60,6 +60,15 @@ export default function MessageCenter() {
   // Formatting mode swaps the one-line composer for the full rich-text editor.
   // Off by default so quick replies stay quick (Enter still sends).
   const [rich, setRich] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [sendError, setSendError] = useState<string | null>(null)
+
+  // Drafts are per client (2026-08-18). Previously the composer, the queued
+  // attachments and the "also send as text" checkbox were single pieces of
+  // state, so switching conversations mid-reply left the half-typed message
+  // aimed at a different client — a confidentiality problem, not just a UX one.
+  const drafts = useRef<Record<string, { body: string; alsoText: boolean; rich: boolean }>>({})
+  const selectedRef = useRef<string | null>(null)
 
   // load the "text me on reply" state for the open conversation
   useEffect(() => {
@@ -128,11 +137,39 @@ export default function MessageCenter() {
   }, [])
 
   const loadConvos = useCallback(async () => {
-    const r = await fetch("/api/admin/conversations")
-    if (r.ok) setConvos((await r.json()).conversations ?? [])
+    try {
+      const r = await fetch("/api/admin/conversations")
+      if (!r.ok) throw new Error(String(r.status))
+      setConvos((await r.json()).conversations ?? [])
+      setLoadError(null)
+    } catch {
+      // Never let a failed fetch render as "No conversations." — that reads as
+      // "there is nothing here", which is a different and wrong statement.
+      setLoadError("Couldn't load conversations. Check your connection.")
+    }
   }, [])
 
   useEffect(() => { loadConvos() }, [loadConvos])
+
+  // Poll while the tab is visible. The client side polls every 30s, so without
+  // this the firm never saw a new message until they clicked away and back.
+  // (2026-08-18)
+  useEffect(() => {
+    const tick = () => {
+      if (document.visibilityState !== "visible") return
+      loadConvos()
+      if (selectedRef.current) loadThread(selectedRef.current)
+    }
+    const id = setInterval(tick, 20_000)
+    document.addEventListener("visibilitychange", tick)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener("visibilitychange", tick)
+    }
+    // loadThread is stable; selected is read through a ref so the interval
+    // isn't torn down and recreated on every conversation switch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadConvos])
 
   // Preselect from ?c=
   useEffect(() => {
@@ -140,11 +177,36 @@ export default function MessageCenter() {
     if (c) setSelected(c)
   }, [params])
 
+  // Park the outgoing conversation's draft and restore the incoming one.
+  // Attachments are deliberately NOT carried across: a File queued for one
+  // client must never end up attached to another.
+  function selectConversation(id: string) {
+    const prev = selectedRef.current
+    if (prev && prev !== id) {
+      drafts.current[prev] = { body, alsoText, rich }
+    }
+    const next = drafts.current[id] ?? { body: "", alsoText: false, rich: false }
+    setBody(next.body)
+    setAlsoText(next.alsoText)
+    setRich(next.rich)
+    setPendingFiles([])
+    setFileNotice(null)
+    setSmsNotice(null)
+    setSendError(null)
+    setSelected(id)
+  }
+
+  useEffect(() => { selectedRef.current = selected }, [selected])
+
   const loadThread = useCallback(async (id: string) => {
-    const r = await fetch(`/api/admin/chat?clientId=${encodeURIComponent(id)}`)
-    if (r.ok) {
+    try {
+      const r = await fetch(`/api/admin/chat?clientId=${encodeURIComponent(id)}`)
+      if (!r.ok) throw new Error(String(r.status))
       setMessages((await r.json()).messages ?? [])
+      setLoadError(null)
       loadConvos() // refresh unread after marking read
+    } catch {
+      setLoadError("Couldn't load this conversation. Check your connection.")
     }
   }, [loadConvos])
 
@@ -152,8 +214,13 @@ export default function MessageCenter() {
     if (selected) loadThread(selected)
   }, [selected, loadThread])
 
+  // Only stick to the bottom if the reader is already near it — otherwise a
+  // poll would yank them away from something they're reading further up.
   useEffect(() => {
-    if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight
+    const el = threadRef.current
+    if (!el) return
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120
+    if (nearBottom) el.scrollTop = el.scrollHeight
   }, [messages])
 
   // In formatting mode `body` holds HTML, so "is it empty" needs the rich check.
@@ -163,6 +230,7 @@ export default function MessageCenter() {
     if ((composerEmpty && pendingFiles.length === 0) || !selected) return
     setSending(true)
     setSmsNotice(null)
+    setSendError(null)
     const res = await fetch("/api/admin/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -171,8 +239,8 @@ export default function MessageCenter() {
         body: composerEmpty ? "📎 Attachment" : rich ? body : body.trim(),
         sms: alsoText,
       }),
-    })
-    if (res.ok) {
+    }).catch(() => null)
+    if (res?.ok) {
       const d = await res.json()
       if (d.sms || d.email) {
         const parts: string[] = []
@@ -205,8 +273,13 @@ export default function MessageCenter() {
       setBody("")
       setPendingFiles([])
       setAlsoText(false)
+      delete drafts.current[selected]
       await loadThread(selected)
       loadConvos()
+    } else {
+      // Never fail silently: the draft stays put and says so, rather than
+      // looking identical to a message that went through. (2026-08-18)
+      setSendError("Not sent. Your message is still here — check your connection and try again.")
     }
     setSending(false)
   }
@@ -290,7 +363,7 @@ export default function MessageCenter() {
         </div>
         <div className="flex-1 overflow-auto">
           {filtered.map((c) => (
-            <button key={c.id} onClick={() => setSelected(c.id)} className={`w-full text-left flex gap-3 px-3 py-3 border-b border-gray-100 transition-colors ${selected === c.id ? "bg-[#efe7da]" : "hover:bg-[#f3ede4]"}`} style={{ borderLeft: `3px solid ${selected === c.id ? "#1B2D45" : "transparent"}` }}>
+            <button key={c.id} onClick={() => selectConversation(c.id)} className={`w-full text-left flex gap-3 px-3 py-3 border-b border-gray-100 transition-colors ${selected === c.id ? "bg-[#efe7da]" : "hover:bg-[#f3ede4]"}`} style={{ borderLeft: `3px solid ${selected === c.id ? "#1B2D45" : "transparent"}` }}>
               <span className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0" style={{ background: "#1B2D45", color: "#fff" }}>{initials(c.name)}</span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
@@ -299,12 +372,21 @@ export default function MessageCenter() {
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-gray-500 truncate">{c.preview || "No messages yet"}</span>
-                  {c.unread > 0 && <span className="shrink-0 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">{c.unread}</span>}
+                  <span className="flex items-center gap-1 shrink-0">
+                    {c.id !== selected && drafts.current[c.id]?.body && (
+                      <span className="px-1 rounded bg-amber-100 text-amber-800 text-[9px] font-semibold" title="You have an unsent draft for this client">Draft</span>
+                    )}
+                    {c.unread > 0 && <span className="min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">{c.unread}</span>}
+                  </span>
                 </div>
               </div>
             </button>
           ))}
-          {filtered.length === 0 && <p className="text-sm text-gray-400 text-center py-8">No conversations.</p>}
+          {loadError ? (
+            <p className="text-sm text-amber-700 text-center py-8 px-3">{loadError}</p>
+          ) : (
+            filtered.length === 0 && <p className="text-sm text-gray-400 text-center py-8">No conversations.</p>
+          )}
         </div>
       </div>
 
@@ -427,6 +509,12 @@ export default function MessageCenter() {
                 </div>
               )}
               {fileNotice && <p className="mb-2 text-xs text-amber-700">{fileNotice}</p>}
+              {sendError && (
+                <div className="mb-2 flex items-center justify-between gap-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2">
+                  <p className="text-xs text-red-800">{sendError}</p>
+                  <button type="button" onClick={send} disabled={sending} className="text-xs font-semibold text-red-800 underline disabled:opacity-50">Try again</button>
+                </div>
+              )}
               <div className="flex items-end gap-2">
                 <button type="button" onClick={() => fileRef.current?.click()} title="Attach files — or drag them onto the conversation" className="px-2 py-2 text-gray-500 hover:text-gray-800 text-lg">📎</button>
                 <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { attachFiles(Array.from(e.target.files ?? [])); e.target.value = "" }} />

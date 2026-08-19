@@ -7,9 +7,12 @@
 // clipboard's HTML flavor, and pre-wrap newlines don't exist in it, so a
 // pasted thread used to collapse into one run-on paragraph.
 //
-// HTML bodies are sanitized on the way into the database (see the chat API
-// route), and only ever written by an authenticated admin.
+// Bodies are sanitized again at render time. The admin chat route sanitizes on
+// write, but client-composed messages (/api/chat) and inbound SMS are stored
+// verbatim, and isHtmlBody() sniffs content rather than trusting the sender —
+// so without this a client could store markup that runs in the firm's browser.
 import { isHtmlBody } from "@/lib/message-format"
+import { sanitizeNotesHtml } from "@/lib/sanitize"
 
 const RICH =
   "[&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 " +
@@ -22,7 +25,7 @@ export default function MessageBody({ body, className = "" }: { body: string; cl
     return (
       <div
         className={`break-words ${RICH} ${className}`}
-        dangerouslySetInnerHTML={{ __html: body }}
+        dangerouslySetInnerHTML={{ __html: sanitizeNotesHtml(body) }}
       />
     )
   }

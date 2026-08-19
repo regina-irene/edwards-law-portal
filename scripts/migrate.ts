@@ -1,3 +1,6 @@
+// scripts/migrate.ts: the whole schema, replayed idempotently.
+// Nothing added here takes effect until someone runs: npm run migrate
+// (the index block added 2026-08-18 at the bottom in particular).
 import { Pool } from "pg"
 
 export const MIGRATION_SQL = `
@@ -317,6 +320,21 @@ export const MIGRATION_SQL = `
   -- stages. NULL means a standalone form that sits outside every stage.
   ALTER TABLE portal_forms ADD COLUMN IF NOT EXISTS stage TEXT;
   ALTER TABLE client_tasks ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+
+  -- Query-performance indexes (2026-08-18). The message threads, the unread
+  -- badge, the task board and the activity feed all filter by client_id and
+  -- sort by created_at, which was a sequential scan on every poll. The partial
+  -- indexes cover the unread/pending counts, which are the hottest reads.
+  -- These are not live until someone runs: npm run migrate
+  CREATE INDEX IF NOT EXISTS chat_messages_client_created_idx ON chat_messages (client_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS chat_messages_unread_idx ON chat_messages (client_id) WHERE sender = 'client' AND read = false;
+  CREATE INDEX IF NOT EXISTS messages_client_created_idx ON messages (client_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS messages_unread_idx ON messages (client_id) WHERE read = false;
+  CREATE INDEX IF NOT EXISTS client_tasks_client_status_idx ON client_tasks (client_id, status, due_date);
+  CREATE INDEX IF NOT EXISTS client_tasks_template_idx ON client_tasks (template_id);
+  CREATE INDEX IF NOT EXISTS client_tasks_pending_idx ON client_tasks (status, due_date) WHERE status = 'pending';
+  CREATE INDEX IF NOT EXISTS auth_activity_created_idx ON auth_activity (created_at DESC);
+  CREATE INDEX IF NOT EXISTS client_notes_created_idx ON client_notes (created_at DESC);
 `
 
 async function migrate(): Promise<void> {

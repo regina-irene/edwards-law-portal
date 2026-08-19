@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { setClientLabel } from "@/lib/client-labels"
+import { revalidateClients } from "@/lib/airtable"
 import { sql } from "@/lib/db"
 
 export async function dismissActivity(eventId: string) {
@@ -10,9 +11,13 @@ export async function dismissActivity(eventId: string) {
 }
 
 export async function refreshClients() {
-  // The /admin page fetches fresh from Airtable on each render, so re-rendering
-  // the path is enough to pull the latest data and update the timestamp.
+  // The roster is now cached for 60s under the "clients" tag (2026-08-18), so
+  // re-rendering the path alone would just replay the cached copy. Bust the
+  // tag first, then re-render both /admin and /admin/clients, because the
+  // Refresh button lives on the Clients page too.
+  revalidateClients()
   revalidatePath("/admin")
+  revalidatePath("/admin/clients")
 }
 
 export async function saveClientLabel(clientId: string, label: string) {

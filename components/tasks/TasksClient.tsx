@@ -47,12 +47,23 @@ export default function TasksClient() {
   const [loading, setLoading] = useState(true)
   const [openId, setOpenId] = useState<string | null>(null)
   const [uploadingId, setUploadingId] = useState<string | null>(null)
+  // "No tasks assigned yet" and "we couldn't reach the server" are different
+  // statements. Conflating them told clients with overdue court-ordered
+  // uploads that they were all caught up. (2026-08-18)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   function reload() {
     return fetch("/api/tasks")
-      .then((r) => r.json())
-      .then((d) => setTasks(d.tasks ?? []))
-      .catch(() => {})
+      .then((r) => {
+        if (!r.ok) throw new Error(String(r.status))
+        return r.json()
+      })
+      .then((d) => {
+        setTasks(d.tasks ?? [])
+        setLoadFailed(false)
+      })
+      .catch(() => setLoadFailed(true))
   }
 
   useEffect(() => {
@@ -65,14 +76,20 @@ export default function TasksClient() {
     fd.append("file", file)
     fd.append("scope", "client_task")
     fd.append("refId", taskId)
-    const res = await fetch("/api/task-files", { method: "POST", body: fd })
+    const res = await fetch("/api/task-files", { method: "POST", body: fd }).catch(() => null)
     setUploadingId(null)
-    if (res.ok) reload()
-    else alert("Upload failed (max 25MB).")
+    if (res?.ok) {
+      setActionError(null)
+      reload()
+    } else {
+      setActionError(`Couldn't upload ${file.name}. Files must be under 25 MB — check the size and your connection, then try again.`)
+    }
   }
 
   async function deleteMyFile(id: string) {
-    await fetch(`/api/task-files/${id}`, { method: "DELETE" })
+    const res = await fetch(`/api/task-files/${id}`, { method: "DELETE" }).catch(() => null)
+    if (!res?.ok) setActionError("Couldn't remove that file. Please try again.")
+    else setActionError(null)
     reload()
   }
 
@@ -86,15 +103,28 @@ export default function TasksClient() {
     })
     if (!res.ok) {
       setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, status: task.status } : t))
+      setActionError("That didn't save. Check your connection and try again.")
+    } else {
+      setActionError(null)
     }
   }
 
-  if (loading) return <p className="text-gray-400 text-sm">Loading...</p>
+  if (loading) return <p className="text-gray-400 text-sm">Loading…</p>
+
+  if (loadFailed && tasks.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-48 bg-gray-50 rounded-lg border border-gray-200 px-4 text-center">
+        <p className="text-sm text-gray-700">We couldn&apos;t load your tasks just now.</p>
+        <p className="text-xs text-gray-500 mt-1">This is a connection problem — it doesn&apos;t mean you have nothing to do.</p>
+        <button type="button" onClick={reload} className="mt-3 px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white hover:border-gray-500">Try again</button>
+      </div>
+    )
+  }
 
   if (tasks.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 bg-gray-50 rounded-lg border border-gray-200">
-        <p className="text-sm text-gray-400">No tasks assigned yet.</p>
+        <p className="text-sm text-gray-400">Nothing needed from you yet — tasks will appear here as your case moves forward.</p>
       </div>
     )
   }
@@ -110,6 +140,12 @@ export default function TasksClient() {
 
   return (
     <div className="space-y-5">
+      {actionError && (
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-red-300 bg-red-50 px-4 py-3">
+          <p className="text-sm text-red-800">{actionError}</p>
+          <button type="button" onClick={() => setActionError(null)} aria-label="Dismiss" className="text-red-800 text-sm font-semibold shrink-0">✕</button>
+        </div>
+      )}
       {/* At-a-glance: open tasks + deadlines */}
       <div className="rounded-xl border border-blue-200 bg-blue-50 keep-ink p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2">

@@ -1,3 +1,5 @@
+import { unstable_cache, revalidateTag } from "next/cache"
+
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!
 const MAIN_BASE_ID = process.env.AIRTABLE_MAIN_BASE_ID!
 
@@ -154,15 +156,40 @@ export function clientDisplayLabel(name: string): string {
   return last || first
 }
 
-// Uncached fetch of all clients (no Next data-cache layer). The cached,
-// timestamped wrapper lives in lib/clients-cache.ts so this module stays free
-// of next/cache imports (which break the node test environment).
-export async function fetchAllClientsRaw(): Promise<AirtableClient[]> {
+// The client roster, cached (2026-08-18). This is called from ~12 places (the
+// admin dashboard, Clients, Field Notes, Forms and several API routes) and it
+// used to be cache: "no-store", so every admin render re-fetched the whole
+// roster. Airtable allows 5 req/s per base, so a few admin tabs open at once
+// produced 429s and pages that rendered with no client names.
+// Cached 60s under the "clients" tag; the admin Refresh button busts the tag.
+// Safe to wrap: this reads nothing per-request (no cookies/headers), only
+// process.env and its own fetch, so every caller sees the same value.
+export const CLIENTS_CACHE_TAG = "clients"
+
+async function loadAllClients(): Promise<AirtableClient[]> {
+  // No fetch-level cache option here: unstable_cache does the caching, and
+  // setting one inside it makes Next log an "ignored fetch cache" warning on
+  // every miss.
   const res = await fetch(`https://api.airtable.com/v0/${MAIN_BASE_ID}/Clients`, {
     headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
-    cache: "no-store",
   })
   if (!res.ok) throw new Error(`Airtable error: ${res.status}`)
   const data = await res.json()
   return (data.records ?? []).map((r: any): AirtableClient => mapClientRecord(r))
+}
+
+// Name and return type are unchanged so no call site had to move.
+export const fetchAllClientsRaw: () => Promise<AirtableClient[]> = unstable_cache(
+  loadAllClients,
+  ["airtable-all-clients"],
+  { revalidate: 60, tags: [CLIENTS_CACHE_TAG] }
+)
+
+// Call from a server action / route handler after the roster changes in
+// Airtable, so the next render refetches instead of waiting out the 60s.
+// Next 16 requires the second argument. `expire: 0` drops the entry outright so
+// the Refresh button refetches immediately, rather than serving one more stale
+// render the way the stale-while-revalidate profiles do.
+export function revalidateClients(): void {
+  revalidateTag(CLIENTS_CACHE_TAG, { expire: 0 })
 }

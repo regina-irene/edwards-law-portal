@@ -11,7 +11,19 @@ export async function GET() {
   if (!client?.clientId) return NextResponse.json({ error: "Client not found" }, { status: 404 })
   const cid = String(client.clientId)
 
-  await sql`UPDATE chat_messages SET read = true WHERE client_id = ${cid} AND sender = 'firm' AND read = false`.catch(() => {})
+  // The portal polls this every 30s per open tab, and this used to write on
+  // every one of those calls (2026-08-18): row locks, WAL and dead tuples for
+  // nothing, since almost every poll has nothing left to mark read. Check
+  // first; the UPDATE now only runs on the poll that actually clears unread.
+  // Still fail-soft: marking read must never break loading the thread.
+  const hasUnread = await sql`
+    SELECT 1 FROM chat_messages
+    WHERE client_id = ${cid} AND sender = 'firm' AND read = false
+    LIMIT 1
+  `.catch(() => ({ rows: [] as any[] }))
+  if (hasUnread.rows.length > 0) {
+    await sql`UPDATE chat_messages SET read = true WHERE client_id = ${cid} AND sender = 'firm' AND read = false`.catch(() => {})
+  }
 
   const result = await sql`
     SELECT id, sender, body, created_at, sms_status

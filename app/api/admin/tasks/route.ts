@@ -135,19 +135,22 @@ export async function POST(req: Request) {
         return NextResponse.json({ task: result.rows[0], tasks: result.rows }, { status: 201 })
       }
 
-      // template-based: assign each selected template
-      const created = []
-      for (const tid of taskTemplateIds) {
-        const tmpl = await sql`SELECT title, description, stage, tag, stage_order, sort_order FROM task_templates WHERE id = ${tid}`
-        if (tmpl.rows.length === 0) continue
-        const t = tmpl.rows[0]
-        const result = await sql`
-          INSERT INTO client_tasks (client_id, template_id, title, description, due_date, stage, tag, stage_order, sort_order)
-          VALUES (${clientId}, ${tid}, ${t.title}, ${t.description}, ${taskDueDate}, ${t.stage}, ${t.tag}, ${t.stage_order ?? 0}, ${t.sort_order ?? 0})
-          RETURNING id, client_id, title, description, status, due_date, stage, tag, stage_order, sort_order, created_at
-        `
-        created.push(result.rows[0])
-      }
+      // template-based: assign every selected template in one round trip.
+      // Was a SELECT + INSERT per template (2026-08-18), so assigning a whole
+      // stage meant 30+ sequential queries. Unnesting the id list WITH
+      // ORDINALITY (rather than a plain id = ANY) keeps the old loop's exact
+      // behaviour: the join drops ids with no template, the ordinal keeps the
+      // caller's ordering so created[0] is still the first id they sent.
+      const assigned = await sql`
+        INSERT INTO client_tasks (client_id, template_id, title, description, due_date, stage, tag, stage_order, sort_order)
+        SELECT ${clientId}::text, t.id, t.title, t.description, ${taskDueDate}::date, t.stage, t.tag,
+               COALESCE(t.stage_order, 0), COALESCE(t.sort_order, 0)
+        FROM unnest(${taskTemplateIds as any}::uuid[]) WITH ORDINALITY AS req(template_id, ord)
+        JOIN task_templates t ON t.id = req.template_id
+        ORDER BY req.ord
+        RETURNING id, client_id, title, description, status, due_date, stage, tag, stage_order, sort_order, created_at
+      `
+      const created = assigned.rows
       if (created.length === 0) return NextResponse.json({ error: "Template not found" }, { status: 404 })
       return NextResponse.json({ task: created[0], tasks: created }, { status: 201 })
     } catch {
