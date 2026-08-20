@@ -40,6 +40,33 @@ export function clientActor(displayName?: string): string {
   return n ? `Client ${n}` : "Client"
 }
 
+/**
+ * Who at the firm did it, by first name (2026-08-20).
+ *
+ * The log used to say "You sent …" for anything the firm did. That reads fine
+ * for exactly one person on exactly one screen, and wrongly everywhere else: a
+ * second person at the firm reading the log sees "You" against something they
+ * never did, and a printed case log records an action with no actor at all.
+ * A name is also simply more useful - "Regina sent" tells you something "You
+ * sent" does not.
+ *
+ * `who` is the admin's stored name or email where the row has one. Rows that
+ * carry no author (chat_messages records only 'firm', not which person) fall
+ * back to FIRM_SENDER_NAME.
+ */
+const FIRM_SENDER_NAME = process.env.FIRM_SENDER_NAME || "Regina"
+
+export function firmActor(who?: string | null): string {
+  const raw = (who ?? "").trim()
+  if (!raw) return FIRM_SENDER_NAME
+  // A stored name ("Regina Edwards") gives its first word; an email
+  // ("regina@edwardsfamilylaw.com") gives the part before the @, capitalised.
+  const name = raw.includes("@") ? raw.split("@")[0].replace(/[._-]+/g, " ") : raw
+  const first = name.split(/\s+/).filter(Boolean)[0] ?? ""
+  if (!first) return FIRM_SENDER_NAME
+  return first.charAt(0).toUpperCase() + first.slice(1)
+}
+
 export type TimelineItem =
   | { type: "note"; at: string; note: ClientNote }
   | { type: "event"; at: string; event: TimelineEvent }
@@ -96,6 +123,7 @@ async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: numb
     // client_tasks.id (the upload route verifies the task exists first).
     (everyCase
       ? sql`SELECT ta.id, ta.client_id, ta.file_name, ta.created_at, ta.uploaded_by, ct.title,
+                   au.name AS firm_name,
                    (au.email IS NOT NULL) AS by_firm
             FROM task_attachments ta
             LEFT JOIN admin_users au ON au.email = ta.uploaded_by
@@ -103,6 +131,7 @@ async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: numb
             WHERE ta.scope = 'client_task' AND ta.client_id IS NOT NULL
             ORDER BY ta.created_at DESC LIMIT ${perSource}`
       : sql`SELECT ta.id, ta.client_id, ta.file_name, ta.created_at, ta.uploaded_by, ct.title,
+                   au.name AS firm_name,
                    (au.email IS NOT NULL) AS by_firm
             FROM task_attachments ta
             LEFT JOIN admin_users au ON au.email = ta.uploaded_by
@@ -216,7 +245,7 @@ async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: numb
       smsStatus: m.sms_status ?? null,
       detail:
         m.sender === "firm"
-          ? `You sent a message: "${preview}"`
+          ? `${firmActor()} sent a message: "${preview}"`
           : m.sms_status === "inbound"
             ? `${who} texted: "${preview}"`
             : `${who} sent a message: "${preview}"`,
@@ -229,7 +258,7 @@ async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: numb
       at: String(m.created_at),
       clientId: caseOf(m),
       sender: "firm",
-      detail: `You sent a message: "${String(m.body ?? "").slice(0, 120)}"`,
+      detail: `${firmActor()} sent a message: "${String(m.body ?? "").slice(0, 120)}"`,
     })
   }
   for (const f of taskFiles.rows) {
@@ -241,7 +270,9 @@ async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: numb
       clientId: caseOf(f),
       sender: f.by_firm ? "firm" : "client",
       detail: f.by_firm
-        ? `You sent ${f.file_name}${onTask}`
+        // This row DOES know who: task_attachments records the uploader and the
+        // query joins admin_users for their name.
+        ? `${firmActor(typeof f.firm_name === "string" ? f.firm_name : (f.uploaded_by as string))} sent ${f.file_name}${onTask}`
         : `${whoFor(f)} uploaded ${f.file_name}${onTask}`,
       href: `/api/task-files/${f.id}`,
       linkLabel: "Open file",
@@ -254,7 +285,7 @@ async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: numb
       at: String(f.available_at),
       clientId: caseOf(f),
       sender: "firm",
-      detail: `You sent ${f.file_name}${f.title ? ` with the task "${f.title}"` : ""}`,
+      detail: `${firmActor()} sent ${f.file_name}${f.title ? ` with the task "${f.title}"` : ""}`,
       href: `/api/task-files/${f.id}`,
       linkLabel: "Open file",
     })
@@ -267,7 +298,7 @@ async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: numb
       at: String(f.created_at),
       clientId: caseOf(f),
       sender: firm ? "firm" : "client",
-      detail: firm ? `You attached ${f.file_name} to a message` : `${whoFor(f)} attached ${f.file_name} to a message`,
+      detail: firm ? `${firmActor()} attached ${f.file_name} to a message` : `${whoFor(f)} attached ${f.file_name} to a message`,
       href: `/api/message-files/${f.id}`,
       linkLabel: "Open file",
     })
