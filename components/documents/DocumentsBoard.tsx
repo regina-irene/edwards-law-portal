@@ -9,6 +9,7 @@
 // have inputs. The rest is there so you know which document you are annotating.
 import { useMemo, useState } from "react"
 import { InlineError } from "@/components/ui/InlineError"
+import { filedByColor, sentByColor, folderColor } from "@/lib/airtable-colors"
 import type { DocBoardRow, DocKind } from "@/lib/doc-board"
 
 const NAVY = "#1b2d45"
@@ -29,6 +30,21 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: "date", label: "Newest first" },
   { key: "missing", label: "Missing who filed or sent it" },
 ]
+
+// The same chips the client sees on their own Pleadings and Correspondence
+// pages, from the same helpers, so a document looks identical wherever it is
+// read. Correspondence and Pleadings use different palettes because the boards
+// hold different choices: "Us"/"Them"/"Court" against "Plaintiff"/"Defendant".
+function personChip(row: DocBoardRow) {
+  return row.kind === "correspondence" ? sentByColor(row.person) : filedByColor(row.person)
+}
+
+// Soften the folder color into a row wash, exactly as PleadingsTable does, so
+// everything from one Drive subfolder reads as a group without drowning the text.
+function tint(hex: string, alpha = 0.5): string {
+  const n = parseInt(hex.replace("#", ""), 16)
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`
+}
 
 function fmtDate(row: DocBoardRow): string {
   const d = row.date
@@ -202,11 +218,16 @@ export default function DocumentsBoard({
       <div className="space-y-2">
         {paged.map((row) => {
           const editing = editingId === row.recordId
+          const fc = row.folder ? folderColor(row.folder) : null
+          const pc = personChip(row)
           return (
             <div
               key={`${row.baseId}-${row.recordId}`}
-              className="bg-white rounded-xl border border-gray-200 p-4"
-              style={{ borderLeft: `4px solid ${row.kind === "pleadings" ? NAVY : "#7c6a52"}` }}
+              className="rounded-xl border border-gray-200 p-4"
+              style={{
+                borderLeft: `4px solid ${row.kind === "pleadings" ? NAVY : "#7c6a52"}`,
+                background: fc ? tint(fc.bg, 0.45) : "#FFFFFF",
+              }}
             >
               <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <p className="text-sm font-semibold text-gray-900 min-w-0">
@@ -214,10 +235,10 @@ export default function DocumentsBoard({
                   <span className="ml-2 text-[11px] font-medium uppercase tracking-wide text-gray-400">
                     {row.kind === "pleadings" ? "Pleading" : "Correspondence"}
                   </span>
-                  {row.folder && (
+                  {fc && row.folder && (
                     <span
                       className="ml-2 px-2 py-0.5 rounded-full text-[11px] font-semibold"
-                      style={{ background: "#eef2f7", color: NAVY }}
+                      style={{ background: fc.bg, color: fc.text }}
                     >
                       {row.folder}
                     </span>
@@ -244,13 +265,20 @@ export default function DocumentsBoard({
 
               {!editing ? (
                 <div className="mt-2 flex flex-wrap items-baseline gap-x-6 gap-y-1">
-                  <p className="text-[13px]">
+                  <p className="text-[13px] flex items-center gap-1.5">
                     <span className="text-gray-400">
-                      {row.kind === "pleadings" ? "Filed by" : "Sent by"}:{" "}
+                      {row.kind === "pleadings" ? "Filed by" : "Sent by"}:
                     </span>
-                    <span className={row.person ? "text-gray-800" : "text-gray-300"}>
-                      {row.person || "not recorded"}
-                    </span>
+                    {row.person ? (
+                      <span
+                        className="px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                        style={{ background: pc.bg, color: pc.text }}
+                      >
+                        {row.person.replace(/\s+/g, " ").trim()}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300">not recorded</span>
+                    )}
                   </p>
                   <p className="text-[13px] min-w-0">
                     <span className="text-gray-400">Notes: </span>
