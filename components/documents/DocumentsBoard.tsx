@@ -13,6 +13,15 @@ import type { DocBoardRow, DocKind } from "@/lib/doc-board"
 
 const NAVY = "#1b2d45"
 
+// How many rows are put on screen at once.
+//
+// The firm has well over a thousand documents across every case, and rendering
+// all of them froze the page: React held ~1,650 cards in the DOM, so scrolling
+// stuttered and clicks - including Edit - never landed. Every filter and every
+// keystroke re-rendered the lot. Capping it is what the Field Notes hub already
+// does, and the filters below are how you get to a specific document anyway.
+const PAGE = 60
+
 type SortKey = "client" | "date" | "missing"
 
 const SORTS: { key: SortKey; label: string }[] = [
@@ -40,6 +49,7 @@ export default function DocumentsBoard({
   const [kind, setKind] = useState<DocKind | "">("")
   const [sortKey, setSortKey] = useState<SortKey>("client")
   const [onlyMissing, setOnlyMissing] = useState(false)
+  const [shown, setShown] = useState(PAGE)
 
   // One row at a time, so there is never an ambiguous save.
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -79,6 +89,10 @@ export default function DocumentsBoard({
     }
     return sorted
   }, [rows, query, kind, sortKey, onlyMissing])
+
+  // Only this slice is rendered. `visible.length` still reports the true match
+  // count, so the number above the list is the honest one.
+  const paged = useMemo(() => visible.slice(0, shown), [visible, shown])
 
   const missingCount = rows.filter((r) => !r.person.trim()).length
 
@@ -131,14 +145,14 @@ export default function DocumentsBoard({
         <input
           type="search"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => { setQuery(e.target.value); setShown(PAGE) }}
           placeholder="Search by client, document, note…"
           aria-label="Search documents"
           className="flex-1 min-w-[14rem] px-4 py-2.5 text-sm bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <select
           value={kind}
-          onChange={(e) => setKind(e.target.value as DocKind | "")}
+          onChange={(e) => { setKind(e.target.value as DocKind | ""); setShown(PAGE) }}
           aria-label="Document type"
           className="px-3 py-2.5 text-sm bg-white border border-gray-300 rounded-xl text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
@@ -148,7 +162,7 @@ export default function DocumentsBoard({
         </select>
         <select
           value={sortKey}
-          onChange={(e) => setSortKey(e.target.value as SortKey)}
+          onChange={(e) => { setSortKey(e.target.value as SortKey); setShown(PAGE) }}
           aria-label="Sort by"
           className="px-3 py-2.5 text-sm bg-white border border-gray-300 rounded-xl text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
@@ -160,7 +174,7 @@ export default function DocumentsBoard({
         </select>
         <button
           type="button"
-          onClick={() => setOnlyMissing((v) => !v)}
+          onClick={() => { setOnlyMissing((v) => !v); setShown(PAGE) }}
           className={`px-3.5 py-2 rounded-full text-xs font-semibold border ${onlyMissing ? "text-white border-transparent" : "bg-white text-gray-700 border-gray-300"}`}
           style={onlyMissing ? { background: "#9a3412" } : undefined}
         >
@@ -170,6 +184,7 @@ export default function DocumentsBoard({
 
       <p className="text-xs text-gray-400">
         {visible.length} of {rows.length} {rows.length === 1 ? "document" : "documents"}
+        {visible.length > paged.length && ` · showing the first ${paged.length}`}
       </p>
 
       {loadError && (
@@ -185,7 +200,7 @@ export default function DocumentsBoard({
       )}
 
       <div className="space-y-2">
-        {visible.map((row) => {
+        {paged.map((row) => {
           const editing = editingId === row.recordId
           return (
             <div
@@ -320,6 +335,21 @@ export default function DocumentsBoard({
           )
         })}
       </div>
+
+      {visible.length > paged.length && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setShown((n) => n + PAGE)}
+            className="text-sm underline text-gray-600 hover:text-gray-900"
+          >
+            Show {Math.min(PAGE, visible.length - paged.length)} more
+          </button>
+          <span className="text-xs text-gray-400">
+            {visible.length - paged.length} not shown - search or filter to narrow it down.
+          </span>
+        </div>
+      )}
     </div>
   )
 }
