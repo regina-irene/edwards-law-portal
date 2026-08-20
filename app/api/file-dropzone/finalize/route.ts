@@ -3,16 +3,19 @@
 //
 // The browser has already put the file in Vercel Blob. This route takes the
 // blob URL (a few hundred bytes of JSON, so nowhere near the 4.5 MB request
-// body limit that broke the old direct upload), fetches those bytes
-// server-side, hands them to Google Drive, writes the receipt into the
-// conversation, and deletes the temporary blob.
+// body limit that broke the old direct upload), reads those bytes server-side,
+// hands them to Google Drive, writes the receipt into the conversation, and
+// deletes the temporary blob.
 //
-// Fetching the blob is a RESPONSE body, which has no such limit, so a 60 MB
-// production PDF is fine here where it was impossible before.
+// Reading the blob is a RESPONSE body, which has no such limit, so a 60 MB
+// production PDF is fine here where it was impossible before. It goes through
+// the store SDK rather than fetch(): the blob is private and its URL is not
+// publicly fetchable. See lib/blob-read.
 import { NextResponse } from "next/server"
 import { del } from "@vercel/blob"
 import { assertClientCanWrite } from "@/lib/client-write-guard"
 import { deliverClientUpload, driveConfigured } from "@/lib/client-uploads"
+import { readBlobBytes } from "@/lib/blob-read"
 import { recordUploadReceipt } from "@/lib/upload-receipt"
 
 export const runtime = "nodejs"
@@ -41,9 +44,9 @@ export async function POST(req: Request): Promise<NextResponse> {
   if (!url || !fileName) {
     return NextResponse.json({ error: "Missing upload details." }, { status: 400 })
   }
-  // Only ever fetch from Blob storage. Without this the route would be an open
-  // proxy that fetches any URL the caller names.
-  if (!/^https:\/\/[a-z0-9-]+\.public\.blob\.vercel-storage\.com\//i.test(url)) {
+  // Only ever read from Blob storage. Without this the route would be an open
+  // proxy that reads any URL the caller names.
+  if (!/^https:\/\/[a-z0-9-]+\.(public|private)\.blob\.vercel-storage\.com\//i.test(url)) {
     return NextResponse.json({ error: "Unrecognised upload location." }, { status: 400 })
   }
 
@@ -59,9 +62,7 @@ export async function POST(req: Request): Promise<NextResponse> {
   const baseName = segments.pop() || fileName
 
   try {
-    const res = await fetch(url)
-    if (!res.ok) throw new Error(`blob fetch ${res.status}`)
-    const buffer = Buffer.from(await res.arrayBuffer())
+    const buffer = await readBlobBytes(url)
 
     const { delivered, link } = await deliverClientUpload({
       clientId: String(client.clientId),

@@ -8,7 +8,7 @@ import { RichTextView } from "@/components/ui/RichTextView"
 import FormFill from "@/components/tasks/FormFill"
 import AirtableEmbed from "@/components/ui/AirtableEmbed"
 import { uploadToBlob } from "@/lib/blob-upload-client"
-import { tooBigMessage } from "@/lib/upload-limits"
+import { tooBigMessage, UPLOAD_ACCEPT_ATTR } from "@/lib/upload-limits"
 
 interface Attachment {
   id: string
@@ -100,10 +100,11 @@ export default function TasksClient({ readOnly = false }: { readOnly?: boolean }
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          // No pathname: the route derives it from the url, so a caller can't
+          // point a row at someone else's file.
           scope: "client_task",
           refId: taskId,
           url: blob.url,
-          pathname: blob.pathname,
           fileName: file.name,
           contentType: blob.contentType,
           size: file.size,
@@ -327,6 +328,10 @@ export default function TasksClient({ readOnly = false }: { readOnly?: boolean }
                             {uploadingId === task.id ? "Uploading…" : "+ Upload a file"}
                             <input
                               type="file"
+                              // Same list the upload token allows, so the
+                              // picker greys out anything that would be
+                              // refused instead of failing mid-upload.
+                              accept={UPLOAD_ACCEPT_ATTR}
                               className="hidden"
                               disabled={uploadingId === task.id}
                               onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadMyFile(task.id, f); e.target.value = "" }}

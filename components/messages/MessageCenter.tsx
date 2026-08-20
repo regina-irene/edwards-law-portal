@@ -11,7 +11,7 @@ import { PromptDialog } from "@/components/ui/PromptDialog"
 import ArchivedChip from "@/components/admin/ArchivedChip"
 import { bodyToHtml, bodyToPlainText, escapeHtml, isEmptyRich } from "@/lib/message-format"
 import { uploadToBlob } from "@/lib/blob-upload-client"
-import { MAX_UPLOAD_LABEL, tooBigMessage } from "@/lib/upload-limits"
+import { MAX_UPLOAD_LABEL, tooBigMessage, UPLOAD_ACCEPT_ATTR } from "@/lib/upload-limits"
 
 interface Conversation {
   id: string
@@ -299,9 +299,10 @@ export default function MessageCenter() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
+              // No pathname: the route derives it from the url, so a caller
+              // can't point a row at someone else's file.
               messageId: d.message.id,
               url: blob.url,
-              pathname: blob.pathname,
               fileName: f.name,
               contentType: blob.contentType,
               size: f.size,
@@ -589,7 +590,9 @@ export default function MessageCenter() {
               )}
               <div className="flex items-end gap-2">
                 <button type="button" onClick={() => fileRef.current?.click()} title="Attach files - or drag them onto the conversation" className="px-2 py-2 text-gray-500 hover:text-gray-800 text-lg">📎</button>
-                <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { attachFiles(Array.from(e.target.files ?? [])); e.target.value = "" }} />
+                {/* accept is a hint, not a limit: the firm's upload token has no
+                    content-type filter and the dialog still offers "All files". */}
+                <input ref={fileRef} type="file" multiple accept={UPLOAD_ACCEPT_ATTR} className="hidden" onChange={(e) => { attachFiles(Array.from(e.target.files ?? [])); e.target.value = "" }} />
                 {rich ? (
                   <div className="flex-1 min-w-0">
                     <RichTextEditor value={body} onChange={setBody} />

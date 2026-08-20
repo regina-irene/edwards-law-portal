@@ -27,19 +27,82 @@ export const MAX_UPLOAD_LABEL = "100 MB"
  */
 export const VERCEL_REQUEST_BODY_LIMIT_BYTES = 4.5 * 1024 * 1024
 
-/** Content types the firm accepts from clients. */
+/**
+ * Content types the firm accepts FROM CLIENTS.
+ *
+ * Family-law discovery is not just PDFs and Word files. Bank exports arrive as
+ * .csv, correspondence as .eml or .msg, a production as a .zip, and evidence as
+ * phone video. A list that stopped at "pdf, doc, jpg" turned those into an
+ * upload the person could not complete and could not explain, so the list below
+ * covers what actually turns up.
+ *
+ * The firm's own uploads are not filtered at all: see app/api/blob-upload.
+ */
 export const ACCEPTED_UPLOAD_TYPES = [
+  // Documents
   "application/pdf",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/rtf",
+  "text/rtf",
+  "application/vnd.oasis.opendocument.text",
+  // Spreadsheets and data exports
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.oasis.opendocument.spreadsheet",
+  "text/csv",
+  "application/csv",
+  "text/plain",
+  // Email
+  "message/rfc822",
+  "application/vnd.ms-outlook",
+  // Archives
+  "application/zip",
+  "application/x-zip-compressed",
+  // Images
   "image/jpeg",
   "image/png",
   "image/heic",
   "image/heif",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "text/plain",
+  "image/tiff",
+  // Video
+  "video/quicktime",
+  "video/mp4",
 ]
+
+/**
+ * The same list as an `accept` attribute for a bare <input type="file">.
+ *
+ * Extensions are included alongside the media types because a browser reports
+ * no useful type at all for .msg and often not for .eml or .heic, so an
+ * accept list of media types alone would hide those files in the picker.
+ * This only filters the dialog. The real check is the upload token.
+ */
+export const UPLOAD_ACCEPT_ATTR = [
+  ...ACCEPTED_UPLOAD_TYPES,
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".rtf",
+  ".odt",
+  ".ods",
+  ".xls",
+  ".xlsx",
+  ".csv",
+  ".txt",
+  ".eml",
+  ".msg",
+  ".zip",
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".heic",
+  ".heif",
+  ".tif",
+  ".tiff",
+  ".mov",
+  ".mp4",
+].join(",")
 
 export function prettyBytes(n: number): string {
   if (n < 1024) return `${n} B`

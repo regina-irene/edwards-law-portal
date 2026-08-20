@@ -9,7 +9,7 @@ import { stageAccent, matchesSearch } from "@/lib/task-progress"
 import { IconButton, TagBadge, NotesBadge, ConfirmDialog, InlineError } from "./bits"
 import type { Template, Attachment, FormSummary } from "./types"
 import { uploadToBlob } from "@/lib/blob-upload-client"
-import { tooBigMessage } from "@/lib/upload-limits"
+import { tooBigMessage, UPLOAD_ACCEPT_ATTR } from "@/lib/upload-limits"
 
 const OPEN_STAGES_KEY = "efl.admin.tasks.openStages"
 
@@ -189,10 +189,11 @@ export default function TemplatesTab({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          // No pathname: the route derives it from the url, so a caller can't
+          // point a row at someone else's file.
           scope: "template",
           refId: templateId,
           url: blob.url,
-          pathname: blob.pathname,
           fileName: file.name,
           contentType: blob.contentType,
           size: file.size,
@@ -470,6 +471,10 @@ export default function TemplatesTab({
                           {uploading ? "Uploading…" : "+ Upload PDF / document"}
                           <input
                             type="file"
+                            // A hint, not a limit: the firm's upload token has
+                            // no content-type filter, and the file dialog still
+                            // offers "All files" for anything unusual.
+                            accept={UPLOAD_ACCEPT_ATTR}
                             className="hidden"
                             disabled={uploading}
                             onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile(t.id, f); e.target.value = "" }}

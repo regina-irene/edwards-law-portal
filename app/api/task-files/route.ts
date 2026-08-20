@@ -6,11 +6,11 @@
 // file came back as a bare 413 while the screen promised 25 MB. The bytes now go
 // from the browser straight to Blob and only the resulting URL is posted here.
 //
-// A browser upload token can only mint a PUBLIC blob, so that copy is staging
-// only. The bytes are restored to a PRIVATE blob here and the public one is
-// deleted, because these are client financial documents and an unguessable URL
-// is not access control. The row points at the private blob, which
-// /api/task-files/[id] streams back through its own authorisation check.
+// The browser writes the blob PRIVATELY, because these are client financial
+// documents and an unguessable URL is not access control. It stays exactly
+// where it landed: nothing is re-uploaded and nothing is deleted here. The row
+// points at that blob and /api/task-files/[id] streams it back through its own
+// authorisation check.
 import { auth } from "@/auth"
 import { requireAdmin } from "@/lib/admin"
 import { getClientByEmail } from "@/lib/airtable"
@@ -18,7 +18,7 @@ import { assertClientCanWrite } from "@/lib/client-write-guard"
 import { sql } from "@/lib/db"
 import { deliverClientUpload } from "@/lib/client-uploads"
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/upload-limits"
-import { moveToPrivateBlob, type PrivateBlob } from "@/lib/blob-private"
+import { readBlobBytes } from "@/lib/blob-read"
 import { NextResponse } from "next/server"
 
 export const runtime = "nodejs"
@@ -26,17 +26,21 @@ export const runtime = "nodejs"
 // longer than a default invocation allows for a large file.
 export const maxDuration = 300
 
-// Only ever fetch from Blob storage. Without this the route would be an open
-// proxy that fetches any URL the caller names.
-const BLOB_URL_RE = /^https:\/\/[a-z0-9-]+\.public\.blob\.vercel-storage\.com\//i
+// Only ever read from Blob storage. Without this the route would be an open
+// proxy that reads any URL the caller names. New uploads are private; the
+// public form is still allowed because rows written earlier point at it.
+const BLOB_URL_RE = /^https:\/\/[a-z0-9-]+\.(public|private)\.blob\.vercel-storage\.com\//i
 
 type Scope = "template" | "client_task"
 
+// `pathname` is NOT accepted from the caller. It used to be, which meant a
+// caller could post their own url with someone else's pathname and have the
+// row (and every later read) point somewhere they should not reach. It is
+// derived from the url below instead.
 interface Body {
   scope?: unknown
   refId?: unknown
   url?: unknown
-  pathname?: unknown
   fileName?: unknown
   contentType?: unknown
   size?: unknown
@@ -49,16 +53,26 @@ export async function POST(req: Request): Promise<NextResponse> {
     rawScope === "template" || rawScope === "client_task" ? rawScope : null
   const refId = typeof body?.refId === "string" ? body.refId.trim() : ""
   const url = typeof body?.url === "string" ? body.url : ""
-  const pathname = typeof body?.pathname === "string" ? body.pathname : ""
   const fileName = typeof body?.fileName === "string" ? body.fileName.trim() : ""
   const contentType = typeof body?.contentType === "string" && body.contentType ? body.contentType : null
   const size =
     typeof body?.size === "number" && Number.isFinite(body.size) ? Math.max(0, Math.round(body.size)) : 0
 
-  if (!scope || !refId || !url || !pathname || !fileName) {
+  if (!scope || !refId || !url || !fileName) {
     return NextResponse.json({ error: "Missing upload details." }, { status: 400 })
   }
   if (!BLOB_URL_RE.test(url)) {
+    return NextResponse.json({ error: "Unrecognised upload location." }, { status: 400 })
+  }
+  // Derived, never taken from the body. The regex above has already confirmed
+  // this parses as a blob URL, but new URL() is guarded all the same.
+  let pathname: string
+  try {
+    pathname = new URL(url).pathname.replace(/^\//, "")
+  } catch {
+    return NextResponse.json({ error: "Unrecognised upload location." }, { status: 400 })
+  }
+  if (!pathname) {
     return NextResponse.json({ error: "Unrecognised upload location." }, { status: 400 })
   }
   if (size > MAX_UPLOAD_BYTES) {
@@ -100,31 +114,33 @@ export async function POST(req: Request): Promise<NextResponse> {
   }
 
   try {
-    // Restore the staging blob privately BEFORE writing the row: a blob that
-    // can't be read then leaves nothing behind and the person can try again.
-    // Client financial documents must not stay in a publicly readable URL.
-    let stored: PrivateBlob
-    try {
-      stored = await moveToPrivateBlob({ stagingUrl: url, pathname, contentType })
-    } catch (e) {
-      console.error("[task-files] private store failed:", e instanceof Error ? e.message : e)
-      return NextResponse.json(
-        { error: "We couldn't read that upload. Please try again." },
-        { status: 502 }
-      )
+    // The blob is already private and already where it belongs, so nothing is
+    // copied or moved here. Only a client's file also goes to Drive, and that
+    // is the only reason to pull the bytes back at all. Read BEFORE the insert
+    // so an upload that can't be read leaves no row pointing at nothing.
+    let buffer: Buffer | null = null
+    if (isClientUpload && clientId) {
+      try {
+        buffer = await readBlobBytes(url)
+      } catch (e) {
+        console.error("[task-files] blob read failed:", e instanceof Error ? e.message : e)
+        return NextResponse.json(
+          { error: "We couldn't read that upload. Please try again." },
+          { status: 502 }
+        )
+      }
     }
-    const buffer = stored.buffer
 
     const ins = await sql`
       INSERT INTO task_attachments (scope, ref_id, client_id, file_name, pathname, url, content_type, size, uploaded_by)
-      VALUES (${scope}, ${refId}, ${clientId}, ${fileName}, ${stored.pathname}, ${stored.url}, ${contentType}, ${size}, ${actorEmail})
+      VALUES (${scope}, ${refId}, ${clientId}, ${fileName}, ${pathname}, ${url}, ${contentType}, ${size}, ${actorEmail})
       RETURNING id, scope, ref_id, file_name, content_type, size, created_at
     `
 
     // Deliver to the firm's Drive folder. Fail-soft - the portal copy is saved,
     // so a Drive problem must never lose the file the client just sent.
     let delivered = true
-    if (isClientUpload && clientId) {
+    if (isClientUpload && clientId && buffer) {
       const out = await deliverClientUpload({ clientId, fileName, buffer, mimeType: contentType })
       delivered = out.delivered
     }

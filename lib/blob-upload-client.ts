@@ -24,7 +24,15 @@ export interface BlobUploadResult {
  * Put one file in Blob and return where it landed.
  *
  * `pathnamePrefix` must match what /api/blob-upload will authorise for this
- * user: a client's own uploads live under `uploads/<clientId>/`.
+ * user. A client's token is only valid under `uploads/`, so client uploads are
+ * given prefixes like `uploads/` or `uploads/tasks/<taskId>`. Nothing here puts
+ * a client id in the path, and nothing server-side reads one out of it:
+ * ownership is always re-derived from the session by the route that records or
+ * files the upload. The prefix is a scoping check, not an identity.
+ *
+ * The blob is written PRIVATE. A message or task attachment is kept and served
+ * later through an authorised route, and an unguessable URL is not access
+ * control for a client's financial affidavit.
  *
  * Throws with a human sentence. Callers show it as-is.
  */
@@ -43,7 +51,7 @@ export async function uploadToBlob(
   const prefix = opts.pathnamePrefix.replace(/\/+$/, "")
 
   const blob = await upload(`${prefix}/${safe}`, file, {
-    access: "public",
+    access: "private",
     handleUploadUrl: "/api/blob-upload",
     contentType: file.type || undefined,
     clientPayload: JSON.stringify({ scope: opts.scope }),

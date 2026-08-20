@@ -1,10 +1,10 @@
 // lib/upload-receipt.ts - the "📎 Sent 3 documents: ..." line that appears in
 // the conversation after a client sends files.
 //
-// Extracted from app/api/file-dropzone/route.ts on 2026-08-20 so the new
-// two-step upload (browser to Blob, then server to Drive) can write the same
-// receipt. The wording and the pattern that reads it back have to stay in step,
-// which is exactly why they now live together in one file.
+// Extracted on 2026-08-20 from the old single-shot upload route (since removed)
+// so the two-step upload (browser to Blob, then server to Drive) can write the
+// same receipt. The wording and the pattern that reads it back have to stay in
+// step, which is exactly why they now live together in one file.
 //
 // Clients were re-uploading, or messaging to ask whether anything arrived,
 // because a finished upload left no trace. The modal posts one file at a time,

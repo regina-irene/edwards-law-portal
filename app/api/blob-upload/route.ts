@@ -6,12 +6,12 @@
 // document production fail with a 413 while the portal promised 25 MB.
 //
 // Authorisation still happens here, before any token is issued. The token is
-// scoped to one pathname prefix and one set of content types, so it cannot be
-// reused to write anywhere else in the store.
+// scoped to one pathname prefix, so it cannot be reused to write anywhere else
+// in the store. Blobs are written PRIVATE by the browser: `access` is chosen at
+// the call site in lib/blob-upload-client, not here.
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client"
 import { NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin"
-import { getPortalClient } from "@/lib/portal-client"
 import { assertClientCanWrite } from "@/lib/client-write-guard"
 import { ACCEPTED_UPLOAD_TYPES, MAX_UPLOAD_BYTES } from "@/lib/upload-limits"
 
@@ -51,7 +51,12 @@ export async function POST(req: Request): Promise<NextResponse> {
         const admin = await requireAdmin()
         if (admin.status === "ok") {
           return {
-            allowedContentTypes: ACCEPTED_UPLOAD_TYPES,
+            // No content-type filter for the firm. A family-law production is
+            // full of .csv, .eml, .msg, .zip, .rtf and .mov, and the admin task
+            // and dropzone uploads accepted anything before this route existed.
+            // Refusing them here would be a regression, and the refusal reaches
+            // the person as an SDK error rather than a sentence.
+            allowedContentTypes: undefined,
             maximumSizeInBytes: MAX_UPLOAD_BYTES,
             addRandomSuffix: true,
             tokenPayload: JSON.stringify({ scope, by: "admin", email: admin.email }),
@@ -74,6 +79,10 @@ export async function POST(req: Request): Promise<NextResponse> {
           throw new Error("Not authorised for that path")
         }
 
+        // A client token does keep a list, and lib/upload-limits widened it to
+        // the formats family-law discovery actually arrives in. The matching
+        // `accept` on the input means the picker filters first, so a wrong file
+        // is a greyed-out file rather than an error after the upload starts.
         return {
           allowedContentTypes: ACCEPTED_UPLOAD_TYPES,
           maximumSizeInBytes: MAX_UPLOAD_BYTES,
