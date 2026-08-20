@@ -84,6 +84,15 @@ export default function StatusBoard({
   const [editStages, setEditStages] = useState<string[]>([])
   const [editText, setEditText] = useState("")
   const [editInternal, setEditInternal] = useState("")
+  // What the two editors held when this row was opened. A column is only sent
+  // to Airtable when its editor actually differs from this, because a save
+  // rewrites whatever it sends: leaving the internal note in the request would
+  // let an edit to the client text overwrite a note someone changed on the
+  // board in the meantime, and would push both columns through the
+  // HTML-to-plain round trip (which normalises blank lines and trailing
+  // spaces) on every save. Sending nothing leaves a column untouched.
+  const [initialText, setInitialText] = useState("")
+  const [initialInternal, setInitialInternal] = useState("")
   // Per-row "yes, I really mean to clear this" latch.
   const [clearConfirm, setClearConfirm] = useState<Record<string, boolean>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
@@ -163,8 +172,12 @@ export default function StatusBoard({
     setEditStages(row.stages)
     // The editor holds HTML. A row whose formatting no longer matches Airtable
     // (edited on the board) opens with Airtable's words as plain paragraphs.
-    setEditText(row.statusHtml || plainToHtml(row.statusText))
-    setEditInternal(row.internalHtml || plainToHtml(row.internalText))
+    const openText = row.statusHtml || plainToHtml(row.statusText)
+    const openInternal = row.internalHtml || plainToHtml(row.internalText)
+    setEditText(openText)
+    setEditInternal(openInternal)
+    setInitialText(openText)
+    setInitialInternal(openInternal)
     clearRow(row.recordId)
   }
 
@@ -192,17 +205,25 @@ export default function StatusBoard({
     // Belt and braces against ever PATCHing an empty stage list over real data.
     // Send the HTML; the server derives the plain text Airtable stores, so the
     // two can never drift apart.
+    const textChanged = editText !== initialText
+    const internalChanged = editInternal !== initialInternal
+
     const body: {
       recordId: string
-      statusHtml: string
-      internalHtml: string
+      statusHtml?: string
+      internalHtml?: string
       stages?: string[]
-    } = {
-      recordId: row.recordId,
-      statusHtml: editText,
-      internalHtml: editInternal,
-    }
+    } = { recordId: row.recordId }
+    if (textChanged) body.statusHtml = editText
+    if (internalChanged) body.internalHtml = editInternal
     if (row.hasStatusRecord) body.stages = editStages
+
+    // Stages are always sent for a real row, so there is always something to
+    // save; this only catches a row with no Status record and no edits.
+    if (body.statusHtml === undefined && body.internalHtml === undefined && !body.stages) {
+      setEditingId(null)
+      return
+    }
 
     const res = await fetch("/api/admin/case-status", {
       method: "PATCH",
@@ -218,13 +239,15 @@ export default function StatusBoard({
     }
 
     const savedStages = [...editStages]
-    const savedHtml = editText
-    const savedInternalHtml = editInternal
+    const savedHtml = textChanged ? editText : row.statusHtml
+    const savedInternalHtml = internalChanged ? editInternal : row.internalHtml
     // Wrapped for the same reason the server wraps it - see statusHtmlToPlain.
     // This must match what the server stored or the row would show one thing
     // and the board another until the next reload.
-    const savedText = bodyToPlainText(`<p>${editText}</p>`)
-    const savedInternalText = bodyToPlainText(`<p>${editInternal}</p>`)
+    const savedText = textChanged ? bodyToPlainText(`<p>${editText}</p>`) : row.statusText
+    const savedInternalText = internalChanged
+      ? bodyToPlainText(`<p>${editInternal}</p>`)
+      : row.internalText
     const now = new Date().toISOString()
     setRows((prev) =>
       prev.map((r) =>

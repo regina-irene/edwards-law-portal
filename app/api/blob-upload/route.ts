@@ -12,7 +12,7 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client"
 import { NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin"
-import { blobAuth, blobConfigured } from "@/lib/blob-token"
+import { blobAuth, blobClientUploadsConfigured, blobCredentialSummary } from "@/lib/blob-token"
 import { assertClientCanWrite } from "@/lib/client-write-guard"
 import { ACCEPTED_UPLOAD_TYPES, MAX_UPLOAD_BYTES } from "@/lib/upload-limits"
 
@@ -28,16 +28,25 @@ function isScope(v: unknown): v is Scope {
 }
 
 export async function POST(req: Request): Promise<NextResponse> {
-  // Say this plainly rather than letting the SDK throw "No read-write token
-  // found" from inside handleUpload, which reaches the person as a refused
-  // upload and reaches the log looking like an authorisation failure. This is a
-  // deployment problem, not something the person did wrong.
-  if (!blobConfigured()) {
-    console.error(
-      "[blob-upload] no blob token: neither BLOB_READ_WRITE_TOKEN nor any *_BLOB_READ_WRITE_TOKEN is set in this environment"
-    )
+  // handleUpload needs a READ-WRITE token specifically. It has no OIDC path:
+  // it derives the store id by parsing the read-write token itself. So a
+  // project set up with BLOB_STORE_ID and OIDC alone reaches this line with a
+  // perfectly working Blob store and still cannot issue a browser upload
+  // token. See lib/blob-token for the full explanation.
+  //
+  // Checked up front so the log names the real cause, rather than letting the
+  // SDK throw "No read-write token found" from inside handleUpload - which
+  // reaches the person as a bare refusal and reaches the log looking like an
+  // authorisation failure. This is a deployment problem, not something the
+  // person did wrong.
+  if (!blobClientUploadsConfigured()) {
+    console.error(`[blob-upload] cannot issue client upload tokens - ${blobCredentialSummary()}`)
     return NextResponse.json(
-      { error: "File uploads are not configured yet. Please contact support." },
+      {
+        error:
+          "File uploads aren't switched on for this site yet. Please let the firm know, " +
+          "and email your documents in the meantime.",
+      },
       { status: 503 }
     )
   }

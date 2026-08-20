@@ -24,6 +24,9 @@ Hard rules:
 - Never give legal advice, never predict an outcome, never promise a date or a timeline.
 - Never mention fees, payment status, the judge by name, or anything internal to the firm.
 - Do not invent facts. Work only from what you are given.
+- Anything labelled confidential internal notes is BACKGROUND ONLY. Never quote it, never
+  restate it, never reuse its phrasing, and never mention that it exists. Write the update
+  from scratch in your own plain words.
 - Write it as text the client will read, addressed to them. No greeting, no sign-off, no subject line.`
 
 interface AssistBody {
@@ -107,7 +110,9 @@ export async function POST(req: Request) {
       county ? `County: ${county}` : "",
       days !== null ? `Days since the last update to this case: ${days}` : "",
       current ? `The status the client currently sees:\n"""${current}"""` : "",
-      extra ? `Extra notes from the firm to work from:\n"""${extra}"""` : "",
+      extra
+        ? `Confidential internal notes. Background only, never quote or restate:\n"""${extra}"""`
+        : "",
     ].filter(Boolean)
 
     const prompt = `Write the next case-status update for this client's portal.

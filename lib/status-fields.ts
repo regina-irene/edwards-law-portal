@@ -199,6 +199,12 @@ export async function resolveVisibleFields(clientId: string): Promise<Set<string
     if (on) visible.add(name)
     else visible.delete(name)
   }
+  // Belt and braces. NOT_CONFIGURABLE holds fields a client may never be shown
+  // as a row on their page, including the firm's internal status note. Enforced
+  // HERE, at the point of use, rather than trusted to the admin UI never having
+  // offered them: a stale `true` saved before this list grew, or any future
+  // caller of saveFieldPrefs, must not be able to switch one back on.
+  for (const name of NOT_CONFIGURABLE) visible.delete(name)
   return visible
 }
 

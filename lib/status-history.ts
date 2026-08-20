@@ -19,6 +19,22 @@ const KEY_PREFIX = "status_history:"
 /** Plenty for the life of a case; keeps one row from growing without bound. */
 const MAX_ENTRIES = 100
 
+/**
+ * The moment the portal started recording the CLIENT-facing status column.
+ *
+ * Before this, every history entry was written from "Case Status - Dashboard",
+ * which is the firm's INTERNAL note. Those rows are still in app_settings and
+ * would otherwise keep rendering on the client's own Status page under
+ * "Earlier updates" - precisely the wording the split exists to keep away from
+ * clients.
+ *
+ * They are filtered out here rather than deleted: nothing of the firm's is
+ * destroyed, and no client is shown a note that was never written for them.
+ * Once every live case has genuine client-facing history, this constant and the
+ * filter below can go.
+ */
+export const CLIENT_HISTORY_FROM = "2026-08-20T00:00:00.000Z"
+
 export interface StatusHistoryEntry {
   /** ISO timestamp of the change. */
   at: string
@@ -46,7 +62,13 @@ export async function getStatusHistory(clientId: string): Promise<StatusHistoryE
     if (!Array.isArray(parsed)) return []
     return parsed.filter(
       (e): e is StatusHistoryEntry =>
-        Boolean(e) && typeof e === "object" && typeof (e as StatusHistoryEntry).at === "string"
+        Boolean(e) &&
+        typeof e === "object" &&
+        typeof (e as StatusHistoryEntry).at === "string" &&
+        // Anything recorded before the split was the internal note. An entry
+        // whose date will not compare is dropped too: if it cannot be shown to
+        // have been written for the client, it is not shown to one.
+        (e as StatusHistoryEntry).at >= CLIENT_HISTORY_FROM
     )
   } catch {
     return []
