@@ -112,6 +112,35 @@ export default function DocumentsBoard({
 
   const missingCount = rows.filter((r) => !r.person.trim()).length
 
+  /**
+   * The choices offered for "Filed by" / "Sent by", read from the data rather
+   * than from Airtable's schema API.
+   *
+   * Two reasons. The portal's Airtable token is not guaranteed to carry
+   * `schema.bases:read`, so asking for the field definition of forty separate
+   * client bases may simply be refused. And more importantly these are single
+   * select columns: writing a value that is not already an option makes
+   * Airtable reject the save. Taking the options from values that are actually
+   * stored means every choice offered is one that base already accepts,
+   * character for character - which matters, because at least one of them
+   * ("Them ") carries a trailing space on the board that a hand-typed list
+   * would quietly lose.
+   *
+   * The consequence worth knowing: an option that exists on the board but has
+   * never been used on any document will not appear here.
+   */
+  const choices = useMemo(() => {
+    const byKind: Record<DocKind, Set<string>> = {
+      pleadings: new Set<string>(),
+      correspondence: new Set<string>(),
+    }
+    for (const r of rows) if (r.person.trim()) byKind[r.kind].add(r.person)
+    return {
+      pleadings: [...byKind.pleadings].sort((a, b) => a.localeCompare(b)),
+      correspondence: [...byKind.correspondence].sort((a, b) => a.localeCompare(b)),
+    }
+  }, [rows])
+
   function startEdit(row: DocBoardRow) {
     setEditingId(row.recordId)
     setEditPerson(row.person)
@@ -149,7 +178,9 @@ export default function DocumentsBoard({
     }
     setRows((prev) =>
       prev.map((r) =>
-        r.recordId === row.recordId ? { ...r, person: editPerson.trim(), notes: editNotes.trim() } : r
+        // person is stored verbatim (see the API route: select options can
+        // carry a trailing space), notes are tidied.
+        r.recordId === row.recordId ? { ...r, person: editPerson, notes: editNotes.trim() } : r
       )
     )
     setEditingId(null)
@@ -304,13 +335,41 @@ export default function DocumentsBoard({
                       >
                         {row.kind === "pleadings" ? "Filed by" : "Sent by"}
                       </label>
-                      <input
+                      {/* The board's own choices. Tinted to the chip colour so
+                          the menu reads the way the row does. */}
+                      <select
                         id={`person-${row.recordId}`}
-                        type="text"
                         value={editPerson}
                         onChange={(e) => setEditPerson(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        style={
+                          editPerson
+                            ? {
+                                background:
+                                  row.kind === "correspondence"
+                                    ? sentByColor(editPerson).bg
+                                    : filedByColor(editPerson).bg,
+                                color:
+                                  row.kind === "correspondence"
+                                    ? sentByColor(editPerson).text
+                                    : filedByColor(editPerson).text,
+                              }
+                            : { background: "#FFFFFF", color: "#111827" }
+                        }
+                      >
+                        <option value="">- not recorded -</option>
+                        {/* A value already on the record that is no longer an
+                            offered choice still has to be selectable, or
+                            opening the row would silently change it. */}
+                        {editPerson && !choices[row.kind].includes(editPerson) && (
+                          <option value={editPerson}>{editPerson.trim()}</option>
+                        )}
+                        {choices[row.kind].map((c) => (
+                          <option key={c} value={c}>
+                            {c.trim()}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label

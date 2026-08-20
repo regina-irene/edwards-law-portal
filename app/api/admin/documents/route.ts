@@ -64,7 +64,12 @@ export async function PATCH(req: Request) {
     if (typeof body.person !== "string") {
       return NextResponse.json({ error: "That field must be text." }, { status: 400 })
     }
-    patch.person = body.person.trim()
+    // NOT trimmed, deliberately. These are single select options and the value
+    // has to match the option on the board exactly. At least one of them
+    // ("Them ") carries a trailing space, so trimming here would turn a valid
+    // choice into one Airtable rejects. The picker only offers values already
+    // stored in that base, so what arrives is already exact.
+    patch.person = body.person
   }
   if (body?.notes !== undefined) {
     if (typeof body.notes !== "string") {
