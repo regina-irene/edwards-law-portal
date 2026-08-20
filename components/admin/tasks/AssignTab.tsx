@@ -280,7 +280,15 @@ export default function AssignTab({
           {error && <InlineError message={error} onRetry={() => reload()} />}
         </section>
 
-        <aside className="lg:col-span-2 space-y-3">
+        <aside className="lg:col-span-2 space-y-4">
+          {/* A task that isn't on the template board: typed here and sent
+              straight to the client, with its own instructions, link and files.
+              It sits BESIDE the template list rather than under the whole page
+              (2026-08-20). At the bottom it was off the end of a long scroll,
+              so sending a one-off task meant scrolling past everything else to
+              reach a form that needed the same client picked all over again. */}
+          <CustomTaskPanel clients={clients} labelOf={labelOf} reload={reload} />
+
           <p className="section-label">Where they stand now</p>
           {preview ? (
             preview.total === 0 ? (
@@ -307,10 +315,6 @@ export default function AssignTab({
           )}
         </aside>
       </div>
-
-      {/* A task that isn't on the template board: typed here and sent straight
-          to the client, with its own instructions, link and files. */}
-      <CustomTaskPanel clients={clients} labelOf={labelOf} reload={reload} />
 
       <ConfirmDialog
         open={Boolean(confirm)}
