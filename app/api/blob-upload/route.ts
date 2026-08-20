@@ -12,6 +12,7 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client"
 import { NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin"
+import { blobAuth, blobConfigured } from "@/lib/blob-token"
 import { assertClientCanWrite } from "@/lib/client-write-guard"
 import { ACCEPTED_UPLOAD_TYPES, MAX_UPLOAD_BYTES } from "@/lib/upload-limits"
 
@@ -27,11 +28,26 @@ function isScope(v: unknown): v is Scope {
 }
 
 export async function POST(req: Request): Promise<NextResponse> {
+  // Say this plainly rather than letting the SDK throw "No read-write token
+  // found" from inside handleUpload, which reaches the person as a refused
+  // upload and reaches the log looking like an authorisation failure. This is a
+  // deployment problem, not something the person did wrong.
+  if (!blobConfigured()) {
+    console.error(
+      "[blob-upload] no blob token: neither BLOB_READ_WRITE_TOKEN nor any *_BLOB_READ_WRITE_TOKEN is set in this environment"
+    )
+    return NextResponse.json(
+      { error: "File uploads are not configured yet. Please contact support." },
+      { status: 503 }
+    )
+  }
+
   const body = (await req.json().catch(() => null)) as HandleUploadBody | null
   if (!body) return NextResponse.json({ error: "Invalid request" }, { status: 400 })
 
   try {
     const result = await handleUpload({
+      ...blobAuth(),
       body,
       request: req,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
