@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/admin"
 import { sql } from "@/lib/db"
 import { deliverClientUpload, driveConfigured } from "@/lib/client-uploads"
 import { get } from "@vercel/blob"
+import { blobAuth } from "@/lib/blob-token"
 import { NextResponse } from "next/server"
 
 export const runtime = "nodejs"
@@ -68,7 +69,7 @@ export async function GET() {
       continue
     }
     try {
-      const blob = await get(item.pathname, { access: "private" })
+      const blob = await get(item.pathname, { ...blobAuth(), access: "private" })
       if (!blob || blob.statusCode !== 200) {
         failed.push(`${item.fileName} (not in portal storage)`)
         continue

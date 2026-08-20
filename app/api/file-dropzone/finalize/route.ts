@@ -16,6 +16,7 @@ import { del } from "@vercel/blob"
 import { assertClientCanWrite } from "@/lib/client-write-guard"
 import { deliverClientUpload, driveConfigured } from "@/lib/client-uploads"
 import { readBlobBytes } from "@/lib/blob-read"
+import { blobAuth } from "@/lib/blob-token"
 import { recordUploadReceipt } from "@/lib/upload-receipt"
 
 export const runtime = "nodejs"
@@ -89,7 +90,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     // The blob was a staging area, not storage. Losing this is harmless, so it
     // must not fail the upload the client is waiting on.
     try {
-      await del(url)
+      await del(url, { ...blobAuth() })
     } catch (e) {
       console.error("[finalize] blob cleanup failed:", e instanceof Error ? e.message : e)
     }

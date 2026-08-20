@@ -2,6 +2,7 @@
 import { requireAdmin } from "@/lib/admin"
 import { sql } from "@/lib/db"
 import { put, del } from "@vercel/blob"
+import { blobAuth } from "@/lib/blob-token"
 import { NextResponse } from "next/server"
 
 const MAX_BYTES = 10 * 1024 * 1024 // 10MB
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
 
   try {
     const safe = file.name.replace(/[^\w.\-]+/g, "_") || "image"
-    const blob = await put(`pages/${clientId}/${page}/${safe}`, file, { access: "private" })
+    const blob = await put(`pages/${clientId}/${page}/${safe}`, file, { ...blobAuth(), access: "private" })
     await sql`
       INSERT INTO page_content (client_id, page, image_pathname, image_url, image_name)
       VALUES (${clientId}, ${page}, ${blob.pathname}, ${blob.url}, ${file.name})
@@ -49,7 +50,7 @@ export async function DELETE(req: Request) {
   try {
     const r = await sql`SELECT image_url FROM page_content WHERE client_id = ${body.clientId} AND page = ${body.page}`
     const url = r.rows[0]?.image_url
-    if (url) { try { await del(url) } catch (e) { console.error("[page-image] blob del:", e) } }
+    if (url) { try { await del(url, { ...blobAuth() }) } catch (e) { console.error("[page-image] blob del:", e) } }
     await sql`
       UPDATE page_content SET image_pathname = NULL, image_url = NULL, image_name = NULL
       WHERE client_id = ${body.clientId} AND page = ${body.page}

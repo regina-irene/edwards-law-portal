@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin"
 import { getPortalClient } from "@/lib/portal-client"
 import { sql } from "@/lib/db"
 import { get } from "@vercel/blob"
+import { blobAuth } from "@/lib/blob-token"
 import { NextResponse } from "next/server"
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -17,7 +18,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const r = await sql`SELECT pathname FROM content_images WHERE id = ${id}`
   if (r.rows.length === 0) return new NextResponse("Not found", { status: 404 })
 
-  const result = await get(r.rows[0].pathname, { access: "private" })
+  const result = await get(r.rows[0].pathname, { ...blobAuth(), access: "private" })
   if (!result || result.statusCode !== 200) return new NextResponse("Not found", { status: 404 })
 
   return new NextResponse(result.stream, {

@@ -18,6 +18,7 @@ import { NextResponse } from "next/server"
 import { del } from "@vercel/blob"
 import { requireAdmin } from "@/lib/admin"
 import { readBlobBytes } from "@/lib/blob-read"
+import { blobAuth } from "@/lib/blob-token"
 import { sql } from "@/lib/db"
 import { uploadToDrive } from "@/lib/google-drive"
 
@@ -84,7 +85,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     // The blob was a staging area, not storage. Losing this is harmless, so it
     // must not fail the upload the person is waiting on.
     try {
-      await del(url)
+      await del(url, { ...blobAuth() })
     } catch (e) {
       console.error("[admin file-dropzone] blob cleanup failed:", e instanceof Error ? e.message : e)
     }

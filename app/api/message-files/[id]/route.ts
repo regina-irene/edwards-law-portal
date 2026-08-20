@@ -4,6 +4,7 @@ import { getPortalClient } from "@/lib/portal-client"
 import { sql } from "@/lib/db"
 import { recordFileView } from "@/lib/file-views"
 import { get } from "@vercel/blob"
+import { blobAuth } from "@/lib/blob-token"
 import { NextResponse } from "next/server"
 
 // Attachments written before 2026-08-20 went into the private blob store from
@@ -32,7 +33,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     viewerRole = "client"
   }
 
-  const result = await get(att.pathname, { access: blobAccess(att.url) })
+  const result = await get(att.pathname, { ...blobAuth(), access: blobAccess(att.url) })
   if (!result || result.statusCode !== 200) return new NextResponse("Not found", { status: 404 })
 
   // Log the open only once the file is really being served.

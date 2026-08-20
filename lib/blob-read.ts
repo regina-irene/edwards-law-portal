@@ -10,6 +10,7 @@
 // the request with the store token. `get()` takes a pathname rather than a URL,
 // so the pathname is derived from the URL that was recorded with the row.
 import { get } from "@vercel/blob"
+import { blobAuth } from "@/lib/blob-token"
 
 /**
  * Everything after the host, with no leading slash. Deliberately NOT decoded:
@@ -36,7 +37,7 @@ export async function readBlobBytes(url: string): Promise<Buffer> {
   }
   if (!pathname) throw new Error("upload location has no pathname")
 
-  const result = await get(pathname, { access: "private" })
+  const result = await get(pathname, { ...blobAuth(), access: "private" })
   if (!result) throw new Error(`blob not found: ${pathname}`)
   if (result.statusCode < 200 || result.statusCode > 299) {
     throw new Error(`blob read returned ${result.statusCode}`)

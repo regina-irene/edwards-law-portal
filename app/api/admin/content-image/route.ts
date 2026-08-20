@@ -2,6 +2,7 @@
 import { requireAdmin } from "@/lib/admin"
 import { sql } from "@/lib/db"
 import { put } from "@vercel/blob"
+import { blobAuth } from "@/lib/blob-token"
 import { NextResponse } from "next/server"
 
 const MAX_BYTES = 10 * 1024 * 1024 // 10MB
@@ -18,7 +19,7 @@ export async function POST(req: Request) {
 
   try {
     const safe = file.name.replace(/[^\w.\-]+/g, "_") || "image"
-    const blob = await put(`content/${safe}`, file, { access: "private" })
+    const blob = await put(`content/${safe}`, file, { ...blobAuth(), access: "private" })
     const ins = await sql`
       INSERT INTO content_images (pathname, url, uploaded_by)
       VALUES (${blob.pathname}, ${blob.url}, ${check.email})

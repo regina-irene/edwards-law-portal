@@ -2,6 +2,7 @@
 import { getPortalClient } from "@/lib/portal-client"
 import { getPageContent } from "@/lib/page-content"
 import { get } from "@vercel/blob"
+import { blobAuth } from "@/lib/blob-token"
 import { NextResponse } from "next/server"
 
 export async function GET(_req: Request, { params }: { params: Promise<{ page: string }> }) {
@@ -12,7 +13,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ page: s
   const content = await getPageContent(String(client.clientId), page)
   if (!content.image_pathname) return new NextResponse("Not found", { status: 404 })
 
-  const result = await get(content.image_pathname, { access: "private" })
+  const result = await get(content.image_pathname, { ...blobAuth(), access: "private" })
   if (!result || result.statusCode !== 200) return new NextResponse("Not found", { status: 404 })
 
   return new NextResponse(result.stream, {

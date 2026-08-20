@@ -6,6 +6,7 @@ import { assertClientCanWrite } from "@/lib/client-write-guard"
 import { sql } from "@/lib/db"
 import { recordFileView } from "@/lib/file-views"
 import { get, del } from "@vercel/blob"
+import { blobAuth } from "@/lib/blob-token"
 import { NextResponse } from "next/server"
 
 async function loadAttachment(id: string) {
@@ -55,7 +56,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
   if (!allowed) return new NextResponse("Forbidden", { status: 403 })
 
-  const result = await get(att.pathname, { access: blobAccess(att.url) })
+  const result = await get(att.pathname, { ...blobAuth(), access: blobAccess(att.url) })
   if (!result || result.statusCode !== 200) return new NextResponse("Not found", { status: 404 })
 
   // Log the open only once the file is really being served.
@@ -106,7 +107,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   }
   if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
-  try { await del(att.url) } catch (e) { console.error("[task-files] blob del failed:", e) }
+  try { await del(att.url, { ...blobAuth() }) } catch (e) { console.error("[task-files] blob del failed:", e) }
   await sql`DELETE FROM task_attachments WHERE id = ${id}`
   return NextResponse.json({ ok: true })
 }
