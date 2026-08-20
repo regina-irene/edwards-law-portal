@@ -6,6 +6,7 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import PageTitle from "@/components/ui/PageTitle"
 import QuickNote from "@/components/notes/QuickNote"
+import LogNoteRow from "@/components/notes/LogNoteRow"
 import { dayHeadingWithDate, timeOfDay } from "@/lib/dates"
 import CaseJump from "@/components/notes/CaseJump"
 import { taglineFor } from "@/lib/taglines"
@@ -257,24 +258,32 @@ export default async function FieldNotesHub({
                 {day.entries.map((entry) =>
                   entry.type === "note" ? (
                     // Written notes are the important entries: navy edge, like
-                    // the per-case timeline.
-                    <Link
+                    // the per-case timeline. LogNoteRow carries that edge and
+                    // the Delete, so the button can sit OUTSIDE the link - a
+                    // <button> nested in an <a> is not reliably clickable.
+                    <LogNoteRow
                       key={entry.key}
-                      href={`/admin/notes/${encodeURIComponent(entry.clientId)}`}
-                      className="block px-5 py-3.5 hover:bg-gray-50"
-                      style={{ borderLeft: "3px solid #1b2d45" }}
+                      noteId={entry.note.noteId}
+                      caseLabel={caseLabel(entry.clientId)}
                     >
-                      <p className="flex items-baseline justify-between gap-3">
-                        <span className="text-sm font-semibold text-gray-900 truncate">
-                          📌 {caseLabel(entry.clientId)}
-                          {isArchived(entry.clientId) && <ArchivedChip note={archiveNoteOf(entry.clientId)} className="ml-2" />}
-                        </span>
-                        <span className="shrink-0 text-xs text-gray-400">
-                          {timeOf(entry.at)}{entry.note.author_name && ` · ${entry.note.author_name}`}
-                        </span>
-                      </p>
-                      <p className="text-sm text-gray-600 mt-0.5">{entry.note.snippet}</p>
-                    </Link>
+                      <Link
+                        href={`/admin/notes/${encodeURIComponent(entry.clientId)}`}
+                        className="block px-5 py-3.5 hover:bg-gray-50"
+                      >
+                        <p className="flex items-baseline justify-between gap-3">
+                          <span className="text-sm font-semibold text-gray-900 truncate">
+                            📌 {caseLabel(entry.clientId)}
+                            {isArchived(entry.clientId) && <ArchivedChip note={archiveNoteOf(entry.clientId)} className="ml-2" />}
+                          </span>
+                          {/* Right padding leaves room for the Delete that
+                              appears on hover in the same corner. */}
+                          <span className="shrink-0 text-xs text-gray-400 pr-14">
+                            {timeOf(entry.at)}{entry.note.author_name && ` · ${entry.note.author_name}`}
+                          </span>
+                        </p>
+                        <p className="text-sm text-gray-600 mt-0.5">{entry.note.snippet}</p>
+                      </Link>
+                    </LogNoteRow>
                   ) : (
                     <div key={entry.key} className="px-5 py-2.5 hover:bg-gray-50" style={{ borderLeft: "3px solid transparent" }}>
                       <p className="flex items-baseline justify-between gap-3">

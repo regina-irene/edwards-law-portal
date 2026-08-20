@@ -6,7 +6,6 @@ import { useCallback, useRef, useState } from "react"
 import { RichTextEditor } from "@/components/ui/RichTextEditor"
 import { RichTextView } from "@/components/ui/RichTextView"
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
-import { UndoBanner } from "@/components/ui/UndoBanner"
 import type { TimelineItem } from "@/lib/notes-timeline"
 import type { ClientNote } from "@/lib/notes"
 
@@ -30,11 +29,16 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState("")
   const [error, setError] = useState("")
-  // Deleting a field note can't be taken back, so it happens in two beats: the
-  // confirm names what's going, then the note is hidden for ten seconds while
-  // the undo is on offer. The DELETE only goes out when that window closes.
+  // Deleting a field note takes one confirm, and then it is actually gone.
+  //
+  // This used to hide the note for ten seconds and offer an undo, holding the
+  // DELETE back until that window closed. It read well and behaved badly:
+  // clicking through to another case inside those ten seconds unmounted the
+  // banner, the DELETE never went out, and the note you believed you had
+  // deleted was still on the file with nothing to say so. On a case log, a
+  // delete that silently does not happen is worse than no undo. The dialog
+  // names what is going; confirming it is the decision.
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const deletingRef = useRef<string | null>(null)
 
   async function save() {
@@ -73,19 +77,13 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
     deletingRef.current = id
     const res = await fetch(`/api/admin/notes?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => null)
     deletingRef.current = null
-    setPendingDeleteId(null)
-    // On a failure the note simply comes back into the list - nothing is lost.
-    if (!res?.ok) { setError("Couldn't delete the note - try again."); return }
+    // Nothing was hidden up front, so a failure costs the list nothing: the
+    // note is still there and still on the file.
+    if (!res?.ok) { setError("Couldn't delete the note - it's still on the file. Try again."); return }
     setItems((prev) => prev.filter((i) => !(i.type === "note" && i.note.id === id)))
   }, [])
 
-  const commitPendingDelete = useCallback(() => {
-    if (pendingDeleteId) void runDelete(pendingDeleteId)
-  }, [pendingDeleteId, runDelete])
-
   function askRemove(id: string) {
-    // Only one note can be waiting at a time - see the other one out first.
-    commitPendingDelete()
     setError("")
     setConfirmingId(id)
   }
@@ -97,7 +95,6 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
 
   // Picking a person implies "just my notes" - portal events have no author.
   const visible = items.filter((i) => {
-    if (pendingDeleteId && i.type === "note" && i.note.id === pendingDeleteId) return false
     if (author) return i.type === "note" && i.note.author_name === author
     return notesOnly ? i.type === "note" : true
   })
@@ -105,17 +102,6 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
 
   return (
     <div className="space-y-5 max-w-3xl">
-      {pendingDeleteId && (
-        <div className="print:hidden">
-          <UndoBanner
-            key={pendingDeleteId}
-            message="Note deleted"
-            onUndo={() => setPendingDeleteId(null)}
-            onDismiss={commitPendingDelete}
-          />
-        </div>
-      )}
-
       <div className="bg-white rounded-xl border border-gray-200 p-4 print:hidden">
         <p className="section-label mb-2">New note</p>
         <RichTextEditor value={draft} onChange={setDraft} />
@@ -233,9 +219,9 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
       <ConfirmDialog
         open={confirmingId !== null}
         title="Delete this note?"
-        body="This note is only kept here - deleting it removes it from the case log for good. You'll have ten seconds to undo."
+        body="This note is only kept here - deleting it removes it from the case log for good."
         confirmLabel="Delete note"
-        onConfirm={() => { setPendingDeleteId(confirmingId); setConfirmingId(null) }}
+        onConfirm={() => { const id = confirmingId; setConfirmingId(null); if (id) void runDelete(id) }}
         onCancel={() => setConfirmingId(null)}
       />
     </div>
