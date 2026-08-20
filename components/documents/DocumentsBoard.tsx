@@ -10,7 +10,7 @@
 import { useMemo, useState } from "react"
 import { InlineError } from "@/components/ui/InlineError"
 import { filedByColor, sentByColor, folderColor } from "@/lib/airtable-colors"
-import type { DocBoardRow, DocKind } from "@/lib/doc-board"
+import type { DocBoardRow, DocKind, DocChoices } from "@/lib/doc-board"
 
 const NAVY = "#1b2d45"
 
@@ -55,9 +55,20 @@ function fmtDate(row: DocBoardRow): string {
 
 export default function DocumentsBoard({
   initialRows,
+  choices,
   loadError = false,
 }: {
   initialRows: DocBoardRow[]
+  /**
+   * "Filed by" / "Sent by" options, per client base.
+   *
+   * Per base rather than pooled across the firm: each client base defines its
+   * own select options, so a choice borrowed from another client is one
+   * Airtable will refuse to save. Built server-side from that base's schema
+   * where the token can read it, topped up with anything already stored on its
+   * records. See lib/doc-board.
+   */
+  choices: DocChoices
   loadError?: boolean
 }) {
   const [rows, setRows] = useState<DocBoardRow[]>(initialRows)
@@ -112,34 +123,8 @@ export default function DocumentsBoard({
 
   const missingCount = rows.filter((r) => !r.person.trim()).length
 
-  /**
-   * The choices offered for "Filed by" / "Sent by", read from the data rather
-   * than from Airtable's schema API.
-   *
-   * Two reasons. The portal's Airtable token is not guaranteed to carry
-   * `schema.bases:read`, so asking for the field definition of forty separate
-   * client bases may simply be refused. And more importantly these are single
-   * select columns: writing a value that is not already an option makes
-   * Airtable reject the save. Taking the options from values that are actually
-   * stored means every choice offered is one that base already accepts,
-   * character for character - which matters, because at least one of them
-   * ("Them ") carries a trailing space on the board that a hand-typed list
-   * would quietly lose.
-   *
-   * The consequence worth knowing: an option that exists on the board but has
-   * never been used on any document will not appear here.
-   */
-  const choices = useMemo(() => {
-    const byKind: Record<DocKind, Set<string>> = {
-      pleadings: new Set<string>(),
-      correspondence: new Set<string>(),
-    }
-    for (const r of rows) if (r.person.trim()) byKind[r.kind].add(r.person)
-    return {
-      pleadings: [...byKind.pleadings].sort((a, b) => a.localeCompare(b)),
-      correspondence: [...byKind.correspondence].sort((a, b) => a.localeCompare(b)),
-    }
-  }, [rows])
+  /** This client's own options for this table. Never another client's. */
+  const choicesFor = (row: DocBoardRow): string[] => choices[row.baseId]?.[row.kind] ?? []
 
   function startEdit(row: DocBoardRow) {
     setEditingId(row.recordId)
@@ -361,10 +346,10 @@ export default function DocumentsBoard({
                         {/* A value already on the record that is no longer an
                             offered choice still has to be selectable, or
                             opening the row would silently change it. */}
-                        {editPerson && !choices[row.kind].includes(editPerson) && (
+                        {editPerson && !choicesFor(row).includes(editPerson) && (
                           <option value={editPerson}>{editPerson.trim()}</option>
                         )}
-                        {choices[row.kind].map((c) => (
+                        {choicesFor(row).map((c) => (
                           <option key={c} value={c}>
                             {c.trim()}
                           </option>

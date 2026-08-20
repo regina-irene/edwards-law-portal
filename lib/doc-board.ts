@@ -88,6 +88,47 @@ function resolveKey(records: { fields: Record<string, unknown> }[], candidates: 
   return candidates[0]
 }
 
+/**
+ * The single select options a base actually defines, per table.
+ *
+ * Read from the Meta API, which needs the `schema.bases:read` scope. That scope
+ * is not guaranteed on the portal's token, and the call is per base, so this
+ * returns null on ANY failure and the caller falls back to the values it can
+ * see in the records. Never throws: a base whose schema is unreadable must
+ * still appear on the board.
+ *
+ * Worth the call when it works, because it includes options that exist on the
+ * board but have never been used on a document - which the records alone can
+ * never reveal.
+ */
+async function fetchSelectOptions(baseId: string): Promise<Partial<Record<DocKind, string[]>> | null> {
+  try {
+    const res = await fetch(`https://api.airtable.com/v0/meta/bases/${baseId}/tables`, {
+      headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
+    })
+    if (!res.ok) return null
+    const data = (await res.json()) as {
+      tables?: { name?: string; fields?: { name?: string; type?: string; options?: { choices?: { name?: string }[] } }[] }[]
+    }
+    const out: Partial<Record<DocKind, string[]>> = {}
+    for (const kind of ["pleadings", "correspondence"] as DocKind[]) {
+      const table = data.tables?.find((t) => t.name === TABLE[kind])
+      if (!table) continue
+      const field = table.fields?.find(
+        (f) => typeof f.name === "string" && PERSON_KEYS[kind].includes(f.name)
+      )
+      const choices = field?.options?.choices
+      if (!Array.isArray(choices)) continue
+      // Names are kept EXACTLY as defined, trailing spaces and all: the value
+      // written back has to match the option character for character.
+      out[kind] = choices.map((c) => String(c?.name ?? "")).filter((n) => n.length > 0)
+    }
+    return out
+  } catch {
+    return null
+  }
+}
+
 async function fetchTable(
   baseId: string,
   table: string
@@ -176,7 +217,22 @@ async function pooled<T, R>(items: T[], size: number, fn: (item: T) => Promise<R
   return out
 }
 
-async function loadBoard(): Promise<DocBoardRow[]> {
+/**
+ * The choices offered for "Filed by" / "Sent by", PER BASE.
+ *
+ * Deliberately not pooled across clients. Each client base defines its own
+ * select options, so offering one base's list on another client's document
+ * invites a save Airtable will refuse - and a confusing error for something
+ * that looked like a valid pick.
+ */
+export type DocChoices = Record<string, Partial<Record<DocKind, string[]>>>
+
+export interface DocBoard {
+  rows: DocBoardRow[]
+  choices: DocChoices
+}
+
+async function loadBoard(): Promise<DocBoard> {
   const clients = await getAllClients()
   const withBase = clients.filter((c) => c.clientBaseId)
 
@@ -184,29 +240,52 @@ async function loadBoard(): Promise<DocBoardRow[]> {
     const label = clientDisplayLabel(c.name) || c.name || c.email || String(c.clientId)
     const baseId = String(c.clientBaseId)
     const rows: DocBoardRow[] = []
+    const observed: Record<DocKind, Set<string>> = {
+      pleadings: new Set<string>(),
+      correspondence: new Set<string>(),
+    }
+
     for (const kind of ["pleadings", "correspondence"] as DocKind[]) {
       try {
         const records = await fetchTable(baseId, TABLE[kind])
-        rows.push(...rowsFor(kind, baseId, String(c.clientId), label, c.archived, records))
+        const built = rowsFor(kind, baseId, String(c.clientId), label, c.archived, records)
+        rows.push(...built)
+        for (const r of built) if (r.person) observed[kind].add(r.person)
       } catch (e) {
         // One unreachable base must not cost the whole board. The client simply
         // shows no rows for that table.
         console.error(`[doc-board] ${label} ${kind} failed:`, e instanceof Error ? e.message : e)
       }
     }
-    return rows
+
+    // Schema first (it knows options nobody has used yet), then anything seen in
+    // the records that the schema did not mention - a base whose column is plain
+    // text rather than a select has no schema choices at all.
+    const schema = await fetchSelectOptions(baseId)
+    const choices: Partial<Record<DocKind, string[]>> = {}
+    for (const kind of ["pleadings", "correspondence"] as DocKind[]) {
+      const merged = new Set<string>(schema?.[kind] ?? [])
+      for (const v of observed[kind]) merged.add(v)
+      if (merged.size > 0) choices[kind] = [...merged].sort((a, b) => a.localeCompare(b))
+    }
+
+    return { rows, baseId, choices }
   })
 
-  const all = perClient.flat()
+  const all = perClient.flatMap((p) => p.rows)
   all.sort(
     (a, b) =>
       a.clientLabel.localeCompare(b.clientLabel) ||
       (b.date ?? b.created ?? "").localeCompare(a.date ?? a.created ?? "")
   )
-  return all
+
+  const choices: DocChoices = {}
+  for (const p of perClient) choices[p.baseId] = p.choices
+
+  return { rows: all, choices }
 }
 
-const cachedBoard: () => Promise<DocBoardRow[]> = unstable_cache(loadBoard, ["doc-board-all"], {
+const cachedBoard: () => Promise<DocBoard> = unstable_cache(loadBoard, ["doc-board-all"], {
   revalidate: 300,
   tags: [DOC_BOARD_CACHE_TAG],
 })
@@ -217,9 +296,12 @@ const cachedBoard: () => Promise<DocBoardRow[]> = unstable_cache(loadBoard, ["do
  * Deliberately NOT fail-soft: it throws so the page can say "couldn't load"
  * rather than showing an empty board that looks like "you have no filings".
  */
-export async function buildDocBoard(options: { includeArchived?: boolean } = {}): Promise<DocBoardRow[]> {
-  const rows = await cachedBoard()
-  return options.includeArchived === true ? rows : rows.filter((r) => !r.archived)
+export async function buildDocBoard(options: { includeArchived?: boolean } = {}): Promise<DocBoard> {
+  const board = await cachedBoard()
+  return {
+    rows: options.includeArchived === true ? board.rows : board.rows.filter((r) => !r.archived),
+    choices: board.choices,
+  }
 }
 
 export function revalidateDocBoard(): void {

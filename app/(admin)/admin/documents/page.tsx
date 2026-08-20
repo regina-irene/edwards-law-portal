@@ -12,7 +12,7 @@ import { requireAdmin } from "@/lib/admin"
 import { refreshDocBoard } from "./actions"
 import DocumentsBoard from "@/components/documents/DocumentsBoard"
 import ArchiveToggle from "@/components/admin/ArchiveToggle"
-import { buildDocBoard, type DocBoardRow } from "@/lib/doc-board"
+import { buildDocBoard, type DocBoardRow, type DocChoices } from "@/lib/doc-board"
 
 export const dynamic = "force-dynamic"
 
@@ -39,9 +39,15 @@ export default async function AdminDocumentsPage({
 
   // A failed read must show an explicit error, never a false "no documents".
   let rows: DocBoardRow[] = []
+  // The select options each client base defines, keyed by base id. Kept per
+  // base on purpose: offering one client's choices on another client's document
+  // would produce a pick Airtable refuses to save.
+  let choices: DocChoices = {}
   let loadError = false
   try {
-    rows = await buildDocBoard({ includeArchived })
+    const board = await buildDocBoard({ includeArchived })
+    rows = board.rows
+    choices = board.choices
   } catch {
     loadError = true
   }
@@ -75,7 +81,7 @@ export default async function AdminDocumentsPage({
         </span>
       </div>
 
-      <DocumentsBoard initialRows={rows} loadError={loadError} />
+      <DocumentsBoard initialRows={rows} choices={choices} loadError={loadError} />
     </div>
   )
 }
