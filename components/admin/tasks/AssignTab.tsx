@@ -6,6 +6,7 @@ import { useMemo, useState } from "react"
 import { groupByStage } from "@/lib/task-stages"
 import { matchesSearch, progressFor } from "@/lib/task-progress"
 import ClientCombobox, { type ClientOption } from "./ClientCombobox"
+import CustomTaskPanel from "./CustomTaskPanel"
 import { ClientProgressCard } from "./ProgressTab"
 import { TriStateCheckbox, TagBadge, UndoBanner, InlineError, ConfirmDialog } from "./bits"
 import type { Template, ClientTask } from "./types"
@@ -306,6 +307,10 @@ export default function AssignTab({
           )}
         </aside>
       </div>
+
+      {/* A task that isn't on the template board: typed here and sent straight
+          to the client, with its own instructions, link and files. */}
+      <CustomTaskPanel clients={clients} labelOf={labelOf} reload={reload} />
 
       <ConfirmDialog
         open={Boolean(confirm)}

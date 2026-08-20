@@ -7,6 +7,17 @@ import { PromptDialog } from "@/components/ui/PromptDialog"
 // Which URL the dialog is currently asking for; null when it's closed.
 type UrlAsk = "link" | "image"
 
+// Turn what a person actually types into something a browser will follow:
+// "example.com" becomes "https://example.com", while mailto:/tel:/http(s) links
+// are left alone. Hoisted out of the editor and exported so the admin link
+// fields normalise a pasted address exactly the same way.
+export function normalizeUrl(u: string): string {
+  const t = u.trim()
+  if (!t) return t
+  if (/^(https?:\/\/|mailto:|tel:)/i.test(t)) return t
+  return `https://${t}`
+}
+
 // Full WYSIWYG editor: formatting, alignment, color, highlight, font size,
 // indent, lists, headings, links, inline image upload + resize/position.
 export function RichTextEditor({
@@ -88,13 +99,6 @@ export function RichTextEditor({
     imgEl.style.height = "auto"
     setImgWidth(pct)
     emit()
-  }
-
-  function normalizeUrl(u: string) {
-    const t = u.trim()
-    if (!t) return t
-    if (/^(https?:\/\/|mailto:|tel:)/i.test(t)) return t
-    return `https://${t}`
   }
 
   // The selection is saved before the dialog opens and put back when it closes,

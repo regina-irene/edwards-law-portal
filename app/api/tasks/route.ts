@@ -32,11 +32,21 @@ export async function GET() {
       getTemplateAttachments(templateIds),
       getClientTaskAttachments(taskIds, cid),
     ])
-    const tasks = rows.map((r) => ({
-      ...r,
-      firmFiles: r.template_id ? byTemplate[r.template_id] ?? [] : [],
-      myFiles: byTask[r.id] ?? [],
-    }))
+    // A template's files are always the firm's. A client_task file can be
+    // either: the client's own upload, or one the firm attached to a custom
+    // one-off task. Splitting them keeps the firm's file out of "Your uploads",
+    // where the client would be offered a Remove button for it.
+    const tasks = rows.map((r) => {
+      const onTask = byTask[r.id] ?? []
+      return {
+        ...r,
+        firmFiles: [
+          ...(r.template_id ? byTemplate[r.template_id] ?? [] : []),
+          ...onTask.filter((f) => f.by_firm),
+        ],
+        myFiles: onTask.filter((f) => !f.by_firm),
+      }
+    })
     return NextResponse.json({ tasks })
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

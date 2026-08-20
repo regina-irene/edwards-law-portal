@@ -27,18 +27,21 @@ export async function POST(req: Request) {
   const check = await requireAdmin()
   if (check.status !== "ok") return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  let action: unknown, title: unknown, description: unknown, clientId: unknown, templateId: unknown, templateIds: unknown, dueDate: unknown, stage: unknown, tag: unknown
+  let action: unknown, title: unknown, description: unknown, clientId: unknown, clientIds: unknown, templateId: unknown, templateIds: unknown, dueDate: unknown, stage: unknown, tag: unknown, notes: unknown, embedUrl: unknown
   try {
     const parsed = await req.json()
     action = parsed?.action
     title = parsed?.title
     description = parsed?.description
     clientId = parsed?.clientId
+    clientIds = parsed?.clientIds
     templateId = parsed?.templateId
     templateIds = parsed?.templateIds
     dueDate = parsed?.dueDate
     stage = parsed?.stage
     tag = parsed?.tag
+    notes = parsed?.notes
+    embedUrl = parsed?.embedUrl
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
   }
@@ -104,7 +107,16 @@ export async function POST(req: Request) {
   }
 
   if (action === "assign") {
-    if (typeof clientId !== "string" || !clientId) {
+    // One assign can now name several clients. `clientId` (singular) is still
+    // accepted and still behaves exactly as it did; `clientIds` is additive, so
+    // the custom-task panel can send one task to a few people in one call.
+    const namedClients: string[] = []
+    if (typeof clientId === "string" && clientId.trim()) namedClients.push(clientId.trim())
+    if (Array.isArray(clientIds)) {
+      for (const c of clientIds) if (typeof c === "string" && c.trim()) namedClients.push(c.trim())
+    }
+    const targetClientIds = Array.from(new Set(namedClients))
+    if (targetClientIds.length === 0) {
       return NextResponse.json({ error: "clientId required" }, { status: 400 })
     }
     const taskTitle = typeof title === "string" && title.trim() ? title.trim() : null
@@ -127,12 +139,25 @@ export async function POST(req: Request) {
       if (taskTitle) {
         const finalStage = typeof stage === "string" && stage.trim() ? stage.trim() : null
         const finalTag = typeof tag === "string" && tag.trim() ? tag.trim() : null
-        const result = await sql`
-          INSERT INTO client_tasks (client_id, template_id, title, description, due_date, stage, tag, stage_order, sort_order)
-          VALUES (${clientId}, ${taskTemplateId}, ${taskTitle}, ${taskDesc}, ${taskDueDate}, ${finalStage}, ${finalTag}, 0, 0)
-          RETURNING id, client_id, title, description, status, due_date, stage, tag, stage_order, sort_order, created_at
-        `
-        return NextResponse.json({ task: result.rows[0], tasks: result.rows }, { status: 201 })
+        // Same treatment PATCH gives these two fields: notes are sanitised HTML,
+        // a bare "example.com" gets an https:// in front of it.
+        const finalNotes = notes === undefined ? null : sanitizeNotesHtml(notes) || null
+        const rawEmbed = typeof embedUrl === "string" ? embedUrl.trim() : ""
+        const finalEmbedUrl = rawEmbed && /^https?:\/\//i.test(rawEmbed) ? rawEmbed : rawEmbed ? `https://${rawEmbed}` : null
+
+        // One row per client. The caller needs every id back so it can hang the
+        // same attachments off each of them.
+        const createdCustom: Record<string, unknown>[] = []
+        for (const cid of targetClientIds) {
+          const result = await sql`
+            INSERT INTO client_tasks (client_id, template_id, title, description, due_date, stage, tag, notes, embed_url, stage_order, sort_order)
+            VALUES (${cid}, ${taskTemplateId}, ${taskTitle}, ${taskDesc}, ${taskDueDate}, ${finalStage}, ${finalTag}, ${finalNotes}, ${finalEmbedUrl}, 0, 0)
+            RETURNING id, client_id, title, description, status, due_date, stage, tag, notes, embed_url, stage_order, sort_order, created_at
+          `
+          if (result.rows[0]) createdCustom.push(result.rows[0])
+        }
+        if (createdCustom.length === 0) return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+        return NextResponse.json({ task: createdCustom[0], tasks: createdCustom }, { status: 201 })
       }
 
       // template-based: assign every selected template in one round trip.
@@ -141,16 +166,21 @@ export async function POST(req: Request) {
       // ORDINALITY (rather than a plain id = ANY) keeps the old loop's exact
       // behaviour: the join drops ids with no template, the ordinal keeps the
       // caller's ordering so created[0] is still the first id they sent.
-      const assigned = await sql`
-        INSERT INTO client_tasks (client_id, template_id, title, description, due_date, stage, tag, stage_order, sort_order)
-        SELECT ${clientId}::text, t.id, t.title, t.description, ${taskDueDate}::date, t.stage, t.tag,
-               COALESCE(t.stage_order, 0), COALESCE(t.sort_order, 0)
-        FROM unnest(${taskTemplateIds as any}::uuid[]) WITH ORDINALITY AS req(template_id, ord)
-        JOIN task_templates t ON t.id = req.template_id
-        ORDER BY req.ord
-        RETURNING id, client_id, title, description, status, due_date, stage, tag, stage_order, sort_order, created_at
-      `
-      const created = assigned.rows
+      // One round trip PER CLIENT: with the single client every existing caller
+      // sends, this is the identical query it has always been.
+      const created: Record<string, unknown>[] = []
+      for (const cid of targetClientIds) {
+        const assigned = await sql`
+          INSERT INTO client_tasks (client_id, template_id, title, description, due_date, stage, tag, stage_order, sort_order)
+          SELECT ${cid}::text, t.id, t.title, t.description, ${taskDueDate}::date, t.stage, t.tag,
+                 COALESCE(t.stage_order, 0), COALESCE(t.sort_order, 0)
+          FROM unnest(${taskTemplateIds as any}::uuid[]) WITH ORDINALITY AS req(template_id, ord)
+          JOIN task_templates t ON t.id = req.template_id
+          ORDER BY req.ord
+          RETURNING id, client_id, title, description, status, due_date, stage, tag, stage_order, sort_order, created_at
+        `
+        created.push(...assigned.rows)
+      }
       if (created.length === 0) return NextResponse.json({ error: "Template not found" }, { status: 404 })
       return NextResponse.json({ task: created[0], tasks: created }, { status: 201 })
     } catch {

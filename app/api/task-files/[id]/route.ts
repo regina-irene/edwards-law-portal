@@ -89,6 +89,13 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   } else {
     const cid = await clientIdForRequest()
     allowed = att.scope === "client_task" && cid != null && att.client_id === cid
+    // A file the FIRM attached to a custom task carries the client's id too, so
+    // ownership alone is not enough: it is the firm's file to remove, not
+    // theirs. The client can still open it (GET above).
+    if (allowed) {
+      const byFirm = await sql`SELECT 1 FROM admin_users WHERE email = ${att.uploaded_by} LIMIT 1`
+      if (byFirm.rows.length > 0) allowed = false
+    }
     // Removing a file is a write. An archived client keeps the download link
     // (GET above) but can no longer take anything back out of their file. The
     // firm's own DELETE is unaffected.
