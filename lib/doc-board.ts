@@ -101,16 +101,23 @@ function resolveKey(records: { fields: Record<string, unknown> }[], candidates: 
  * board but have never been used on a document - which the records alone can
  * never reveal.
  */
-async function fetchSelectOptions(baseId: string): Promise<Partial<Record<DocKind, string[]>> | null> {
+async function fetchSelectOptions(baseId: string): Promise<Partial<Record<DocKind, DocChoice[]>> | null> {
   try {
     const res = await fetch(`https://api.airtable.com/v0/meta/bases/${baseId}/tables`, {
       headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
     })
     if (!res.ok) return null
     const data = (await res.json()) as {
-      tables?: { name?: string; fields?: { name?: string; type?: string; options?: { choices?: { name?: string }[] } }[] }[]
+      tables?: {
+        name?: string
+        fields?: {
+          name?: string
+          type?: string
+          options?: { choices?: { name?: string; color?: string }[] }
+        }[]
+      }[]
     }
-    const out: Partial<Record<DocKind, string[]>> = {}
+    const out: Partial<Record<DocKind, DocChoice[]>> = {}
     for (const kind of ["pleadings", "correspondence"] as DocKind[]) {
       const table = data.tables?.find((t) => t.name === TABLE[kind])
       if (!table) continue
@@ -120,8 +127,12 @@ async function fetchSelectOptions(baseId: string): Promise<Partial<Record<DocKin
       const choices = field?.options?.choices
       if (!Array.isArray(choices)) continue
       // Names are kept EXACTLY as defined, trailing spaces and all: the value
-      // written back has to match the option character for character.
-      out[kind] = choices.map((c) => String(c?.name ?? "")).filter((n) => n.length > 0)
+      // written back has to match the option character for character. The
+      // colour is carried too, so a chip shows what the board shows instead of
+      // being guessed from the option's wording.
+      out[kind] = choices
+        .map((c) => ({ name: String(c?.name ?? ""), color: c?.color }))
+        .filter((c) => c.name.length > 0)
     }
     return out
   } catch {
@@ -225,7 +236,21 @@ async function pooled<T, R>(items: T[], size: number, fn: (item: T) => Promise<R
  * invites a save Airtable will refuse - and a confusing error for something
  * that looked like a valid pick.
  */
-export type DocChoices = Record<string, Partial<Record<DocKind, string[]>>>
+/**
+ * One option on a base's "Filed by:" / "Sent by:" column.
+ *
+ * `color` is the Airtable colour name from that base's schema ("cyanLight1").
+ * Undefined when the schema could not be read, in which case the caller falls
+ * back to guessing from the wording. That guess is genuinely unreliable: one
+ * base pairs "Defendant" with "Wife" and another pairs it with "Husband", so a
+ * keyword rule gets one of them backwards.
+ */
+export interface DocChoice {
+  name: string
+  color?: string
+}
+
+export type DocChoices = Record<string, Partial<Record<DocKind, DocChoice[]>>>
 
 export interface DocBoard {
   rows: DocBoardRow[]
@@ -258,15 +283,20 @@ async function loadBoard(): Promise<DocBoard> {
       }
     }
 
-    // Schema first (it knows options nobody has used yet), then anything seen in
-    // the records that the schema did not mention - a base whose column is plain
-    // text rather than a select has no schema choices at all.
+    // Schema first (it knows the colours, and options nobody has used yet), then
+    // anything seen in the records that the schema did not mention - a base whose
+    // column is plain text rather than a select has no schema choices at all.
     const schema = await fetchSelectOptions(baseId)
-    const choices: Partial<Record<DocKind, string[]>> = {}
+    const choices: Partial<Record<DocKind, DocChoice[]>> = {}
     for (const kind of ["pleadings", "correspondence"] as DocKind[]) {
-      const merged = new Set<string>(schema?.[kind] ?? [])
-      for (const v of observed[kind]) merged.add(v)
-      if (merged.size > 0) choices[kind] = [...merged].sort((a, b) => a.localeCompare(b))
+      const merged = new Map<string, DocChoice>()
+      for (const c of schema?.[kind] ?? []) merged.set(c.name, c)
+      // A stored value the schema did not list gets no colour, so the UI falls
+      // back to its keyword guess for that one rather than showing it blank.
+      for (const v of observed[kind]) if (!merged.has(v)) merged.set(v, { name: v })
+      if (merged.size > 0) {
+        choices[kind] = [...merged.values()].sort((a, b) => a.name.localeCompare(b.name))
+      }
     }
 
     return { rows, baseId, choices }

@@ -184,14 +184,41 @@ export function paymentStatusColor(name: string): ChipColor {
   return fromName(PAYMENT_STATUS[name])
 }
 
-// "Filed by:" on the per-client Pleadings tables (choice names vary slightly
-// between bases - trailing spaces etc - so match by keyword).
+/**
+ * "Filed by:" on the per-client Pleadings tables.
+ *
+ * A guess by keyword, used where the base's real schema colours aren't to hand.
+ * Choice names vary between bases, and several pair the party with the spouse:
+ * "Plaintiff / Husband", "Defendant / Wife".
+ *
+ * ORDER MATTERS, and getting it wrong was a real bug (2026-08-20). The party
+ * word is tested BEFORE the spouse word. Phillander's board has
+ * "Defendant / Wife" in cyan, but the old version tested "wife" first and
+ * painted it yellow, because it assumed plaintiff went with wife and defendant
+ * with husband. That holds in some cases and not in others, so the spouse words
+ * are now only a fallback for a choice that names no party at all.
+ *
+ * Where the base's own schema can be read, use the colour it actually defines
+ * instead of this: see chipFromColorName and lib/doc-board.
+ */
 export function filedByColor(name: string): ChipColor {
   const n = name.toLowerCase()
-  if (n.includes("plaintiff") || n.includes("wife")) return fromName("yellowLight2")
-  if (n.includes("defendant") || n.includes("husband")) return fromName("cyanLight1")
   if (n.includes("court")) return fromName("redBright")
+  if (n.includes("plaintiff")) return fromName("yellowLight2")
+  if (n.includes("defendant")) return fromName("cyanLight1")
+  // No party named, so fall back to the spouse word on its own.
+  if (n.includes("wife")) return fromName("yellowLight2")
+  if (n.includes("husband")) return fromName("cyanLight1")
   return GRAY
+}
+
+/**
+ * The chip for an Airtable colour name straight from a base's schema
+ * ("cyanLight1", "yellowLight2"). Authoritative, where the schema is readable:
+ * it is the colour the board itself shows, not a guess from the option's words.
+ */
+export function chipFromColorName(colorName: string | undefined): ChipColor {
+  return fromName(colorName)
 }
 
 // "Sent by:" on the per-client Correspondence tables. The real choices are

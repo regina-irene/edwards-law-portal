@@ -9,7 +9,7 @@
 // have inputs. The rest is there so you know which document you are annotating.
 import { useMemo, useState } from "react"
 import { InlineError } from "@/components/ui/InlineError"
-import { filedByColor, sentByColor, folderColor } from "@/lib/airtable-colors"
+import { filedByColor, sentByColor, folderColor, chipFromColorName } from "@/lib/airtable-colors"
 import type { DocBoardRow, DocKind, DocChoices } from "@/lib/doc-board"
 
 const NAVY = "#1b2d45"
@@ -31,11 +31,18 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: "missing", label: "Missing who filed or sent it" },
 ]
 
-// The same chips the client sees on their own Pleadings and Correspondence
-// pages, from the same helpers, so a document looks identical wherever it is
-// read. Correspondence and Pleadings use different palettes because the boards
-// hold different choices: "Us"/"Them"/"Court" against "Plaintiff"/"Defendant".
-function personChip(row: DocBoardRow) {
+/**
+ * The chip for a "Filed by" / "Sent by" value.
+ *
+ * Uses the colour that client's own base defines, which is the only way to get
+ * this right. The keyword fallback below is a guess, and on Phillander's board
+ * it guessed wrong: the options there are "Plaintiff / Husband" and
+ * "Defendant / Wife", so any rule keyed on the spouse word paints one of them
+ * the other one's colour. The fallback only runs when the base's schema could
+ * not be read.
+ */
+function personChip(row: DocBoardRow, color?: string) {
+  if (color) return chipFromColorName(color)
   return row.kind === "correspondence" ? sentByColor(row.person) : filedByColor(row.person)
 }
 
@@ -124,7 +131,11 @@ export default function DocumentsBoard({
   const missingCount = rows.filter((r) => !r.person.trim()).length
 
   /** This client's own options for this table. Never another client's. */
-  const choicesFor = (row: DocBoardRow): string[] => choices[row.baseId]?.[row.kind] ?? []
+  const choicesFor = (row: DocBoardRow) => choices[row.baseId]?.[row.kind] ?? []
+
+  /** The colour that base gives one of its own options, if the schema was readable. */
+  const colorOf = (row: DocBoardRow, value: string): string | undefined =>
+    choicesFor(row).find((c) => c.name === value)?.color
 
   function startEdit(row: DocBoardRow) {
     setEditingId(row.recordId)
@@ -235,7 +246,7 @@ export default function DocumentsBoard({
         {paged.map((row) => {
           const editing = editingId === row.recordId
           const fc = row.folder ? folderColor(row.folder) : null
-          const pc = personChip(row)
+          const pc = personChip(row, colorOf(row, row.person))
           return (
             <div
               key={`${row.baseId}-${row.recordId}`}
@@ -330,14 +341,8 @@ export default function DocumentsBoard({
                         style={
                           editPerson
                             ? {
-                                background:
-                                  row.kind === "correspondence"
-                                    ? sentByColor(editPerson).bg
-                                    : filedByColor(editPerson).bg,
-                                color:
-                                  row.kind === "correspondence"
-                                    ? sentByColor(editPerson).text
-                                    : filedByColor(editPerson).text,
+                                background: personChip({ ...row, person: editPerson }, colorOf(row, editPerson)).bg,
+                                color: personChip({ ...row, person: editPerson }, colorOf(row, editPerson)).text,
                               }
                             : { background: "#FFFFFF", color: "#111827" }
                         }
@@ -346,12 +351,12 @@ export default function DocumentsBoard({
                         {/* A value already on the record that is no longer an
                             offered choice still has to be selectable, or
                             opening the row would silently change it. */}
-                        {editPerson && !choicesFor(row).includes(editPerson) && (
+                        {editPerson && !choicesFor(row).some((c) => c.name === editPerson) && (
                           <option value={editPerson}>{editPerson.trim()}</option>
                         )}
                         {choicesFor(row).map((c) => (
-                          <option key={c} value={c}>
-                            {c.trim()}
+                          <option key={c.name} value={c.name}>
+                            {c.name.trim()}
                           </option>
                         ))}
                       </select>
