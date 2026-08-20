@@ -54,7 +54,15 @@ export const DEFAULT_VISIBLE: string[] = [
  * are not offered as toggles (there is nothing to toggle: the page is built
  * around them) and they are never repeated in the extra-fields list.
  */
-export const NOT_CONFIGURABLE: string[] = ["Case Status - Dashboard", "Last Modified"]
+export const NOT_CONFIGURABLE: string[] = [
+  // The client-facing status is the write-up at the top of the page; there is
+  // nothing to toggle.
+  "Case Status - For Client",
+  // The internal note is not offered at all. It is not a field a client may be
+  // shown, so it must never appear in the list of things that can be switched on.
+  "Case Status - Dashboard",
+  "Last Modified",
+]
 
 /**
  * Everything the page already puts on screen. The extra-fields section at the

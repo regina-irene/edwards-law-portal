@@ -1,11 +1,19 @@
 "use client"
 // components/status/StatusBoard.tsx - the admin Status board. Every client, the
-// stage their case is at, and the words the client actually reads on their
-// Status page - editable in place.
+// stage their case is at, and BOTH status write-ups - editable in place.
+//
+// Two columns on the Airtable board, and only one of them reaches a client
+// (2026-08-20):
+//   Internal note   "Case Status - Dashboard".  Yours. Never leaves this screen.
+//   Client-facing   "Case Status - For Client". Exactly what the client reads.
+//
+// They are drawn side by side, in different colours, and every label says which
+// is which. Getting these two confused is the one mistake this screen must make
+// hard to make, because one direction of the mistake puts internal wording in
+// front of a client.
 //
 // Everything here is admin-only. Payment status and the judge are deliberately
-// absent: this screen edits what the CLIENT sees, so the client-facing fields
-// are the only ones on it.
+// absent from the board.
 //
 // This is a client component, so it imports no server-only helper from
 // lib/case-status (that module pulls in next/cache). Types are type-only
@@ -75,6 +83,7 @@ export default function StatusBoard({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editStages, setEditStages] = useState<string[]>([])
   const [editText, setEditText] = useState("")
+  const [editInternal, setEditInternal] = useState("")
   // Per-row "yes, I really mean to clear this" latch.
   const [clearConfirm, setClearConfirm] = useState<Record<string, boolean>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
@@ -155,6 +164,7 @@ export default function StatusBoard({
     // The editor holds HTML. A row whose formatting no longer matches Airtable
     // (edited on the board) opens with Airtable's words as plain paragraphs.
     setEditText(row.statusHtml || plainToHtml(row.statusText))
+    setEditInternal(row.internalHtml || plainToHtml(row.internalText))
     clearRow(row.recordId)
   }
 
@@ -182,9 +192,15 @@ export default function StatusBoard({
     // Belt and braces against ever PATCHing an empty stage list over real data.
     // Send the HTML; the server derives the plain text Airtable stores, so the
     // two can never drift apart.
-    const body: { recordId: string; statusHtml: string; stages?: string[] } = {
+    const body: {
+      recordId: string
+      statusHtml: string
+      internalHtml: string
+      stages?: string[]
+    } = {
       recordId: row.recordId,
       statusHtml: editText,
+      internalHtml: editInternal,
     }
     if (row.hasStatusRecord) body.stages = editStages
 
@@ -203,10 +219,12 @@ export default function StatusBoard({
 
     const savedStages = [...editStages]
     const savedHtml = editText
+    const savedInternalHtml = editInternal
     // Wrapped for the same reason the server wraps it - see statusHtmlToPlain.
     // This must match what the server stored or the row would show one thing
     // and the board another until the next reload.
     const savedText = bodyToPlainText(`<p>${editText}</p>`)
+    const savedInternalText = bodyToPlainText(`<p>${editInternal}</p>`)
     const now = new Date().toISOString()
     setRows((prev) =>
       prev.map((r) =>
@@ -217,6 +235,8 @@ export default function StatusBoard({
               plainStages: savedStages.map(plainOf),
               statusText: savedText,
               statusHtml: savedHtml,
+              internalText: savedInternalText,
+              internalHtml: savedInternalHtml,
               lastModified: now,
               daysSinceUpdate: 0,
               hasStatusRecord: true,
@@ -225,7 +245,10 @@ export default function StatusBoard({
       )
     )
     setEditingId(null)
-    noteFor(row.recordId, "Saved. This is what the client sees on their Status page now.")
+    noteFor(
+      row.recordId,
+      "Saved. The client-facing text is what they now read on their Status page; the internal note stays here."
+    )
     void refreshFlags()
   }
 
@@ -240,6 +263,12 @@ export default function StatusBoard({
         name: row.name,
         stages: editingId === row.recordId ? editStages : row.stages,
         statusText: row.statusText,
+        // The firm's own note is the best raw material for a client-facing
+        // update, so it is sent as context. It is never returned verbatim: the
+        // assist route's house rules rewrite it in plain, client-safe English.
+        context: bodyToPlainText(
+          `<p>${editingId === row.recordId ? editInternal : row.internalHtml || row.internalText}</p>`
+        ),
         caseTypes: row.caseTypes,
         county: row.county,
         daysSinceUpdate: row.daysSinceUpdate,
@@ -262,7 +291,10 @@ export default function StatusBoard({
     if (editingId !== row.recordId) startEdit(row)
     // Claude returns plain sentences; the editor holds HTML.
     setEditText(plainToHtml(data.text))
-    noteFor(row.recordId, "Draft only - read it, edit it, then Save. Nothing has been saved or sent.")
+    noteFor(
+      row.recordId,
+      "Draft only, written from your internal note. Read it, edit it, then Save. Nothing has been saved or sent."
+    )
   }
 
   async function ask() {
@@ -437,15 +469,44 @@ export default function StatusBoard({
               </div>
 
               {!editing && (
-                row.statusHtml ? (
-                  <div className="mt-2">
-                    <RichTextView html={row.statusHtml} className="text-gray-700" />
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Internal note. Grey, and labelled as private on every row,
+                      so it can never be mistaken for the client-facing text. */}
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1">
+                      Internal note · not shown to the client
+                    </p>
+                    {row.internalHtml ? (
+                      <RichTextView html={row.internalHtml} className="text-gray-700" />
+                    ) : (
+                      <p
+                        className={`text-sm whitespace-pre-wrap ${row.internalText ? "text-gray-700" : "text-gray-400"}`}
+                      >
+                        {row.internalText || "Nothing written."}
+                      </p>
+                    )}
                   </div>
-                ) : (
-                  <p className={`mt-2 text-sm whitespace-pre-wrap ${row.statusText ? "text-gray-700" : "text-gray-400"}`}>
-                    {row.statusText || "No status written for this client yet."}
-                  </p>
-                )
+
+                  {/* Client-facing. Navy edge, the same colour the client sees
+                      their own status card in. */}
+                  <div
+                    className="rounded-lg border border-gray-200 bg-white p-3 border-l-4"
+                    style={{ borderLeftColor: NAVY }}
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-wide mb-1" style={{ color: NAVY }}>
+                      What the client reads
+                    </p>
+                    {row.statusHtml ? (
+                      <RichTextView html={row.statusHtml} className="text-gray-800" />
+                    ) : (
+                      <p
+                        className={`text-sm whitespace-pre-wrap ${row.statusText ? "text-gray-800" : "text-gray-400"}`}
+                      >
+                        {row.statusText || "Nothing yet - this client's Status page shows no update."}
+                      </p>
+                    )}
+                  </div>
+                </div>
               )}
 
               {editing && (
@@ -471,15 +532,33 @@ export default function StatusBoard({
                     </div>
                   </div>
 
-                  <div>
-                    <p className="section-label mb-1.5">What the client reads</p>
-                    {/* Bold, colour and highlighting are kept portal-side;
-                        Airtable receives the plain text of whatever is typed
-                        here, so the board stays readable. */}
-                    <RichTextEditor value={editText} onChange={setEditText} />
-                    <p className="mt-1 text-[11px] text-gray-400">
-                      Formatting shows on the client&apos;s Status page. Airtable gets the plain text.
-                    </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <p className="section-label mb-1.5 text-gray-600">Internal note (private)</p>
+                      <RichTextEditor value={editInternal} onChange={setEditInternal} />
+                      <p className="mt-1 text-[11px] text-gray-400">
+                        Your working note. Saves to <strong>Case Status - Dashboard</strong> on the
+                        board. No client can see this, and changing it alone writes nothing to their
+                        history.
+                      </p>
+                    </div>
+
+                    <div
+                      className="rounded-lg border border-gray-200 bg-white p-3 border-l-4"
+                      style={{ borderLeftColor: NAVY }}
+                    >
+                      <p className="section-label mb-1.5" style={{ color: NAVY }}>
+                        What the client reads
+                      </p>
+                      {/* Bold, colour and highlighting are kept portal-side;
+                          Airtable receives the plain text of whatever is typed
+                          here, so the board stays readable. */}
+                      <RichTextEditor value={editText} onChange={setEditText} />
+                      <p className="mt-1 text-[11px] text-gray-400">
+                        Goes to <strong>Case Status - For Client</strong> and onto their Status page.
+                        Formatting shows there; Airtable gets the plain text.
+                      </p>
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
@@ -513,7 +592,7 @@ export default function StatusBoard({
                     onClick={() => startEdit(row)}
                     className="text-xs text-gray-500 hover:text-gray-900 underline"
                   >
-                    Edit stage &amp; status
+                    Edit stage &amp; both statuses
                   </button>
                 )}
                 <button

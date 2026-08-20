@@ -79,8 +79,10 @@ export default async function AdminStatusPage({
         </form>
       </div>
       <p className="text-sm text-gray-500 -mt-3">
-        Anything you save here appears on that client&apos;s Status page. Stage names are shown in plain
-        English; hover a pill to see the value on the Airtable board.
+        Each case has two write-ups. The <strong>internal note</strong> is yours and stays on this
+        screen. <strong>What the client reads</strong> is the only text that reaches their Status
+        page, and it is the only one recorded in their history and your field notes. Stage names are
+        shown in plain English; hover a pill to see the value on the Airtable board.
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <ArchiveToggle basePath="/admin/status" includeArchived={includeArchived} />

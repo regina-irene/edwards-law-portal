@@ -23,8 +23,15 @@ export const CASE_STATUS_CACHE_TAG = "case-status"
 // Only what the board needs. Payment Status and Judge are deliberately NOT
 // read here - this data feeds a client-facing status, and the less of the
 // internal record travels, the less can leak.
+//
+// TWO status columns, and the difference matters (2026-08-20):
+//   "Case Status - For Client"  is the one the client reads on their portal.
+//   "Case Status - Dashboard"   is the firm's internal note. It is read so the
+//                               admin board can show it beside the client one,
+//                               and it is NEVER sent to a client page.
 const STATUS_FIELDS = [
   "Case Stage",
+  "Case Status - For Client",
   "Case Status - Dashboard",
   "Case Type",
   "County",
@@ -134,7 +141,10 @@ export function daysSince(iso: string | null): number | null {
 export interface CaseStatusRow {
   recordId: string
   stages: string[]
+  /** "Case Status - For Client": the words the client reads. */
   statusText: string
+  /** "Case Status - Dashboard": the firm's internal note. Admin screens only. */
+  internalText: string
   caseTypes: string[]
   county: string
   lastModified: string | null
@@ -149,7 +159,8 @@ function mapStatusRecord(r: any): CaseStatusRow {
   return {
     recordId: String(r?.id ?? ""),
     stages: selectList(f["Case Stage"]),
-    statusText: text(f["Case Status - Dashboard"]),
+    statusText: text(f["Case Status - For Client"]),
+    internalText: text(f["Case Status - Dashboard"]),
     caseTypes: selectList(f["Case Type"]),
     county: text(f["County"]),
     lastModified: typeof f["Last Modified"] === "string" && f["Last Modified"] ? f["Last Modified"] : null,
@@ -215,7 +226,10 @@ export interface CaseStatusBoardRow {
   email: string
   stages: string[]
   plainStages: string[]
+  /** What the client reads. From "Case Status - For Client". */
   statusText: string
+  /** The firm's internal note. From "Case Status - Dashboard". Never sent to a client. */
+  internalText: string
   caseTypes: string[]
   county: string
   lastModified: string | null
@@ -224,8 +238,10 @@ export interface CaseStatusBoardRow {
   hasStatusRecord: boolean
   /** "Archived" on the Clients board - a former or closed case. */
   archived: boolean
-  /** The formatted status, when the stored formatting still matches Airtable. */
+  /** The formatted client-facing status, when the stored formatting still matches Airtable. */
   statusHtml: string
+  /** The formatted internal note, on the same terms. */
+  internalHtml: string
   /** "closed 12 days ago" / "access ended". Empty for an active case. */
   archiveNote: string
 }
@@ -278,9 +294,12 @@ export async function buildStatusBoard(options: StatusBoardOptions = {}): Promis
     ? await archiveNotes(wanted)
     : new Map<string, ArchiveNote>()
 
-  // Formatting for the client-facing text, in one query for the whole board.
+  // Formatting for both status columns, one query each for the whole board.
   const recordIds = wanted.map((c) => statusRecordId(c.clientId)).filter(Boolean)
-  const rich = await getRichStatuses(recordIds)
+  const [rich, richInternal] = await Promise.all([
+    getRichStatuses(recordIds),
+    getRichStatuses(recordIds, "internal"),
+  ])
 
   const rows: CaseStatusBoardRow[] = []
   for (const c of wanted) {
@@ -290,11 +309,15 @@ export async function buildStatusBoard(options: StatusBoardOptions = {}): Promis
     const stages = status?.stages ?? []
     const lastModified = status?.lastModified ?? null
     const statusText = status?.statusText ?? ""
+    const internalText = status?.internalText ?? ""
     // Only honour stored formatting while it still matches Airtable's words - 
     // a status edited on the board must not show yesterday's styling.
     const storedRich = rich.get(recordId)
     const statusHtml =
       storedRich && storedRich.hash === hashOf(statusText) ? storedRich.html : ""
+    const storedInternal = richInternal.get(recordId)
+    const internalHtml =
+      storedInternal && storedInternal.hash === hashOf(internalText) ? storedInternal.html : ""
     rows.push({
       recordId,
       clientId: String(c.clientId),
@@ -303,7 +326,9 @@ export async function buildStatusBoard(options: StatusBoardOptions = {}): Promis
       stages,
       plainStages: stages.map(plainStage),
       statusText,
+      internalText,
       statusHtml,
+      internalHtml,
       caseTypes: status?.caseTypes ?? [],
       county: status?.county ?? "",
       lastModified,
@@ -323,7 +348,10 @@ export async function buildStatusBoard(options: StatusBoardOptions = {}): Promis
 
 export interface CaseStatusPatch {
   stages?: string[]
+  /** Goes to "Case Status - For Client". */
   statusText?: string
+  /** Goes to "Case Status - Dashboard". */
+  internalText?: string
 }
 
 /**
@@ -334,7 +362,8 @@ export interface CaseStatusPatch {
 export async function updateCaseStatus(recordId: string, patch: CaseStatusPatch): Promise<void> {
   const fields: Record<string, unknown> = {}
   if (patch.stages !== undefined) fields["Case Stage"] = patch.stages
-  if (patch.statusText !== undefined) fields["Case Status - Dashboard"] = patch.statusText
+  if (patch.statusText !== undefined) fields["Case Status - For Client"] = patch.statusText
+  if (patch.internalText !== undefined) fields["Case Status - Dashboard"] = patch.internalText
   if (Object.keys(fields).length === 0) return
 
   const res = await fetch(

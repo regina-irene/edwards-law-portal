@@ -70,8 +70,12 @@ export default async function StatusPage() {
   }))
   const nextCourt = events ? nextCourtDate(events) : null
   const refreshedAt = formatRefreshed(Date.now())
-  // The Status board's "Case Status - Dashboard" field is the case status for
-  // all cases; the old "Status of Case" field on Clients is just a fallback.
+  // "Case Status - For Client" on the Status board is the ONLY status text a
+  // client may read (2026-08-20). getCaseStatus reads that column and nothing
+  // else, so the firm's internal "Case Status - Dashboard" note cannot arrive
+  // here. The old "Status of Case" field on Clients remains a legacy fallback;
+  // it is client-facing too, so falling back to it is safe. Never fall back to
+  // the dashboard column.
   const statusText = caseStatus?.statusText || client.statusOfCase
   const statusHtml = await resolveStatusHtml(statusKey, statusText)
   const statusUpdated = caseStatus?.lastModified

@@ -14,7 +14,26 @@ import { sql } from "@/lib/db"
 import { sanitizeNotesHtml } from "@/lib/sanitize"
 import { bodyToPlainText, plainToHtml } from "@/lib/message-format"
 
+/**
+ * Which of the two status columns a stored fragment belongs to (2026-08-20).
+ *
+ * "client"   -> Airtable's "Case Status - For Client", the words on the
+ *               client's own Status page.
+ * "internal" -> Airtable's "Case Status - Dashboard", the firm's note, shown
+ *               only on the admin board.
+ *
+ * They are kept under separate keys deliberately. One key for both would mean
+ * the last field saved decided the formatting for the other, and a hash that
+ * happened to collide would put internal styling on client-facing words.
+ */
+export type StatusScope = "client" | "internal"
+
 const KEY_PREFIX = "status_rich:"
+const INTERNAL_KEY_PREFIX = "status_rich_internal:"
+
+function prefixFor(scope: StatusScope): string {
+  return scope === "internal" ? INTERNAL_KEY_PREFIX : KEY_PREFIX
+}
 
 export interface RichStatus {
   html: string
@@ -22,8 +41,8 @@ export interface RichStatus {
   hash: string
 }
 
-function keyFor(clientId: string): string {
-  return KEY_PREFIX + String(clientId)
+function keyFor(clientId: string, scope: StatusScope = "client"): string {
+  return prefixFor(scope) + String(clientId)
 }
 
 export function hashOf(plain: string): string {
@@ -43,9 +62,12 @@ export function statusHtmlToPlain(html: string): string {
   return bodyToPlainText(`<p>${html}</p>`)
 }
 
-export async function getRichStatus(clientId: string): Promise<RichStatus | null> {
+export async function getRichStatus(
+  clientId: string,
+  scope: StatusScope = "client"
+): Promise<RichStatus | null> {
   try {
-    const r = await sql`SELECT value FROM app_settings WHERE key = ${keyFor(clientId)} LIMIT 1`
+    const r = await sql`SELECT value FROM app_settings WHERE key = ${keyFor(clientId, scope)} LIMIT 1`
     const raw = r.rows[0]?.value
     if (!raw) return null
     const parsed: unknown = JSON.parse(String(raw))
@@ -59,17 +81,21 @@ export async function getRichStatus(clientId: string): Promise<RichStatus | null
 }
 
 /** One query for the whole board rather than one per row. Fails soft to empty. */
-export async function getRichStatuses(clientIds: string[]): Promise<Map<string, RichStatus>> {
+export async function getRichStatuses(
+  clientIds: string[],
+  scope: StatusScope = "client"
+): Promise<Map<string, RichStatus>> {
   const out = new Map<string, RichStatus>()
   if (clientIds.length === 0) return out
+  const prefix = prefixFor(scope)
   try {
-    const keys = clientIds.map(keyFor)
+    const keys = clientIds.map((id) => keyFor(id, scope))
     const r = await sql.query("SELECT key, value FROM app_settings WHERE key = ANY($1)", [keys])
     for (const row of r.rows) {
       try {
         const parsed = JSON.parse(String(row.value)) as Partial<RichStatus>
         if (typeof parsed.html === "string" && typeof parsed.hash === "string") {
-          out.set(String(row.key).slice(KEY_PREFIX.length), { html: parsed.html, hash: parsed.hash })
+          out.set(String(row.key).slice(prefix.length), { html: parsed.html, hash: parsed.hash })
         }
       } catch {
         // one bad row shouldn't cost the rest their formatting
@@ -82,13 +108,18 @@ export async function getRichStatuses(clientIds: string[]): Promise<Map<string, 
 }
 
 /** Store the formatted version against the plain text that went to Airtable. */
-export async function saveRichStatus(clientId: string, html: string, plain: string): Promise<void> {
+export async function saveRichStatus(
+  clientId: string,
+  html: string,
+  plain: string,
+  scope: StatusScope = "client"
+): Promise<void> {
   try {
     const clean = sanitizeNotesHtml(html)
     const payload = JSON.stringify({ html: clean, hash: hashOf(plain) })
     await sql`
       INSERT INTO app_settings (key, value, updated_at)
-      VALUES (${keyFor(clientId)}, ${payload}, now())
+      VALUES (${keyFor(clientId, scope)}, ${payload}, now())
       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()
     `
   } catch {
@@ -104,10 +135,14 @@ export async function saveRichStatus(clientId: string, html: string, plain: stri
  * otherwise the Airtable text escaped into simple HTML - so a status edited on
  * the board shows the board's words, never stale formatting over new text.
  */
-export async function resolveStatusHtml(clientId: string, airtableText: string): Promise<string> {
+export async function resolveStatusHtml(
+  clientId: string,
+  airtableText: string,
+  scope: StatusScope = "client"
+): Promise<string> {
   const text = (airtableText ?? "").trim()
   if (!text) return ""
-  const stored = await getRichStatus(clientId)
+  const stored = await getRichStatus(clientId, scope)
   if (stored && stored.hash === hashOf(text)) return sanitizeNotesHtml(stored.html)
   return plainToHtml(text)
 }

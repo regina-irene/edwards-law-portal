@@ -31,8 +31,12 @@ export async function GET() {
 interface PatchBody {
   recordId?: unknown
   stages?: unknown
+  /** Client-facing status, plain. Legacy callers only. */
   statusText?: unknown
+  /** Client-facing status, formatted. What the board sends. */
   statusHtml?: unknown
+  /** The firm's internal note, formatted. Admin board only, never shown to a client. */
+  internalHtml?: unknown
 }
 
 export async function PATCH(req: Request) {
@@ -45,7 +49,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "A valid case record id is required." }, { status: 400 })
   }
 
-  const patch: { stages?: string[]; statusText?: string } = {}
+  const patch: { stages?: string[]; statusText?: string; internalText?: string } = {}
   const rawStages: unknown = body ? body.stages : undefined
   const rawStatusText: unknown = body ? body.statusText : undefined
 
@@ -89,7 +93,25 @@ export async function PATCH(req: Request) {
     patch.statusText = rawStatusText.trim()
   }
 
-  if (patch.stages === undefined && patch.statusText === undefined) {
+  // The internal note travels the same way and lands in a different Airtable
+  // column. It is never read by a client page, never written to the client's
+  // status history, and never quoted in a field note.
+  const rawInternalHtml: unknown = body ? body.internalHtml : undefined
+  let internalHtml: string | null = null
+
+  if (rawInternalHtml !== undefined) {
+    if (typeof rawInternalHtml !== "string") {
+      return NextResponse.json({ error: "The internal note must be text." }, { status: 400 })
+    }
+    internalHtml = sanitizeNotesHtml(rawInternalHtml)
+    patch.internalText = statusHtmlToPlain(internalHtml)
+  }
+
+  if (
+    patch.stages === undefined &&
+    patch.statusText === undefined &&
+    patch.internalText === undefined
+  ) {
     return NextResponse.json({ error: "Nothing to save." }, { status: 400 })
   }
 
@@ -109,6 +131,12 @@ export async function PATCH(req: Request) {
     // status history, and the same change as a field note on the admin case
     // log. If either fails the status is still saved - they record the change,
     // they aren't the change.
+    //
+    // `before.statusText` is the CLIENT-facing column (lib/airtable reads
+    // "Case Status - For Client"), so everything compared here is what the
+    // client actually saw. Editing only the internal note leaves no trace in
+    // the client's history and no field note, which is the point of it being
+    // internal.
     const fromStages = before?.stages ?? []
     const fromText = before?.statusText ?? ""
     const toStages = patch.stages ?? fromStages
@@ -118,13 +146,20 @@ export async function PATCH(req: Request) {
       toStages.length !== fromStages.length ||
       toStages.some((s, i) => s !== fromStages[i])
 
+    // Formatting is saved whenever it was sent, NOT only when the words moved.
+    // Re-colouring or bolding a status leaves the plain text identical, so
+    // gating this on `changed` silently threw those edits away. It is stored
+    // against the plain text Airtable now holds, so an edit made directly on
+    // the board still invalidates it rather than leaving old styling over new
+    // words.
+    if (statusHtml !== null) {
+      await saveRichStatus(recordId, statusHtml, toText)
+    }
+    if (internalHtml !== null && patch.internalText !== undefined) {
+      await saveRichStatus(recordId, internalHtml, patch.internalText, "internal")
+    }
+
     if (changed) {
-      // Formatting is stored against the plain text Airtable now holds, so an
-      // edit made directly on the board invalidates it rather than leaving old
-      // styling over new words.
-      if (statusHtml !== null) {
-        await saveRichStatus(recordId, statusHtml, toText)
-      }
       // The portal's clientId IS the Status record id, so the same value keys
       // the history and the field note.
       await appendStatusHistory(recordId, {

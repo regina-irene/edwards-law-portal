@@ -166,9 +166,12 @@ export async function getCaseStatus(clientId: string): Promise<CaseStatusInfo | 
       servicePerfected: f["Service Perfected?"] === true,
       answerFiled: f["Answer Filed?"] === true,
       dateAnswerFiled: date(f["Date Answer Filed"]),
-      // "Case Status - Dashboard" on the Status board is THE case status text for
-      // all cases (per Regina) - the old "Status of Case" field on Clients is legacy.
-      statusText: text(f["Case Status - Dashboard"]),
+      // "Case Status - For Client" is the ONLY status a client may read
+      // (2026-08-20). "Case Status - Dashboard" beside it on the same board is
+      // the firm's internal note and must never be served from here: this
+      // object feeds the client's own Status page. The old "Status of Case"
+      // field on Clients is legacy and only a fallback.
+      statusText: text(f["Case Status - For Client"]),
       lastModified: date(f["Last Modified"]),
     }
   } catch {
