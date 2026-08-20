@@ -10,8 +10,8 @@ import MessageBody from "@/components/messages/MessageBody"
 import { PromptDialog } from "@/components/ui/PromptDialog"
 import ArchivedChip from "@/components/admin/ArchivedChip"
 import { bodyToHtml, bodyToPlainText, escapeHtml, isEmptyRich } from "@/lib/message-format"
-
-const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
+import { uploadToBlob } from "@/lib/blob-upload-client"
+import { MAX_UPLOAD_LABEL, tooBigMessage } from "@/lib/upload-limits"
 
 interface Conversation {
   id: string
@@ -125,16 +125,17 @@ export default function MessageCenter() {
   const dragDepth = useRef(0)
 
   // Attach files from a drop or the paperclip, holding back anything too big
-  // for the server so it fails here with an explanation instead of silently
-  // on send.
+  // so it fails here with an explanation instead of silently on send. The limit
+  // comes from lib/upload-limits so this text and the server's check can't drift
+  // apart, the way the old hard-coded 25 MB did.
   const attachFiles = useCallback((incoming: File[]) => {
     if (incoming.length === 0) return
-    const tooBig = incoming.filter((f) => f.size > MAX_ATTACHMENT_BYTES)
-    const ok = incoming.filter((f) => f.size <= MAX_ATTACHMENT_BYTES)
+    const tooBig = incoming.filter((f) => tooBigMessage(f) !== null)
+    const ok = incoming.filter((f) => tooBigMessage(f) === null)
     if (ok.length) setPendingFiles((p) => [...p, ...ok])
     setFileNotice(
       tooBig.length
-        ? `Too big to attach (25 MB max): ${tooBig.map((f) => f.name).join(", ")}`
+        ? `Too big to attach (${MAX_UPLOAD_LABEL} max): ${tooBig.map((f) => f.name).join(", ")}`
         : null
     )
   }, [])
@@ -277,18 +278,50 @@ export default function MessageCenter() {
       }
       // Attachments upload one at a time against the saved message; report any
       // that don't make it rather than dropping them quietly.
+      //
+      // The bytes go from here straight to Vercel Blob and only the resulting
+      // URL is posted to /api/message-files. Posting the file into the route
+      // meant anything over ~4.5 MB was refused by the platform with a bare 413
+      // before our code ran. (2026-08-20)
       const failed: string[] = []
+      let firstError: string | null = null
       for (let i = 0; i < pendingFiles.length; i++) {
         const f = pendingFiles[i]
-        setAttachProgress(pendingFiles.length > 1 ? `Attaching ${i + 1} of ${pendingFiles.length}…` : `Attaching ${f.name}…`)
-        const fd = new FormData()
-        fd.append("file", f)
-        fd.append("messageId", d.message.id)
-        const up = await fetch("/api/message-files", { method: "POST", body: fd }).catch(() => null)
-        if (!up?.ok) failed.push(f.name)
+        const stage = pendingFiles.length > 1 ? `Attaching ${i + 1} of ${pendingFiles.length}` : `Attaching ${f.name}`
+        setAttachProgress(`${stage}…`)
+        try {
+          const blob = await uploadToBlob(f, {
+            scope: "message",
+            pathnamePrefix: `messages/${d.message.id}`,
+            onProgress: (pct) => setAttachProgress(`${stage}… ${Math.round(pct)}%`),
+          })
+          const up = await fetch("/api/message-files", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              messageId: d.message.id,
+              url: blob.url,
+              pathname: blob.pathname,
+              fileName: f.name,
+              contentType: blob.contentType,
+              size: f.size,
+            }),
+          })
+          if (!up.ok) {
+            const err = (await up.json().catch(() => null)) as { error?: string } | null
+            throw new Error(err?.error || "The attachment didn't save.")
+          }
+        } catch (e) {
+          failed.push(f.name)
+          if (!firstError) firstError = e instanceof Error ? e.message : null
+        }
       }
       setAttachProgress(null)
-      setFileNotice(failed.length ? `Couldn't attach: ${failed.join(", ")}` : null)
+      setFileNotice(
+        failed.length
+          ? `Couldn't attach: ${failed.join(", ")}${firstError ? ` - ${firstError}` : ""}`
+          : null
+      )
       setBody("")
       setPendingFiles([])
       setAlsoText(false)

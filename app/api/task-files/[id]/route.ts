@@ -13,6 +13,13 @@ async function loadAttachment(id: string) {
   return r.rows[0] ?? null
 }
 
+// Attachments written before 2026-08-20 went into the private blob store from
+// the server. Browser uploads land in the public store, so which one to read is
+// decided by the URL that was recorded with the row, not by a fixed constant.
+function blobAccess(url: unknown): "public" | "private" {
+  return typeof url === "string" && /\.public\.blob\.vercel-storage\.com\//i.test(url) ? "public" : "private"
+}
+
 async function clientIdForRequest(): Promise<string | null> {
   const session = await auth()
   if (!session?.user?.email) return null
@@ -48,7 +55,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
   if (!allowed) return new NextResponse("Forbidden", { status: 403 })
 
-  const result = await get(att.pathname, { access: "private" })
+  const result = await get(att.pathname, { access: blobAccess(att.url) })
   if (!result || result.statusCode !== 200) return new NextResponse("Not found", { status: 404 })
 
   // Log the open only once the file is really being served.

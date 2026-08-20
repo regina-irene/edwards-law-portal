@@ -154,7 +154,6 @@ export default function ClientThread({ readOnly = false }: { readOnly?: boolean 
 
   const sendFilesButton = readOnly ? null : (
     <UploadDocsButton
-      endpoint="/api/file-dropzone"
       label="📎 Send files"
       heading="Send documents to your legal team"
       blurb="Drag and drop files here, or browse. They go straight to your legal team."

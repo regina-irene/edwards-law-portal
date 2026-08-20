@@ -4,9 +4,38 @@
 // that they reached the legal team.
 import { useState, useEffect } from "react"
 import FileDropzone, { DropFile } from "@/components/ui/FileDropzone"
+import { sendFileToFirm, uploadToBlob } from "@/lib/blob-upload-client"
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/upload-limits"
+
+/**
+ * The firm's own uploads: into Blob, then ask the server to move them into the
+ * shared Drive folder. Same two-step shape as sendFileToFirm, but a different
+ * scope on the token and a different finalize route, because nothing about this
+ * belongs to a client.
+ *
+ * Throws with a human sentence. The modal shows it as-is.
+ */
+async function sendFileToDrive(file: File, onProgress: (percent: number) => void): Promise<void> {
+  const blob = await uploadToBlob(file, {
+    scope: "admin-upload",
+    pathnamePrefix: "admin-uploads",
+    onProgress,
+  })
+
+  const res = await fetch("/api/admin/file-dropzone/finalize", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url: blob.url, fileName: file.name, contentType: blob.contentType }),
+  }).catch(() => null)
+
+  if (!res?.ok) {
+    const data = (await res?.json().catch(() => null)) as { error?: string } | null
+    throw new Error(data?.error || "That file didn't reach Drive. Please try again.")
+  }
+}
 
 export default function UploadDocsButton({
-  endpoint = "/api/admin/file-dropzone",
+  admin = false,
   label = "📁 Upload files",
   buttonClassName = "text-xs px-3 py-1.5 rounded-lg border border-[#1B2D45] text-[#1B2D45] font-medium hover:bg-[#efe7da]",
   heading = "Upload documents",
@@ -14,7 +43,15 @@ export default function UploadDocsButton({
   actionLabel = "Upload to Drive",
   successNote = "You'll also see them listed in your messages, so you can check back any time on what you sent.",
 }: {
-  endpoint?: string
+  /**
+   * The firm's own uploader. Files go to the shared Drive folder rather than
+   * into a client's folder, and nothing is written to the conversation.
+   * Left off, this is the client's "send files to my legal team" modal.
+   *
+   * This replaced an `endpoint` prop: the browser now uploads to Blob first, so
+   * the route a caller wants is the finalize step, not one upload URL.
+   */
+  admin?: boolean
   label?: string
   buttonClassName?: string
   heading?: string
@@ -37,32 +74,32 @@ export default function UploadDocsButton({
     return () => window.removeEventListener("beforeunload", warn)
   }, [uploading])
 
-  // Upload one file via XMLHttpRequest so we can report real progress.
-  function uploadOne(f: DropFile): Promise<{ ok: boolean; msg?: string }> {
-    return new Promise((resolve) => {
-      const xhr = new XMLHttpRequest()
-      xhr.open("POST", endpoint)
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          const pct = Math.round((e.loaded / e.total) * 100)
-          setFiles((prev) => prev.map((x) => (x.id === f.id ? { ...x, progress: pct } : x)))
-        }
+  // Upload one file. The bytes go straight from the browser to Vercel Blob,
+  // then the server moves them to Drive (2026-08-20).
+  //
+  // This used to POST the file into the API route. Vercel rejects a request
+  // body over ~4.5 MB with a bare 413 before any of our code runs, so a client
+  // sending a document production got "Upload failed / check your connection"
+  // while the modal promised 25 MB. Blob has no such ceiling.
+  async function uploadOne(f: DropFile): Promise<{ ok: boolean; msg?: string }> {
+    const onProgress = (pct: number) =>
+      setFiles((prev) => prev.map((x) => (x.id === f.id ? { ...x, progress: Math.round(pct) } : x)))
+    try {
+      if (admin) {
+        await sendFileToDrive(f.file, onProgress)
+      } else {
+        await sendFileToFirm(f.file, {
+          relativePath: f.relativePath || f.file.name,
+          onProgress,
+        })
       }
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve({ ok: true })
-        } else {
-          let msg = "Upload failed"
-          try { const d = JSON.parse(xhr.responseText); msg = d.error || msg } catch { /* non-JSON */ }
-          resolve({ ok: false, msg })
-        }
+      return { ok: true }
+    } catch (e) {
+      return {
+        ok: false,
+        msg: e instanceof Error ? e.message : "Upload failed. Please try again.",
       }
-      xhr.onerror = () => resolve({ ok: false, msg: "Upload failed. Please check your connection and try again." })
-      const fd = new FormData()
-      fd.append("file", f.file)
-      fd.append("relativePath", f.relativePath || f.file.name)
-      xhr.send(fd)
-    })
+    }
   }
 
   async function upload() {
@@ -99,7 +136,15 @@ export default function UploadDocsButton({
             </div>
             <p className="text-xs text-gray-500 mb-4">{blurb}</p>
 
-            <FileDropzone files={files} onChange={setFiles} />
+            {/* The limit comes from lib/upload-limits so the promise on screen
+                and the server's check can't drift apart. It said 25 MB while
+                the platform silently refused anything over ~4.5 MB. */}
+            <FileDropzone
+              files={files}
+              onChange={setFiles}
+              maxSize={MAX_UPLOAD_BYTES}
+              sizeLabel={`Maximum size: ${MAX_UPLOAD_LABEL}`}
+            />
 
             {uploading && (
               <div className="mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
@@ -113,9 +158,11 @@ export default function UploadDocsButton({
             {!uploading && result && result.sent > 0 && (
               <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5">
                 <p className="text-sm font-semibold text-green-900">
-                  ✅ {result.sent} {result.sent === 1 ? "file" : "files"} sent - your legal team has {result.sent === 1 ? "it" : "them"}.
+                  {admin
+                    ? `✅ ${result.sent} ${result.sent === 1 ? "file is" : "files are"} in the firm's Drive folder.`
+                    : `✅ ${result.sent} ${result.sent === 1 ? "file" : "files"} sent - your legal team has ${result.sent === 1 ? "it" : "them"}.`}
                 </p>
-                <p className="text-xs text-green-800 mt-0.5">{successNote}</p>
+                {!admin && <p className="text-xs text-green-800 mt-0.5">{successNote}</p>}
                 {result.failed > 0 && (
                   <p className="text-xs text-amber-800 mt-1.5">
                     {result.failed} {result.failed === 1 ? "file didn't" : "files didn't"} go through - {result.failed === 1 ? "it's" : "they're"} marked above. You can try again.
@@ -128,7 +175,9 @@ export default function UploadDocsButton({
               <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5">
                 <p className="text-sm font-semibold text-red-900">Nothing was sent.</p>
                 <p className="text-xs text-red-800 mt-0.5">
-                  Please check your connection and try again. If it keeps failing, email us and we&apos;ll sort it out.
+                  {admin
+                    ? "The reason is on each file above. Check the Drive folder and the service account, then try again."
+                    : "Please check your connection and try again. If it keeps failing, email us and we'll sort it out."}
                 </p>
               </div>
             )}

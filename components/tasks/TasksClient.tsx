@@ -1,4 +1,5 @@
-// components/tasks/TasksClient.tsx
+// components/tasks/TasksClient.tsx - the client's task list, including the files
+// they attach to a task.
 "use client"
 
 import { useState, useEffect } from "react"
@@ -6,6 +7,8 @@ import { groupByStage } from "@/lib/task-stages"
 import { RichTextView } from "@/components/ui/RichTextView"
 import FormFill from "@/components/tasks/FormFill"
 import AirtableEmbed from "@/components/ui/AirtableEmbed"
+import { uploadToBlob } from "@/lib/blob-upload-client"
+import { tooBigMessage } from "@/lib/upload-limits"
 
 interface Attachment {
   id: string
@@ -73,20 +76,51 @@ export default function TasksClient({ readOnly = false }: { readOnly?: boolean }
     reload().finally(() => setLoading(false))
   }, [])
 
+  // The bytes go from here straight to Vercel Blob and only the resulting URL is
+  // posted to /api/task-files. Posting the file into the route meant anything
+  // over ~4.5 MB was refused by the platform with a bare 413 before our code
+  // ran, while the screen promised 25 MB. (2026-08-20)
+  //
+  // The blob pathname has to sit under `uploads/`: that is the only prefix a
+  // client's upload token is authorised for.
   async function uploadMyFile(taskId: string, file: File) {
     if (readOnly) return
+    const tooBig = tooBigMessage(file)
+    if (tooBig) {
+      setActionError(tooBig)
+      return
+    }
     setUploadingId(taskId)
-    const fd = new FormData()
-    fd.append("file", file)
-    fd.append("scope", "client_task")
-    fd.append("refId", taskId)
-    const res = await fetch("/api/task-files", { method: "POST", body: fd }).catch(() => null)
-    setUploadingId(null)
-    if (res?.ok) {
+    try {
+      const blob = await uploadToBlob(file, {
+        scope: "task",
+        pathnamePrefix: `uploads/tasks/${taskId}`,
+      })
+      const res = await fetch("/api/task-files", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scope: "client_task",
+          refId: taskId,
+          url: blob.url,
+          pathname: blob.pathname,
+          fileName: file.name,
+          contentType: blob.contentType,
+          size: file.size,
+        }),
+      })
+      if (!res.ok) {
+        const err = (await res.json().catch(() => null)) as { error?: string } | null
+        throw new Error(err?.error || `Couldn't upload ${file.name}. Please try again.`)
+      }
       setActionError(null)
-      reload()
-    } else {
-      setActionError(`Couldn't upload ${file.name}. Files must be under 25 MB - check the size and your connection, then try again.`)
+      await reload()
+    } catch (e) {
+      setActionError(
+        e instanceof Error ? e.message : `Couldn't upload ${file.name}. Please try again.`
+      )
+    } finally {
+      setUploadingId(null)
     }
   }
 

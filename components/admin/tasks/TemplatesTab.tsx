@@ -8,6 +8,8 @@ import { groupByStage } from "@/lib/task-stages"
 import { stageAccent, matchesSearch } from "@/lib/task-progress"
 import { IconButton, TagBadge, NotesBadge, ConfirmDialog, InlineError } from "./bits"
 import type { Template, Attachment, FormSummary } from "./types"
+import { uploadToBlob } from "@/lib/blob-upload-client"
+import { tooBigMessage } from "@/lib/upload-limits"
 
 const OPEN_STAGES_KEY = "efl.admin.tasks.openStages"
 
@@ -167,16 +169,46 @@ export default function TemplatesTab({
     })
   }
 
+  // The bytes go from here straight to Vercel Blob and only the resulting URL is
+  // posted to /api/task-files. Posting the file into the route meant anything
+  // over ~4.5 MB was refused by the platform with a bare 413 before our code
+  // ran. (2026-08-20)
   async function uploadFile(templateId: string, file: File) {
+    const tooBig = tooBigMessage(file)
+    if (tooBig) {
+      setError(tooBig)
+      return
+    }
     setUploading(true)
-    const fd = new FormData()
-    fd.append("file", file)
-    fd.append("scope", "template")
-    fd.append("refId", templateId)
-    const res = await fetch("/api/task-files", { method: "POST", body: fd }).catch(() => null)
-    setUploading(false)
-    if (res?.ok) await reload()
-    else setError("Upload failed (25 MB max).")
+    try {
+      const blob = await uploadToBlob(file, {
+        scope: "task",
+        pathnamePrefix: `tasks/template/${templateId}`,
+      })
+      const res = await fetch("/api/task-files", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scope: "template",
+          refId: templateId,
+          url: blob.url,
+          pathname: blob.pathname,
+          fileName: file.name,
+          contentType: blob.contentType,
+          size: file.size,
+        }),
+      })
+      if (!res.ok) {
+        const err = (await res.json().catch(() => null)) as { error?: string } | null
+        throw new Error(err?.error || "That file didn't save. Please try again.")
+      }
+      setError(null)
+      await reload()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "That file didn't save. Please try again.")
+    } finally {
+      setUploading(false)
+    }
   }
 
   async function deleteFile(id: string) {

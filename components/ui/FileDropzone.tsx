@@ -2,6 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from "react"
 import { collectDroppedFiles } from "@/lib/drop-files"
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/upload-limits"
 
 export interface DropFile {
   file: File
@@ -21,7 +22,7 @@ interface Props {
   files: DropFile[]
   onChange: (files: DropFile[]) => void
   accept?: string // comma list of mime types / extensions
-  maxSize?: number // bytes
+  maxSize?: number // bytes, defaults to MAX_UPLOAD_BYTES
   formatLabel?: string
   sizeLabel?: string
 }
@@ -32,9 +33,13 @@ export default function FileDropzone({
   files,
   onChange,
   accept = "application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  maxSize = 26214400,
+  // Defaults come from lib/upload-limits (2026-08-20). The old hardcoded
+  // 25 MB was a promise the platform could not keep: a serverless request body
+  // is capped at ~4.5 MB, so mid-sized files failed with an unexplained 413.
+  // Uploads now go straight to Blob, which has no such ceiling.
+  maxSize = MAX_UPLOAD_BYTES,
   formatLabel = "Accepted: PDF, Word, JPG, PNG",
-  sizeLabel = "Maximum size: 25 MB",
+  sizeLabel = `Maximum size: ${MAX_UPLOAD_LABEL}`,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const folderInputRef = useRef<HTMLInputElement>(null)
