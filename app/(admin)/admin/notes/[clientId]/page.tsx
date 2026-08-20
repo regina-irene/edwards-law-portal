@@ -10,6 +10,7 @@ import { getClientLabels } from "@/lib/client-labels"
 import { requireAdmin } from "@/lib/admin"
 import { listNotes, type ClientNote } from "@/lib/notes"
 import { fetchClientEvents, mergeTimeline, clientProseName } from "@/lib/notes-timeline"
+import { getHiddenEventIds } from "@/lib/hidden-events"
 
 export const dynamic = "force-dynamic"
 
@@ -34,6 +35,10 @@ export default async function ClientFieldNotes({ params }: { params: Promise<{ c
   const proseName = clientProseName(client?.name) || labels[cid] || ""
   const events = await fetchClientEvents(cid, proseName)
   const items = mergeTimeline(notes, events)
+  // Activity the firm has taken off the log. Passed down rather than filtered
+  // here so the timeline can offer "Show hidden" without another round trip;
+  // nothing was deleted, so every one of these can come back.
+  const hiddenEventIds = [...(await getHiddenEventIds())]
 
   return (
     <div className="space-y-6">
@@ -47,7 +52,12 @@ export default async function ClientFieldNotes({ params }: { params: Promise<{ c
           </span>
         }
       />
-      <NotesTimeline clientId={cid} initialItems={items} loadError={notesFailed} />
+      <NotesTimeline
+        clientId={cid}
+        initialItems={items}
+        loadError={notesFailed}
+        hiddenEventIds={hiddenEventIds}
+      />
     </div>
   )
 }

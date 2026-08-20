@@ -7,6 +7,7 @@ import { redirect } from "next/navigation"
 import PageTitle from "@/components/ui/PageTitle"
 import QuickNote from "@/components/notes/QuickNote"
 import LogNoteRow from "@/components/notes/LogNoteRow"
+import LogEventRow from "@/components/notes/LogEventRow"
 import { dayHeadingWithDate, timeOfDay } from "@/lib/dates"
 import CaseJump from "@/components/notes/CaseJump"
 import { taglineFor } from "@/lib/taglines"
@@ -17,6 +18,7 @@ import ArchivedChip from "@/components/admin/ArchivedChip"
 import { requireAdmin } from "@/lib/admin"
 import { latestNoteByClient, searchNotes, listNoteAuthors, countNotes, type NoteSearchHit } from "@/lib/notes"
 import { fetchAllEvents, clientProseName, type TimelineEvent } from "@/lib/notes-timeline"
+import { getHiddenEventIds } from "@/lib/hidden-events"
 
 const EVENT_ICONS: Record<string, string> = { chat: "💬", message: "💬", upload: "📎", form: "📋", task: "✅", view: "👁️" }
 
@@ -47,12 +49,15 @@ const timeOf = timeOfDay
 export default async function FieldNotesHub({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; author?: string; case?: string; limit?: string; show?: string; archived?: string }>
+  searchParams: Promise<{ q?: string; author?: string; case?: string; limit?: string; show?: string; archived?: string; hidden?: string }>
 }) {
   const check = await requireAdmin()
   if (check.status !== "ok") redirect("/login")
 
-  const { q, author, case: caseId, limit, show, archived } = await searchParams
+  const { q, author, case: caseId, limit, show, archived, hidden } = await searchParams
+  // Hidden activity is off unless asked for, so the log reads clean by default
+  // and nothing is ever gone for good. In the URL so it survives a refresh.
+  const showHidden = hidden === "1"
   const query = (q ?? "").trim()
   const writer = (author ?? "").trim()
   const forCase = (caseId ?? "").trim()
@@ -110,6 +115,10 @@ export default async function FieldNotesHub({
   const nameOf = (id: string) =>
     clientProseName(clients.find((c) => String(c.clientId) === id)?.name) || labels[id] || ""
   const events = wantsEvents ? await fetchAllEvents(nameOf).catch(() => [] as TimelineEvent[]) : []
+  // Fails soft to an empty set inside the helper, so a database problem shows
+  // MORE activity than it should rather than making entries disappear.
+  const hiddenEventIds = await getHiddenEventIds()
+  const hiddenOnScreen = events.filter((e) => e.clientId && hiddenEventIds.has(e.id)).length
 
   const kindMatch = KINDS.find((k) => k.key === kind) ?? KINDS[0]
   const eventRows: LogRow[] = events
@@ -118,6 +127,10 @@ export default async function FieldNotesHub({
     .filter((e) => !forCase || e.clientId === forCase)
     .filter((e) => (kind ? kindMatch.match(e) : true))
     .filter((e) => !query || e.detail.toLowerCase().includes(query.toLowerCase()) || caseLabel(e.clientId!).toLowerCase().includes(query.toLowerCase()))
+    // Entries the firm has taken off the log. Nothing was deleted: the message,
+    // file, task or form response is untouched and this line comes straight
+    // back with "Show hidden". See lib/hidden-events.
+    .filter((e) => showHidden || !hiddenEventIds.has(e.id))
     .map((e) => ({ type: "event" as const, at: e.at, clientId: e.clientId!, key: e.id, event: e }))
 
   const noteRows: LogRow[] = logResult.rows
@@ -218,6 +231,7 @@ export default async function FieldNotesHub({
           Include archived
           {archivedCount > 0 && <span className="text-gray-400">({archivedCount})</span>}
         </label>
+        {showHidden && <input type="hidden" name="hidden" value="1" />}
         {filtered && (
           <Link href="/admin/notes" className="text-sm text-gray-400 hover:text-gray-700 underline">Clear</Link>
         )}
@@ -237,6 +251,23 @@ export default async function FieldNotesHub({
               {kind && ` · ${kindMatch.label.toLowerCase()}`}
               {!includeArchived && archivedCount > 0 && ` · ${archivedCount} archived ${archivedCount === 1 ? "case" : "cases"} hidden`}
             </span>
+            {/* Hiding an entry never deletes anything, so there is always a way
+                back to it. The link carries the current filters with it. */}
+            {(showHidden || hiddenOnScreen > 0) && (
+              <Link
+                href={`/admin/notes?${new URLSearchParams({
+                  ...(query ? { q: query } : {}),
+                  ...(writer ? { author: writer } : {}),
+                  ...(forCase ? { case: forCase } : {}),
+                  ...(kind ? { show: kind } : {}),
+                  ...(includeArchived ? { archived: "1" } : {}),
+                  ...(showHidden ? {} : { hidden: "1" }),
+                }).toString()}`}
+                className="text-xs text-gray-400 hover:text-gray-700 underline print:hidden"
+              >
+                {showHidden ? "Hide them again" : `Show ${hiddenOnScreen} hidden`}
+              </Link>
+            )}
           </div>
 
           {notesFailed && (
@@ -285,15 +316,25 @@ export default async function FieldNotesHub({
                       </Link>
                     </LogNoteRow>
                   ) : (
-                    <div key={entry.key} className="px-5 py-2.5 hover:bg-gray-50" style={{ borderLeft: "3px solid transparent" }}>
+                    <LogEventRow
+                      key={entry.key}
+                      eventId={entry.event.id}
+                      hidden={hiddenEventIds.has(entry.event.id)}
+                    >
+                    <div className="px-5 py-2.5 hover:bg-gray-50" style={{ borderLeft: "3px solid transparent" }}>
                       <p className="flex items-baseline justify-between gap-3">
                         <span className="min-w-0 truncate">
                           <Link href={`/admin/notes/${encodeURIComponent(entry.clientId)}`} className="text-sm font-semibold text-gray-700 hover:underline">
                             {EVENT_ICONS[entry.event.kind] ?? "•"} {caseLabel(entry.clientId)}
                           </Link>
                           {isArchived(entry.clientId) && <ArchivedChip note={archiveNoteOf(entry.clientId)} className="ml-2" />}
+                          {hiddenEventIds.has(entry.event.id) && (
+                            <span className="ml-2 text-[10px] uppercase tracking-wide text-gray-400">hidden</span>
+                          )}
                         </span>
-                        <span className="shrink-0 text-xs text-gray-400">{timeOf(entry.at)}</span>
+                        {/* Right padding leaves room for the Hide that appears
+                            on hover in the same corner. */}
+                        <span className="shrink-0 text-xs text-gray-400 pr-12">{timeOf(entry.at)}</span>
                       </p>
                       <p className="text-[13px] text-gray-600 mt-0.5">
                         {entry.event.detail}
@@ -304,6 +345,7 @@ export default async function FieldNotesHub({
                         )}
                       </p>
                     </div>
+                    </LogEventRow>
                   )
                 )}
               </div>

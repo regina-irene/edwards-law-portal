@@ -19,8 +19,22 @@ function fmt(at: string): string {
   })
 }
 
-export default function NotesTimeline({ clientId, initialItems, loadError = false }: { clientId: string; initialItems: TimelineItem[]; loadError?: boolean }) {
+export default function NotesTimeline({
+  clientId,
+  initialItems,
+  loadError = false,
+  hiddenEventIds = [],
+}: {
+  clientId: string
+  initialItems: TimelineItem[]
+  loadError?: boolean
+  /** Activity entries the firm has taken off the log. Nothing was deleted. */
+  hiddenEventIds?: string[]
+}) {
   const [items, setItems] = useState<TimelineItem[]>(initialItems)
+  // Held here so hiding a row is instant, and reversible without a reload.
+  const [hidden, setHidden] = useState<Set<string>>(() => new Set(hiddenEventIds))
+  const [showHidden, setShowHidden] = useState(false)
   const [draft, setDraft] = useState("")
   const [saving, setSaving] = useState(false)
   const [notesOnly, setNotesOnly] = useState(false)
@@ -88,6 +102,38 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
     setConfirmingId(id)
   }
 
+  // Activity rows are drawn live from the conversation, the uploads, the tasks
+  // and the forms - there is no row here to delete. So this HIDES: the entry
+  // leaves the log and the message, document, task or response stays exactly
+  // where it is. Reversible from "Show hidden".
+  async function toggleHidden(eventId: string) {
+    const wasHidden = hidden.has(eventId)
+    // Move it straight away; put it back if the write fails.
+    setHidden((prev) => {
+      const next = new Set(prev)
+      if (wasHidden) next.delete(eventId)
+      else next.add(eventId)
+      return next
+    })
+    setError("")
+    const res = wasHidden
+      ? await fetch(`/api/admin/timeline-hide?id=${encodeURIComponent(eventId)}`, { method: "DELETE" }).catch(() => null)
+      : await fetch("/api/admin/timeline-hide", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ eventId }),
+        }).catch(() => null)
+    if (!res?.ok) {
+      setHidden((prev) => {
+        const next = new Set(prev)
+        if (wasHidden) next.add(eventId)
+        else next.delete(eventId)
+        return next
+      })
+      setError(wasHidden ? "Couldn't restore that entry - try again." : "Couldn't hide that entry - try again.")
+    }
+  }
+
   // Everyone who wrote a note on this client, for the "written by" menu.
   const authors = Array.from(
     new Set(items.flatMap((i) => (i.type === "note" && i.note.author_name ? [i.note.author_name] : []))),
@@ -96,6 +142,7 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
   // Picking a person implies "just my notes" - portal events have no author.
   const visible = items.filter((i) => {
     if (author) return i.type === "note" && i.note.author_name === author
+    if (i.type === "event" && hidden.has(i.event.id) && !showHidden) return false
     return notesOnly ? i.type === "note" : true
   })
   const paged = visible.slice(0, shown)
@@ -136,6 +183,15 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
         >
           Just my notes
         </button>
+        {hidden.size > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowHidden((v) => !v)}
+            className="text-xs text-gray-400 hover:text-gray-700 underline"
+          >
+            {showHidden ? "Hide them again" : `Show ${hidden.size} hidden`}
+          </button>
+        )}
         {authors.length > 0 && (
           <label className="ml-auto flex items-center gap-2 text-xs text-gray-500">
             Written by
@@ -189,11 +245,18 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
               )}
             </div>
           ) : (
-            <div key={item.event.id} className="flex items-baseline gap-2.5 px-4 py-2 rounded-lg" style={{ background: "rgba(255,255,255,0.55)" }}>
+            <div
+              key={item.event.id}
+              className={`group flex items-baseline gap-2.5 px-4 py-2 rounded-lg ${hidden.has(item.event.id) ? "opacity-60" : ""}`}
+              style={{ background: "rgba(255,255,255,0.55)" }}
+            >
               <span className="text-sm">{EVENT_ICONS[item.event.kind] ?? "•"}</span>
-              <p className="text-[13px] text-gray-600 min-w-0">
+              <p className="text-[13px] text-gray-600 min-w-0 flex-1">
                 {item.event.detail}
                 <span className="text-gray-400"> · {fmt(item.at)}</span>
+                {hidden.has(item.event.id) && (
+                  <span className="ml-2 text-[10px] uppercase tracking-wide text-gray-400">hidden</span>
+                )}
                 {item.event.href && (
                   <a
                     href={item.event.href}
@@ -205,6 +268,15 @@ export default function NotesTimeline({ clientId, initialItems, loadError = fals
                   </a>
                 )}
               </p>
+              {/* "Hide", never "Delete": the message, file, task or response
+                  this line describes is not touched. */}
+              <button
+                type="button"
+                onClick={() => void toggleHidden(item.event.id)}
+                className="shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 text-[11px] text-gray-400 hover:text-gray-800 underline print:hidden"
+              >
+                {hidden.has(item.event.id) ? "Restore" : "Hide"}
+              </button>
             </div>
           )
         )}
