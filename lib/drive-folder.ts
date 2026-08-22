@@ -27,14 +27,25 @@ export const DRIVE_FOLDER_CACHE_TAG = "drive-folder"
 export interface DriveSubfolder {
   id: string
   name: string
+  /** Files anywhere beneath it, not just its direct children. */
   fileCount: number
 }
 
 export interface DriveFolderSummary {
   folderId: string
   name: string
-  /** Files sitting directly in the linked folder, not counting subfolders. */
+  /**
+   * EVERY file beneath the linked folder, at any depth.
+   *
+   * The first version counted only the files sitting loose at the top level and
+   * called it "12 files", which read as the size of the whole folder. On an RPD
+   * folder that keeps everything in subfolders that number was near zero and
+   * plainly wrong. This is the real total; `looseFileCount` is the top level on
+   * its own, for when that distinction matters.
+   */
   fileCount: number
+  /** Files sitting directly in the linked folder, outside any subfolder. */
+  looseFileCount: number
   subfolders: DriveSubfolder[]
   /** "PDF", "Word", "Excel", "Image" and so on, most common first. */
   types: string[]
@@ -56,8 +67,17 @@ export type DriveFolderResult =
   | { ok: true; summary: DriveFolderSummary }
   | { ok: false; error: DriveFolderError }
 
-/** Stop before a pathological folder turns one page view into a thousand calls. */
-const MAX_FILES = 400
+/**
+ * Limits, so one page view cannot turn into a thousand Drive calls.
+ *
+ * The walk is breadth-first and queries a whole level at once (Drive accepts
+ * "'a' in parents or 'b' in parents"), so depth costs calls, width mostly does
+ * not. That is what makes counting the entire tree affordable.
+ */
+const MAX_DEPTH = 6
+const MAX_CALLS = 60
+/** Parent ids per query. Drive rejects a query string that gets too long. */
+const PARENTS_PER_QUERY = 25
 const MAX_SUBFOLDERS = 60
 
 /**
@@ -148,82 +168,116 @@ async function readFolder(folderId: string): Promise<DriveFolderResult> {
       }
     }
 
-    const files: { name: string; mimeType: string; modifiedTime: string | null }[] = []
-    const subfolders: DriveSubfolder[] = []
-    let pageToken: string | undefined
+    // Walk the WHOLE tree, breadth first, one query per level.
+    //
+    // Drive has no recursive listing, and asking each folder separately would
+    // cost a call per folder. Instead every folder at a level is queried
+    // together with "'a' in parents or 'b' in parents", so a wide folder costs
+    // no more than a narrow one and only depth adds calls.
+    //
+    // Each file is credited to the TOP-LEVEL subfolder it ultimately sits
+    // under, which is what makes "RPD 10 (37 files)" mean what it looks like it
+    // means, however deeply those files are nested.
+    let looseFileCount = 0
+    let totalFiles = 0
     let truncated = false
+    let calls = 0
 
-    do {
-      const res = await drive.files.list({
-        q: `'${folderId}' in parents and trashed = false`,
-        fields: "nextPageToken, files(id, name, mimeType, modifiedTime)",
-        pageSize: 200,
-        pageToken,
-        supportsAllDrives: true,
-        includeItemsFromAllDrives: true,
-        orderBy: "folder,name",
-      })
-      for (const f of res.data.files ?? []) {
-        if (f.mimeType === FOLDER_MIME) {
-          if (subfolders.length < MAX_SUBFOLDERS) {
-            subfolders.push({ id: String(f.id), name: String(f.name ?? "Untitled"), fileCount: 0 })
-          } else {
-            // Flag it, or a folder with eighty subfolders quietly reports sixty
-            // and the "not everything was counted" note never appears.
+    const subfolders: DriveSubfolder[] = []
+    const countFor = new Map<string, number>()
+    /** folder id -> the top-level subfolder it belongs to. */
+    const rootOf = new Map<string, string>()
+    const typeCounts = new Map<string, number>()
+    const dates: string[] = []
+
+    const note = (name: string, mimeType: string, modifiedTime: string | null) => {
+      totalFiles++
+      const t = friendlyType(mimeType, name)
+      typeCounts.set(t, (typeCounts.get(t) ?? 0) + 1)
+      if (modifiedTime) dates.push(modifiedTime.slice(0, 10))
+    }
+
+    let level: string[] = [folderId]
+    for (let depth = 0; depth < MAX_DEPTH && level.length > 0; depth++) {
+      const next: string[] = []
+
+      for (let i = 0; i < level.length; i += PARENTS_PER_QUERY) {
+        const chunk = level.slice(i, i + PARENTS_PER_QUERY)
+        const q = `(${chunk.map((id) => `'${id}' in parents`).join(" or ")}) and trashed = false`
+        let pageToken: string | undefined
+
+        do {
+          if (calls >= MAX_CALLS) {
             truncated = true
+            break
           }
-        } else if (files.length < MAX_FILES) {
-          files.push({
-            name: String(f.name ?? ""),
-            mimeType: String(f.mimeType ?? ""),
-            modifiedTime: f.modifiedTime ?? null,
-          })
-        } else {
-          truncated = true
-        }
-      }
-      pageToken = res.data.nextPageToken ?? undefined
-    } while (pageToken && !truncated)
-
-    // One extra count per subfolder, so "Bank statements (14 files)" is real
-    // rather than implied. Capped by MAX_SUBFOLDERS above; a failure on one
-    // subfolder leaves it at zero rather than losing the whole summary.
-    await Promise.all(
-      subfolders.map(async (sf) => {
-        try {
+          calls++
           const res = await drive.files.list({
-            q: `'${sf.id}' in parents and trashed = false and mimeType != '${FOLDER_MIME}'`,
-            fields: "files(id)",
-            pageSize: 200,
+            q,
+            // `parents` is what lets a file be credited to the right subfolder.
+            fields: "nextPageToken, files(id, name, mimeType, modifiedTime, parents)",
+            pageSize: 1000,
+            pageToken,
             supportsAllDrives: true,
             includeItemsFromAllDrives: true,
           })
-          sf.fileCount = (res.data.files ?? []).length
-        } catch {
-          sf.fileCount = 0
-        }
-      })
-    )
 
-    const typeCounts = new Map<string, number>()
-    for (const f of files) {
-      const t = friendlyType(f.mimeType, f.name)
-      typeCounts.set(t, (typeCounts.get(t) ?? 0) + 1)
+          for (const f of res.data.files ?? []) {
+            const parent = (f.parents ?? []).find((pid) => chunk.includes(String(pid)))
+            const parentId = String(parent ?? chunk[0])
+            const isFolder = f.mimeType === FOLDER_MIME
+
+            if (isFolder) {
+              const id = String(f.id)
+              if (depth === 0) {
+                // A top-level subfolder: its own root, and its own line on screen.
+                if (subfolders.length < MAX_SUBFOLDERS) {
+                  subfolders.push({ id, name: String(f.name ?? "Untitled"), fileCount: 0 })
+                  rootOf.set(id, id)
+                  countFor.set(id, 0)
+                  next.push(id)
+                } else {
+                  truncated = true
+                }
+              } else {
+                const root = rootOf.get(parentId)
+                if (root) rootOf.set(id, root)
+                next.push(id)
+              }
+              continue
+            }
+
+            note(String(f.name ?? ""), String(f.mimeType ?? ""), f.modifiedTime ?? null)
+            if (depth === 0) {
+              looseFileCount++
+            } else {
+              const root = rootOf.get(parentId)
+              if (root) countFor.set(root, (countFor.get(root) ?? 0) + 1)
+            }
+          }
+
+          pageToken = res.data.nextPageToken ?? undefined
+        } while (pageToken)
+
+        if (truncated) break
+      }
+
+      if (truncated) break
+      level = next
     }
-    const types = [...typeCounts.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t)
 
-    const dates = files
-      .map((f) => f.modifiedTime)
-      .filter((d): d is string => Boolean(d))
-      .map((d) => d.slice(0, 10))
-      .sort()
+    for (const sf of subfolders) sf.fileCount = countFor.get(sf.id) ?? 0
+
+    const types = [...typeCounts.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t)
+    dates.sort()
 
     return {
       ok: true,
       summary: {
         folderId,
         name: String(meta.data.name ?? "Folder"),
-        fileCount: files.length,
+        fileCount: totalFiles,
+        looseFileCount,
         subfolders,
         types,
         from: dates[0] ?? null,

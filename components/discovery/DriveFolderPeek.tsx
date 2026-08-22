@@ -25,7 +25,10 @@ interface Subfolder {
 
 interface Summary {
   name: string
+  /** Everything beneath the folder, at any depth. */
   fileCount: number
+  /** Files sitting loose at the top level, outside any subfolder. */
+  looseFileCount: number
   subfolders: Subfolder[]
   types: string[]
   from: string | null
@@ -111,12 +114,22 @@ export default function DriveFolderPeek({
 
           {!loading && summary && (
             <div className="space-y-2">
+              {/* The headline is the WHOLE tree - that is what someone means
+                  when they ask how much is in a folder. The breakdown below
+                  says where those files actually sit. */}
               <p className="text-gray-700">
                 <span className="font-semibold">{summary.name}</span>
                 {summary.fileCount > 0 && (
                   <>
                     {" "}
                     · {summary.fileCount} {summary.fileCount === 1 ? "file" : "files"}
+                    {summary.subfolders.length > 0 && (
+                      <>
+                        {" "}
+                        in {summary.subfolders.length}{" "}
+                        {summary.subfolders.length === 1 ? "folder" : "folders"}
+                      </>
+                    )}
                   </>
                 )}
                 {summary.types.length > 0 && <> · {summary.types.slice(0, 4).join(", ")}</>}
@@ -138,13 +151,21 @@ export default function DriveFolderPeek({
                 </ul>
               )}
 
+              {summary.looseFileCount > 0 && summary.subfolders.length > 0 && (
+                <p className="text-gray-500 text-[12px]">
+                  {summary.looseFileCount} {summary.looseFileCount === 1 ? "file sits" : "files sit"}{" "}
+                  loose at the top level.
+                </p>
+              )}
+
               {summary.subfolders.length === 0 && summary.fileCount === 0 && (
                 <p className="text-gray-500">This folder is empty.</p>
               )}
 
               {summary.truncated && (
                 <p className="text-[11px] text-gray-400">
-                  Only the first few hundred files were counted.
+                  This folder is deep enough that not everything was counted, so the totals are a
+                  minimum.
                 </p>
               )}
             </div>
