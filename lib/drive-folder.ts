@@ -20,7 +20,6 @@
 // the UI shows as a plain sentence rather than an error. The service account
 // email is the `client_email` in GOOGLE_SERVICE_ACCOUNT_JSON.
 import { google } from "googleapis"
-import { unstable_cache } from "next/cache"
 
 export const DRIVE_FOLDER_CACHE_TAG = "drive-folder"
 
@@ -291,15 +290,49 @@ async function readFolder(folderId: string): Promise<DriveFolderResult> {
 }
 
 /**
- * A folder summary, cached for an hour.
+ * How long a result is kept, and why the two differ.
  *
- * Discovery folders change rarely and this costs several Drive calls, so it is
- * cached hard. The cache key is the folder id, so two clients linking the same
+ * A SUCCESS is cached hard: discovery folders change rarely and each read costs
+ * several Drive calls, so an hour is cheap and two clients linking the same
  * folder share one read.
+ *
+ * A FAILURE is cached for a minute, and that distinction matters. The first
+ * version cached both for an hour, which set a trap: "this folder hasn't been
+ * shared" would be remembered for an hour, so the moment you fixed the sharing
+ * in Drive and came back to check, the portal would confidently repeat the old
+ * answer with no sign it was doing so. A minute is long enough to stop a
+ * frustrated person hammering the Drive API and short enough that a fix shows
+ * up while they are still looking at the screen.
  */
-export function summariseDriveFolder(folderId: string): Promise<DriveFolderResult> {
-  return unstable_cache(() => readFolder(folderId), ["drive-folder", folderId], {
-    revalidate: 3600,
-    tags: [DRIVE_FOLDER_CACHE_TAG],
-  })()
+const OK_TTL_MS = 60 * 60 * 1000
+const FAIL_TTL_MS = 60 * 1000
+
+/**
+ * Per-instance, deliberately.
+ *
+ * Not next/cache: unstable_cache has one revalidate window for whatever the
+ * function returns, so it cannot hold a success for an hour and a failure for a
+ * minute. A plain Map on the serverless instance can, and losing it when the
+ * instance recycles costs nothing but a re-read.
+ */
+const cache = new Map<string, { at: number; result: DriveFolderResult }>()
+
+export function clearDriveFolderCache(): void {
+  cache.clear()
+}
+
+export async function summariseDriveFolder(folderId: string): Promise<DriveFolderResult> {
+  const hit = cache.get(folderId)
+  if (hit) {
+    const ttl = hit.result.ok ? OK_TTL_MS : FAIL_TTL_MS
+    if (Date.now() - hit.at < ttl) return hit.result
+  }
+  const result = await readFolder(folderId)
+  cache.set(folderId, { at: Date.now(), result })
+  // The map is per instance and folders are few, but an unbounded cache is
+  // still an unbounded cache.
+  if (cache.size > 500) {
+    for (const k of [...cache.keys()].slice(0, 100)) cache.delete(k)
+  }
+  return result
 }
