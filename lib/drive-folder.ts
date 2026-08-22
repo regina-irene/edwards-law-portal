@@ -23,10 +23,21 @@ import { google } from "googleapis"
 
 export const DRIVE_FOLDER_CACHE_TAG = "drive-folder"
 
+/** A file sitting loose at the top level of the linked folder. */
+export interface DriveLooseFile {
+  id: string
+  name: string
+  /** Google's own "open this file" URL, so it opens where the client expects. */
+  link: string
+  type: string
+}
+
 /** One subfolder inside the linked folder. */
 export interface DriveSubfolder {
   id: string
   name: string
+  /** Opens the folder in Drive. */
+  link: string
   /** Files anywhere beneath it, not just its direct children. */
   fileCount: number
 }
@@ -46,6 +57,14 @@ export interface DriveFolderSummary {
   fileCount: number
   /** Files sitting directly in the linked folder, outside any subfolder. */
   looseFileCount: number
+  /**
+   * Those same top-level files, by name.
+   *
+   * Counting them was not enough: a folder whose documents sit at the root
+   * showed a number and no way to tell what they were, while every subfolder
+   * got a label. Named and linked, up to MAX_LOOSE_LISTED.
+   */
+  looseFiles: DriveLooseFile[]
   subfolders: DriveSubfolder[]
   /** "PDF", "Word", "Excel", "Image" and so on, most common first. */
   types: string[]
@@ -79,6 +98,8 @@ const MAX_CALLS = 60
 /** Parent ids per query. Drive rejects a query string that gets too long. */
 const PARENTS_PER_QUERY = 25
 const MAX_SUBFOLDERS = 60
+/** Enough to read a folder at a glance without turning the panel into a wall. */
+const MAX_LOOSE_LISTED = 50
 
 /**
  * The folder id inside a Drive URL, or null when the link is not a folder.
@@ -179,6 +200,7 @@ async function readFolder(folderId: string): Promise<DriveFolderResult> {
     // under, which is what makes "RPD 10 (37 files)" mean what it looks like it
     // means, however deeply those files are nested.
     let looseFileCount = 0
+    const looseFiles: DriveLooseFile[] = []
     let totalFiles = 0
     let truncated = false
     let calls = 0
@@ -215,7 +237,7 @@ async function readFolder(folderId: string): Promise<DriveFolderResult> {
           const res = await drive.files.list({
             q,
             // `parents` is what lets a file be credited to the right subfolder.
-            fields: "nextPageToken, files(id, name, mimeType, modifiedTime, parents)",
+            fields: "nextPageToken, files(id, name, mimeType, modifiedTime, parents, webViewLink)",
             pageSize: 1000,
             pageToken,
             supportsAllDrives: true,
@@ -232,7 +254,12 @@ async function readFolder(folderId: string): Promise<DriveFolderResult> {
               if (depth === 0) {
                 // A top-level subfolder: its own root, and its own line on screen.
                 if (subfolders.length < MAX_SUBFOLDERS) {
-                  subfolders.push({ id, name: String(f.name ?? "Untitled"), fileCount: 0 })
+                  subfolders.push({
+                    id,
+                    name: String(f.name ?? "Untitled"),
+                    link: f.webViewLink ?? `https://drive.google.com/drive/folders/${id}`,
+                    fileCount: 0,
+                  })
                   rootOf.set(id, id)
                   countFor.set(id, 0)
                   next.push(id)
@@ -247,9 +274,22 @@ async function readFolder(folderId: string): Promise<DriveFolderResult> {
               continue
             }
 
-            note(String(f.name ?? ""), String(f.mimeType ?? ""), f.modifiedTime ?? null)
+            const fileName = String(f.name ?? "")
+            const fileMime = String(f.mimeType ?? "")
+            note(fileName, fileMime, f.modifiedTime ?? null)
             if (depth === 0) {
               looseFileCount++
+              if (looseFiles.length < MAX_LOOSE_LISTED) {
+                looseFiles.push({
+                  id: String(f.id),
+                  name: fileName,
+                  // webViewLink is Google's own open-in-Drive URL. Falling back
+                  // to a constructed one keeps the row clickable if Drive omits
+                  // it, which it does for some file types.
+                  link: f.webViewLink ?? `https://drive.google.com/file/d/${String(f.id)}/view`,
+                  type: friendlyType(fileMime, fileName),
+                })
+              }
             } else {
               const root = rootOf.get(parentId)
               if (root) countFor.set(root, (countFor.get(root) ?? 0) + 1)
@@ -268,6 +308,20 @@ async function readFolder(folderId: string): Promise<DriveFolderResult> {
 
     for (const sf of subfolders) sf.fileCount = countFor.get(sf.id) ?? 0
 
+    /**
+     * Natural order, so "RPD 2" comes before "RPD 10".
+     *
+     * A plain string sort compares character by character, which puts "RPD 10"
+     * ahead of "RPD 2" because "1" sorts before "2". `numeric` makes the
+     * collator read runs of digits as numbers, which is how anyone reading a
+     * list of numbered discovery requests expects them to be ordered.
+     */
+    const naturally = (a: string, b: string) =>
+      a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" })
+
+    subfolders.sort((a, b) => naturally(a.name, b.name))
+    looseFiles.sort((a, b) => naturally(a.name, b.name))
+
     const types = [...typeCounts.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t)
     dates.sort()
 
@@ -278,6 +332,7 @@ async function readFolder(folderId: string): Promise<DriveFolderResult> {
         name: String(meta.data.name ?? "Folder"),
         fileCount: totalFiles,
         looseFileCount,
+        looseFiles,
         subfolders,
         types,
         from: dates[0] ?? null,

@@ -20,7 +20,15 @@ import { useState } from "react"
 interface Subfolder {
   id: string
   name: string
+  link: string
   fileCount: number
+}
+
+interface LooseFile {
+  id: string
+  name: string
+  link: string
+  type: string
 }
 
 interface Summary {
@@ -29,6 +37,7 @@ interface Summary {
   fileCount: number
   /** Files sitting loose at the top level, outside any subfolder. */
   looseFileCount: number
+  looseFiles: LooseFile[]
   subfolders: Subfolder[]
   types: string[]
   from: string | null
@@ -141,7 +150,14 @@ export default function DriveFolderPeek({
                   {summary.subfolders.map((sf) => (
                     <li key={sf.id} className="text-gray-700">
                       <span className="text-gray-400 mr-1.5">📁</span>
-                      {sf.name}
+                      <a
+                        href={sf.link}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:underline"
+                      >
+                        {sf.name}
+                      </a>
                       <span className="text-gray-400">
                         {" "}
                         ({sf.fileCount} {sf.fileCount === 1 ? "file" : "files"})
@@ -151,10 +167,30 @@ export default function DriveFolderPeek({
                 </ul>
               )}
 
-              {summary.looseFileCount > 0 && summary.subfolders.length > 0 && (
-                <p className="text-gray-500 text-[12px]">
-                  {summary.looseFileCount} {summary.looseFileCount === 1 ? "file sits" : "files sit"}{" "}
-                  loose at the top level.
+              {/* Files at the root, by name. A subfolder got a label and these
+                  only got a number, which made a folder that keeps its
+                  documents at the top level look emptier than it is. */}
+              {summary.looseFiles.length > 0 && (
+                <ul className="space-y-0.5">
+                  {summary.looseFiles.map((f) => (
+                    <li key={f.id} className="text-gray-700">
+                      <span className="text-gray-400 mr-1.5">📄</span>
+                      <a
+                        href={f.link}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:underline"
+                      >
+                        {f.name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {summary.looseFileCount > summary.looseFiles.length && (
+                <p className="text-[11px] text-gray-400">
+                  and {summary.looseFileCount - summary.looseFiles.length} more at the top level
                 </p>
               )}
 
