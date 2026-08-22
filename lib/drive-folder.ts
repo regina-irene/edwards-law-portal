@@ -233,18 +233,59 @@ async function readFolder(folderId: string): Promise<DriveFolderResult> {
       },
     }
   } catch (e) {
-    const status = (e as { code?: number; status?: number })?.code ?? (e as { status?: number })?.status
-    if (status === 404 || status === 403) {
+    // Google's own reason, which is the only thing that actually says WHY.
+    // The first version of this collapsed 403 and 404 into one "hasn't been
+    // shared" sentence, which is wrong twice over: a 404 usually means the id
+    // is not a folder we can see at all, and a 403 can equally mean the Drive
+    // API is not enabled on the Cloud project (accessNotConfigured) or that a
+    // Workspace policy forbids the service account. Those need different fixes,
+    // so they are logged separately and shown separately.
+    const err = e as {
+      code?: number | string
+      status?: number
+      message?: string
+      errors?: { reason?: string; message?: string }[]
+      response?: { status?: number; data?: { error?: { message?: string; errors?: { reason?: string }[] } } }
+    }
+    const status =
+      (typeof err.code === "number" ? err.code : undefined) ?? err.status ?? err.response?.status
+    const reason =
+      err.errors?.[0]?.reason ?? err.response?.data?.error?.errors?.[0]?.reason ?? ""
+    const detail = err.response?.data?.error?.message ?? err.message ?? ""
+
+    console.error(
+      `[drive-folder] read failed folder=${folderId} status=${status ?? "?"} reason=${reason || "?"} detail=${detail.slice(0, 300)}`
+    )
+
+    if (reason === "accessNotConfigured" || /has not been used in project|is disabled/i.test(detail)) {
+      return {
+        ok: false,
+        error: {
+          reason: "not-configured",
+          message:
+            "The Google Drive API isn't switched on for the portal's Google project yet.",
+        },
+      }
+    }
+    if (status === 403) {
+      return {
+        ok: false,
+        error: {
+          reason: "no-access",
+          message: "Google refused the portal access to this folder.",
+        },
+      }
+    }
+    if (status === 404) {
       return {
         ok: false,
         error: {
           reason: "no-access",
           message:
-            "This folder hasn't been shared with the portal yet, so its contents can't be listed.",
+            "The portal can't find that folder. Either the link points somewhere that no longer exists, or the folder isn't visible to the portal.",
         },
       }
     }
-    console.error("[drive-folder] read failed:", e instanceof Error ? e.message : e)
     return { ok: false, error: { reason: "failed", message: "Couldn't read that folder just now." } }
   }
 }
