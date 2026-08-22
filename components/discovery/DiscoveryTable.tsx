@@ -5,6 +5,8 @@
 // on a phone and "View file" is always a full-width tap target.
 
 import { useMemo, useState } from "react"
+import DriveFolderPeek from "@/components/discovery/DriveFolderPeek"
+import { isDriveFolderLink } from "@/lib/drive-folder-link"
 import type { DiscoveryDoc } from "@/lib/discovery"
 
 function shortDate(d: string): string {
@@ -123,6 +125,13 @@ export default function DiscoveryTable({ docs }: { docs: DiscoveryDoc[] }) {
                 View file
               </a>
             )}
+            {/* A folder link on its own says nothing about what is inside, so
+                the contents can be listed here without leaving the portal. */}
+            {isDriveFolderLink(d.link) && (
+              <div className="mt-2">
+                <DriveFolderPeek recordId={d.id} />
+              </div>
+            )}
           </li>
         ))}
       </ul>
@@ -188,6 +197,11 @@ export default function DiscoveryTable({ docs }: { docs: DiscoveryDoc[] }) {
                   >
                     View file
                   </a>
+                )}
+                {isDriveFolderLink(d.link) && (
+                  <div className="mt-2 text-right">
+                    <DriveFolderPeek recordId={d.id} label="What's inside" />
+                  </div>
                 )}
               </td>
             </tr>

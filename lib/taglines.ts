@@ -17,6 +17,7 @@ const TAGLINES: Record<string, string> = {
   "admin:notes": "Your private case log - clients never see this",
   "admin:status": "Where every case stands, in plain English",
   "admin:documents": "Every filing and letter, across every case",
+  "admin:discovery": "What each client can see, and what they cannot",
   "admin:messages": "Every client conversation",
   "admin:pages": "What clients see on every page",
   "admin:settings": "Pages, navigation, and defaults",
