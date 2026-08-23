@@ -40,7 +40,7 @@ export const dynamic = "force-dynamic"
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as
-    | { recordId?: unknown; baseId?: unknown }
+    | { recordId?: unknown; baseId?: unknown; refresh?: unknown }
     | null
 
   const recordId = typeof body?.recordId === "string" ? body.recordId.trim() : ""
@@ -99,7 +99,9 @@ export async function POST(req: Request) {
     )
   }
 
-  const result = await summariseDriveFolder(folderId)
+  // Asked for explicitly by the Refresh control, so a folder that changed in
+  // Drive can be re-read without waiting for the cache to lapse.
+  const result = await summariseDriveFolder(folderId, { force: body?.refresh === true })
   if (!result.ok) {
     // 200 with a reason, not an error status: "this folder hasn't been shared
     // with the portal" is information for the person, not a fault to retry.

@@ -75,20 +75,17 @@ export default function DriveFolderPeek({
   const [summary, setSummary] = useState<Summary | null>(null)
   const [message, setMessage] = useState("")
 
-  async function toggle() {
-    if (open) {
-      setOpen(false)
-      return
-    }
-    setOpen(true)
-    // Read once and keep it: the server caches for an hour anyway, and
-    // re-fetching on every open would make the control feel slow.
-    if (summary || message) return
+  async function load(force = false) {
     setLoading(true)
+    setMessage("")
     const res = await fetch("/api/drive-folder", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(baseId ? { recordId, baseId } : { recordId }),
+      body: JSON.stringify({
+        recordId,
+        ...(baseId ? { baseId } : {}),
+        ...(force ? { refresh: true } : {}),
+      }),
     }).catch(() => null)
     setLoading(false)
 
@@ -104,6 +101,19 @@ export default function DriveFolderPeek({
     else setMessage(data?.error || "Couldn't read that folder just now.")
   }
 
+  async function toggle() {
+    if (open) {
+      setOpen(false)
+      return
+    }
+    setOpen(true)
+    // Kept between opens so the panel is instant the second time. Refresh is
+    // how you get a fresh read; see the note in lib/drive-folder about why an
+    // hour-old answer with no way to update it was the wrong default.
+    if (summary || message) return
+    await load()
+  }
+
   return (
     <div className="print:hidden">
       <button
@@ -114,6 +124,17 @@ export default function DriveFolderPeek({
       >
         {open ? "Hide contents" : label}
       </button>
+
+      {open && !loading && (
+        <button
+          type="button"
+          onClick={() => void load(true)}
+          className="ml-3 text-xs text-gray-400 hover:text-gray-800 underline"
+          title="Read this folder again, ignoring anything remembered from earlier"
+        >
+          Refresh
+        </button>
+      )}
 
       {open && (
         <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-[13px]">

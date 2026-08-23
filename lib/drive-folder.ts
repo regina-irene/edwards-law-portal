@@ -430,8 +430,15 @@ export function clearDriveFolderCache(): void {
   cache.clear()
 }
 
-export async function summariseDriveFolder(folderId: string): Promise<DriveFolderResult> {
-  const hit = cache.get(folderId)
+export async function summariseDriveFolder(
+  folderId: string,
+  options: { force?: boolean } = {}
+): Promise<DriveFolderResult> {
+  // `force` skips the cache entirely. Without it a folder read an hour ago
+  // keeps answering with an hour-old picture, so a document added this morning
+  // is simply absent with nothing on screen to say why - which is exactly the
+  // confusion this option exists to end.
+  const hit = options.force ? undefined : cache.get(folderId)
   if (hit) {
     const ttl = hit.result.ok ? OK_TTL_MS : FAIL_TTL_MS
     if (Date.now() - hit.at < ttl) return hit.result
