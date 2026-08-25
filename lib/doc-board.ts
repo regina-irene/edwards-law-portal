@@ -162,6 +162,24 @@ async function fetchTable(
   return records
 }
 
+
+/**
+ * The value that carries the file's FOLDER PATH, from whichever column holds it.
+ *
+ * Client bases disagree about which column that is. Some put the full path in
+ * "File Path" ("Divorce/2024.01.09 Answer.pdf") while also having a "Name"
+ * column holding just the bare filename; others only have one of the two.
+ *
+ * So the candidates are searched for one that actually contains a slash rather
+ * than trusting a fixed order. Preferring "Name" cost Gichana its folder
+ * colours: every row looked path-less, so the "which folder is the table's own
+ * root" test decided BOTH Divorce and Contempt were the root and threw both
+ * away, leaving every filing untagged and untinted. (2026-08-22)
+ */
+function pathBearing(values: string[]): string {
+  return values.find((v) => v && /[/\\]/.test(v)) ?? values.find(Boolean) ?? ""
+}
+
 function rowsFor(
   kind: DocKind,
   baseId: string,
@@ -174,7 +192,7 @@ function rowsFor(
   const notesField = resolveKey(records, NOTES_KEYS)
 
   const rawNameOf = (f: Record<string, unknown>) =>
-    text(f["File Path"]) || text(f["Name of File"]) || text(f["Name"]) || ""
+    pathBearing([text(f["File Path"]), text(f["Name of File"]), text(f["Name"])])
 
   // Which folder is the table's own? Whatever the files carrying no folder path
   // sit in. Same rule as lib/pleadings, so the two lists agree.

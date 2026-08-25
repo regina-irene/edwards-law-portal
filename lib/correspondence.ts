@@ -32,6 +32,24 @@ function text(v: unknown): string {
   return typeof v === "string" ? v.trim() : ""
 }
 
+
+/**
+ * The value that carries the file's FOLDER PATH, from whichever column holds it.
+ *
+ * Client bases disagree about which column that is. Some put the full path in
+ * "File Path" ("Divorce/2024.01.09 Answer.pdf") while also having a "Name"
+ * column holding just the bare filename; others only have one of the two.
+ *
+ * So the candidates are searched for one that actually contains a slash rather
+ * than trusting a fixed order. Preferring "Name" cost Gichana its folder
+ * colours: every row looked path-less, so the "which folder is the table's own
+ * root" test decided BOTH Divorce and Contempt were the root and threw both
+ * away, leaving every filing untagged and untinted. (2026-08-22)
+ */
+function pathBearing(values: string[]): string {
+  return values.find((v) => v && /[/\\]/.test(v)) ?? values.find(Boolean) ?? ""
+}
+
 export async function getCorrespondence(clientBaseId: string): Promise<CorrespondenceDoc[] | null> {
   if (!clientBaseId) return null
   try {
@@ -54,7 +72,7 @@ export async function getCorrespondence(clientBaseId: string): Promise<Correspon
     // "File Path" is this table's primary field; the other two are here for
     // bases that were set up the Pleadings way.
     const rawNameOf = (f: Record<string, unknown>) =>
-      text(f["File Path"]) || text(f["Name of File"]) || text(f["Name"]) || ""
+      pathBearing([text(f["File Path"]), text(f["Name of File"]), text(f["Name"])])
 
     // Which folder is the table's own (top-level) one? Whatever the files that
     // carry no folder path in their name sit in - anything else is a subfolder.
