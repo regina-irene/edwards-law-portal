@@ -7,7 +7,7 @@
 
 import { useMemo, useState } from "react"
 import type { PleadingDoc } from "@/lib/pleadings"
-import { filedByColor, folderColor } from "@/lib/airtable-colors"
+import { filedByColor, folderPalette } from "@/lib/airtable-colors"
 
 function shortDate(d: string): string {
   return new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
@@ -39,6 +39,14 @@ function sortValue(d: PleadingDoc, key: SortKey): string {
 export default function PleadingsTable({ docs }: { docs: PleadingDoc[] }) {
   const [sortKey, setSortKey] = useState<SortKey>("filedOn")
   const [asc, setAsc] = useState(false) // newest first by default
+
+  // One palette for this case's folders, so two of them can never share a
+  // colour. See folderPalette: hashing each name separately let "Divorce" and
+  // "Contempt" collide, which made the whole list look like one case.
+  const palette = useMemo(
+    () => folderPalette(docs.map((d) => d.folder ?? "")),
+    [docs]
+  )
 
   const sorted = useMemo(() => {
     const copy = docs.slice()
@@ -77,7 +85,7 @@ export default function PleadingsTable({ docs }: { docs: PleadingDoc[] }) {
       <ul className="md:hidden space-y-3">
         {sorted.map((d) => {
           const dateLabel = d.filedOn ? shortDate(d.filedOn) : "-"
-          const fc = d.folder ? folderColor(d.folder) : null
+          const fc = d.folder ? palette.get(d.folder) ?? null : null
           return (
             <li
               key={d.id}
@@ -176,7 +184,7 @@ export default function PleadingsTable({ docs }: { docs: PleadingDoc[] }) {
             const dateLabel = d.filedOn ? shortDate(d.filedOn) : "-"
             // filings kept in a subfolder ("TPO") are tagged and washed in that
             // folder's color so they stand apart from the main docket
-            const fc = d.folder ? folderColor(d.folder) : null
+            const fc = d.folder ? palette.get(d.folder) ?? null : null
             return (
               <tr
                 key={d.id}

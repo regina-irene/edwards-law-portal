@@ -8,7 +8,7 @@
 
 import { useMemo, useState } from "react"
 import type { CorrespondenceDoc } from "@/lib/correspondence"
-import { sentByColor, sentByLabel, folderColor } from "@/lib/airtable-colors"
+import { sentByColor, sentByLabel, folderPalette } from "@/lib/airtable-colors"
 
 function shortDate(d: string): string {
   return new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
@@ -44,6 +44,14 @@ function sortValue(d: CorrespondenceDoc, key: SortKey): string {
 export default function CorrespondenceTable({ docs }: { docs: CorrespondenceDoc[] }) {
   const [sortKey, setSortKey] = useState<SortKey>("sentOn")
   const [asc, setAsc] = useState(false) // newest first by default
+
+  // One palette for this case's folders, so two of them can never share a
+  // colour. See folderPalette: hashing each name separately let "Divorce" and
+  // "Contempt" collide, which made the whole list look like one case.
+  const palette = useMemo(
+    () => folderPalette(docs.map((d) => d.folder ?? "")),
+    [docs]
+  )
 
   const sorted = useMemo(() => {
     const copy = docs.slice()
@@ -82,7 +90,7 @@ export default function CorrespondenceTable({ docs }: { docs: CorrespondenceDoc[
       <ul className="md:hidden space-y-3">
         {sorted.map((d) => {
           const dateLabel = d.sentOn ? shortDate(d.sentOn) : "-"
-          const fc = d.folder ? folderColor(d.folder) : null
+          const fc = d.folder ? palette.get(d.folder) ?? null : null
           return (
             <li
               key={d.id}
@@ -181,7 +189,7 @@ export default function CorrespondenceTable({ docs }: { docs: CorrespondenceDoc[
             const dateLabel = d.sentOn ? shortDate(d.sentOn) : "-"
             // letters kept in a subfolder ("Opposing Counsel") are tagged and
             // washed in that folder's color so they stand apart from the rest
-            const fc = d.folder ? folderColor(d.folder) : null
+            const fc = d.folder ? palette.get(d.folder) ?? null : null
             return (
               <tr
                 key={d.id}

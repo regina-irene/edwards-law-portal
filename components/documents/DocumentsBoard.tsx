@@ -9,7 +9,7 @@
 // have inputs. The rest is there so you know which document you are annotating.
 import { useMemo, useState } from "react"
 import { InlineError } from "@/components/ui/InlineError"
-import { filedByColor, sentByColor, folderColor, chipFromColorName } from "@/lib/airtable-colors"
+import { filedByColor, sentByColor, folderPalette, chipFromColorName } from "@/lib/airtable-colors"
 import type { DocBoardRow, DocKind, DocChoices } from "@/lib/doc-board"
 
 const NAVY = "#1b2d45"
@@ -130,6 +130,24 @@ export default function DocumentsBoard({
 
   const missingCount = rows.filter((r) => !r.person.trim()).length
 
+  // Folder colours are assigned PER CLIENT, not across the whole firm. Two
+  // clients may both have a "Divorce" folder and there is no reason those
+  // should match, while two folders belonging to the SAME client must not
+  // collide - which is exactly what the old per-name hash allowed.
+  const palettes = useMemo(() => {
+    const byClient = new Map<string, string[]>()
+    for (const r of rows) {
+      if (!r.folder) continue
+      const key = r.clientId
+      const list = byClient.get(key)
+      if (list) list.push(r.folder)
+      else byClient.set(key, [r.folder])
+    }
+    const out = new Map<string, ReturnType<typeof folderPalette>>()
+    for (const [key, folders] of byClient) out.set(key, folderPalette(folders))
+    return out
+  }, [rows])
+
   /** This client's own options for this table. Never another client's. */
   const choicesFor = (row: DocBoardRow) => choices[row.baseId]?.[row.kind] ?? []
 
@@ -245,7 +263,7 @@ export default function DocumentsBoard({
       <div className="space-y-2">
         {paged.map((row) => {
           const editing = editingId === row.recordId
-          const fc = row.folder ? folderColor(row.folder) : null
+          const fc = row.folder ? palettes.get(row.clientId)?.get(row.folder) ?? null : null
           const pc = personChip(row, colorOf(row, row.person))
           return (
             <div

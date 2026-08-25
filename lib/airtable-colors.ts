@@ -277,6 +277,31 @@ export function folderColor(name: string): ChipColor {
   return fromName(FOLDER_ROTATION[hash % FOLDER_ROTATION.length])
 }
 
+/**
+ * Colours for the folders on ONE case, assigned by position rather than by hash.
+ *
+ * folderColor above hashes each name on its own, which cannot promise that two
+ * folders in the same list look different - and on Gichana's pleadings both
+ * "Divorce" and "Contempt" hashed to slot 6, so every filing came out the same
+ * yellow and the split was invisible. A one in eight chance, drawn.
+ *
+ * Walking the rotation instead guarantees distinct colours for up to eight
+ * folders on a case, which is well past what any of these tables carry. Names
+ * are sorted first so a given set of folders always produces the same colours;
+ * adding a NEW folder can shift the others, which is a fair trade for two
+ * folders never sharing a colour.
+ */
+export function folderPalette(names: string[]): Map<string, ChipColor> {
+  const distinct = [...new Set(names.map((n) => n.trim()).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" })
+  )
+  const out = new Map<string, ChipColor>()
+  distinct.forEach((name, i) => {
+    out.set(name, fromName(FOLDER_ROTATION[i % FOLDER_ROTATION.length]))
+  })
+  return out
+}
+
 export function judgeColor(name: string): ChipColor {
   const match = JUDGE_PREFIX.find(([prefix]) => name.startsWith(prefix))
   return fromName(match?.[1])
