@@ -64,3 +64,42 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+/**
+ * Mark a client's messages read WITHOUT opening the conversation (2026-08-22).
+ *
+ * Reading a thread already clears its unread count, but that is the only way it
+ * ever cleared - so a question you dealt with by phone, or one that needs no
+ * answer at all, sat in the inbox looking outstanding until you opened it just
+ * to make the badge go away. That trains you to open things you have already
+ * handled, which is how a real one gets lost among them.
+ *
+ * This changes the READ FLAG only. Nothing is deleted, the messages stay in the
+ * thread exactly as they are, and the client is told nothing.
+ */
+export async function POST(req: Request) {
+  const check = await requireAdmin()
+  if (check.status !== "ok") return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const body = (await req.json().catch(() => null)) as { clientId?: unknown } | null
+  const clientId = typeof body?.clientId === "string" ? body.clientId.trim() : ""
+  if (!clientId) {
+    return NextResponse.json({ error: "A client is required." }, { status: 400 })
+  }
+
+  try {
+    // Only the client's own messages carry an unread state; the firm's do not.
+    const r = await sql`
+      UPDATE chat_messages
+      SET read = true
+      WHERE client_id = ${clientId} AND sender = 'client' AND read = false
+      RETURNING id
+    `
+    return NextResponse.json({ ok: true, cleared: r.rows.length })
+  } catch {
+    return NextResponse.json(
+      { error: "Couldn't clear those just now - they're still marked unread." },
+      { status: 500 }
+    )
+  }
+}

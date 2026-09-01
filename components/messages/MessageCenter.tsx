@@ -197,6 +197,32 @@ export default function MessageCenter() {
     if (c) setSelected(c)
   }, [params])
 
+  /**
+   * Clear a conversation's unread count without opening or answering it.
+   *
+   * Reading a thread already clears it, but that was the ONLY way it ever
+   * cleared - so a question handled by phone, or one needing no reply at all,
+   * sat in the inbox looking outstanding until you opened it purely to stop the
+   * badge. That trains you to open things you have already dealt with, which is
+   * how a real one gets lost among them.
+   *
+   * Only the read flag moves. No message is deleted, the thread is unchanged,
+   * and the client is told nothing.
+   */
+  async function markRead(clientId: string) {
+    const before = convos.find((c) => c.id === clientId)?.unread ?? 0
+    // Drop the badge immediately, and put it back if the write fails.
+    setConvos((prev) => prev.map((c) => (c.id === clientId ? { ...c, unread: 0 } : c)))
+    const res = await fetch("/api/admin/conversations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clientId }),
+    }).catch(() => null)
+    if (!res?.ok) {
+      setConvos((prev) => prev.map((c) => (c.id === clientId ? { ...c, unread: before } : c)))
+    }
+  }
+
   // Park the outgoing conversation's draft and restore the incoming one.
   // Attachments are deliberately NOT carried across: a File queued for one
   // client must never end up attached to another.
@@ -426,7 +452,8 @@ export default function MessageCenter() {
         </div>
         <div className="flex-1 overflow-auto">
           {filtered.map((c) => (
-            <button key={c.id} onClick={() => selectConversation(c.id)} className={`w-full text-left flex gap-3 px-3 py-3 border-b border-gray-100 transition-colors ${selected === c.id ? "bg-[#efe7da]" : "hover:bg-[#f3ede4]"}`} style={{ borderLeft: `3px solid ${selected === c.id ? "#1B2D45" : "transparent"}` }}>
+            <div key={c.id} className="relative group">
+            <button onClick={() => selectConversation(c.id)} className={`w-full text-left flex gap-3 px-3 py-3 border-b border-gray-100 transition-colors ${selected === c.id ? "bg-[#efe7da]" : "hover:bg-[#f3ede4]"}`} style={{ borderLeft: `3px solid ${selected === c.id ? "#1B2D45" : "transparent"}` }}>
               <span className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0" style={{ background: "#1B2D45", color: "#fff" }}>{initials(c.name)}</span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
@@ -440,11 +467,24 @@ export default function MessageCenter() {
                     {c.id !== selected && drafts.current[c.id]?.body && (
                       <span className="px-1 rounded bg-amber-100 text-amber-800 text-[9px] font-semibold" title="You have an unsent draft for this client">Draft</span>
                     )}
-                    {c.unread > 0 && <span className="min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">{c.unread}</span>}
+                    {c.unread > 0 && <span className="min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center group-hover:invisible">{c.unread}</span>}
                   </span>
                 </div>
               </div>
             </button>
+            {/* Sits OUTSIDE the row button: a button cannot nest inside one.
+                Offered only where there is something to clear. */}
+            {c.unread > 0 && (
+              <button
+                type="button"
+                onClick={() => void markRead(c.id)}
+                title="Clear the unread count without opening or replying. Nothing is deleted and the client isn't told."
+                className="absolute right-2 bottom-2.5 opacity-0 group-hover:opacity-100 focus:opacity-100 text-[10px] font-semibold text-gray-500 hover:text-gray-900 underline"
+              >
+                Mark read
+              </button>
+            )}
+            </div>
           ))}
           {loadError ? (
             <p className="text-sm text-amber-700 text-center py-8 px-3">{loadError}</p>
