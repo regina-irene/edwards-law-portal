@@ -6,6 +6,7 @@
 // once (the hub's running log): pass a client id to narrow, or "" for the lot.
 // Every source is fail-soft: one broken source never blanks the log.
 import { sql } from "@/lib/db"
+import { ensureChatAuthorColumn } from "@/lib/ensure-columns"
 import type { ClientNote } from "@/lib/notes"
 
 export interface TimelineEvent {
@@ -104,6 +105,12 @@ const PER_SOURCE_LIMIT = 500
 export type NameLookup = (clientId: string) => string
 
 async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: number): Promise<TimelineEvent[]> {
+  // The chat query below reads author_email. On a database that has not got the
+  // column yet the whole query would fail, and its .catch would quietly drop
+  // every message from the case log - so make sure it exists first. Cached, so
+  // this costs one statement per server instance, not one per page view.
+  await ensureChatAuthorColumn()
+
   // An empty id means "every case". Each source therefore has TWO shapes - an
   // unfiltered read and one narrowed to a single client_id - picked here. The
   // old single query used `(${cid} = '' OR client_id = ${cid})`, and that OR

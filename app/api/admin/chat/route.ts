@@ -1,5 +1,6 @@
 // app/api/admin/chat/route.ts
 import { requireAdmin } from "@/lib/admin"
+import { ensureChatAuthorColumn } from "@/lib/ensure-columns"
 import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
 import { getAllClients } from "@/lib/airtable"
@@ -72,6 +73,11 @@ export async function POST(req: Request) {
   const smsBody = bodyToPlainText(storedBody)
 
   try {
+    // Adds author_email if this database has not got it yet, so nobody has to
+    // run anything by hand after a deploy. Idempotent and cached; see
+    // lib/ensure-columns.
+    await ensureChatAuthorColumn()
+
     // The signed-in admin is stored so the case log can say who actually sent
     // it. Taken from the session, never the request body.
     const result = await sql`

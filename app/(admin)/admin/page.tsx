@@ -11,6 +11,7 @@ import { taglineFor } from "@/lib/taglines"
 import ActivityFeed from "@/components/admin/ActivityFeed"
 import { bodyToPlainText } from "@/lib/message-format"
 import { requireAdmin, displayNameFromEmail } from "@/lib/admin"
+import { ensureChatAuthorColumn } from "@/lib/ensure-columns"
 
 const num = (r: any) => parseInt(r?.rows?.[0]?.count ?? "0", 10) || 0
 
@@ -27,6 +28,10 @@ export default async function AdminHome({
   // so an unreadable session just means nothing is credited to "you".
   const viewer = await requireAdmin()
   const me = viewer.status === "ok" ? viewer.email.trim().toLowerCase() : ""
+
+  // Same reason as lib/notes-timeline: the activity query reads author_email,
+  // and on a database without the column the whole feed would come back empty.
+  await ensureChatAuthorColumn()
 
   const [clients, labels, unreadMessages, openTasksRes, activity] = await Promise.all([
     fetchAllClientsRaw().catch(() => []),
