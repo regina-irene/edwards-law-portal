@@ -20,6 +20,7 @@ import PageTitle from "@/components/ui/PageTitle"
 import { taglineFor } from "@/lib/taglines"
 import SchemePicker from "@/components/settings/SchemePicker"
 import StatusFieldsEditor from "@/components/admin/StatusFieldsEditor"
+import StaffAccess from "@/components/admin/StaffAccess"
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
 import { DEFAULT_SCHEME_KEY } from "@/lib/color-schemes"
 
@@ -164,6 +165,10 @@ export default function AdminSettingsPage() {
           {themeStatus === "saved" && <span className="text-sm text-green-700 font-medium">Saved! ✓</span>}
         </div>
       </section>
+
+      {/* Above the field-visibility controls on purpose: who can get in at all
+          is a bigger question than what they see once they are in. */}
+      <StaffAccess />
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-gray-800">Case Status fields clients see</h2>

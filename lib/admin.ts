@@ -21,8 +21,16 @@ export async function requireAdmin(): Promise<AdminCheckResult> {
   const session = await auth()
   if (!session?.user?.email) return { status: "unauthenticated" }
 
+  // Case-INSENSITIVE, and that matters (2026-08-22). auth.ts already compares
+  // with LOWER() when deciding whether to send a sign-in link, but this check
+  // compared exactly. So a staff row stored as "Kim@edwardsfamilylaw.com" let
+  // the person receive a link, sign in successfully, and then be told they had
+  // no access - which reads as "the portal is broken", not "the address is
+  // capitalised differently". All three checks now agree.
   const result = await sql`
-    SELECT email, name FROM admin_users WHERE email = ${session.user.email} LIMIT 1
+    SELECT email, name FROM admin_users
+    WHERE LOWER(email) = ${session.user.email.trim().toLowerCase()}
+    LIMIT 1
   `
   if (result.rows.length === 0) return { status: "forbidden" }
 

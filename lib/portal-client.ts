@@ -16,7 +16,8 @@ export const getSession = cache(async () => auth())
 
 const isAdmin = cache(async (email: string): Promise<boolean> => {
   try {
-    const r = await sql`SELECT 1 FROM admin_users WHERE email = ${email} LIMIT 1`
+    // Case-insensitive, to agree with lib/admin and auth. See the note there.
+    const r = await sql`SELECT 1 FROM admin_users WHERE LOWER(email) = ${email.trim().toLowerCase()} LIMIT 1`
     return r.rows.length > 0
   } catch {
     return false
