@@ -236,7 +236,12 @@ export function RichTextEditor({
             setImgEl(null)
           }
         }}
-        className="min-h-[140px] px-3 py-2 text-sm text-gray-800 focus:outline-none [&_a]:text-blue-600 [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:text-base [&_h3]:font-semibold [&_img]:max-w-full [&_img]:rounded [&_img]:my-2"
+        // resize-y with overflow-auto gives a drag handle in the bottom-right
+        // corner, the same as a textarea. It was a fixed 140px box, which is
+        // fine for a one-line reply and cramped for anything you actually have
+        // to read back before sending. Used by the message composer, field
+        // notes and the case status editor, so all three get the room.
+        className="min-h-[140px] resize-y overflow-auto px-3 py-2 text-sm text-gray-800 focus:outline-none [&_a]:text-blue-600 [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:text-base [&_h3]:font-semibold [&_img]:max-w-full [&_img]:rounded [&_img]:my-2"
       />
 
       <PromptDialog

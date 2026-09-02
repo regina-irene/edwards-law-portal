@@ -452,6 +452,25 @@ export default function MessageCenter() {
 
   let lastDay = ""
 
+  /**
+   * Grow the compose box to fit what is being typed, and never shrink it.
+   *
+   * It was rows={1} with resize-none, so writing anything longer than a line
+   * meant editing through a one-line slot with no way to make it bigger. It now
+   * starts several lines tall, grows as you type, and has a drag handle.
+   *
+   * Only ever GROWS: if you have dragged it taller, typing will not yank it
+   * back down. The cap is generous but finite so the box can never swallow the
+   * conversation above it.
+   */
+  function growComposer(el: HTMLTextAreaElement | null) {
+    if (!el) return
+    const cap = Math.max(180, Math.round(window.innerHeight * 0.4))
+    if (el.scrollHeight > el.clientHeight) {
+      el.style.height = `${Math.min(el.scrollHeight + 2, cap)}px`
+    }
+  }
+
   // Was h-[calc(100vh-14rem)] inside max-w-5xl, so on any normal monitor the
   // Message Center sat in a small box with empty space either side and a short
   // thread that needed scrolling for conversations that would otherwise have
@@ -674,7 +693,24 @@ export default function MessageCenter() {
                     <RichTextEditor value={body} onChange={setBody} />
                   </div>
                 ) : (
-                  <textarea value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() } }} rows={1} placeholder="Send a message… or drag files here to attach" className="flex-1 resize-none px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32" />
+                  <textarea
+                    value={body}
+                    ref={growComposer}
+                    onChange={(e) => {
+                      setBody(e.target.value)
+                      growComposer(e.currentTarget)
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault()
+                        send()
+                      }
+                    }}
+                    rows={3}
+                    placeholder="Send a message… Shift+Enter for a new line, or drag files here to attach"
+                    title="Drag the bottom-right corner to make this bigger"
+                    className="flex-1 resize-y min-h-[5.5rem] px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 )}
                 <button onClick={send} disabled={(composerEmpty && pendingFiles.length === 0) || sending} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 disabled:opacity-50 self-end">{sending ? "…" : "Send"}</button>
               </div>
