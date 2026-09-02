@@ -113,9 +113,13 @@ async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: numb
   const everyCase = cid === ""
   const [chat, legacy, taskFiles, firmTaskFiles, msgFiles, driveFiles, taskViews, msgViews, forms, doneTasks] = await Promise.all([
     (everyCase
-      ? sql`SELECT id, client_id, sender, body, sms_status, created_at FROM chat_messages
+      ? sql`SELECT cm.id, cm.client_id, cm.sender, cm.body, cm.sms_status, cm.created_at,
+                   cm.author_email, au.name AS author_name
+            FROM chat_messages cm LEFT JOIN admin_users au ON LOWER(au.email) = LOWER(cm.author_email)
             ORDER BY created_at DESC LIMIT ${perSource}`
-      : sql`SELECT id, client_id, sender, body, sms_status, created_at FROM chat_messages
+      : sql`SELECT cm.id, cm.client_id, cm.sender, cm.body, cm.sms_status, cm.created_at,
+                   cm.author_email, au.name AS author_name
+            FROM chat_messages cm LEFT JOIN admin_users au ON LOWER(au.email) = LOWER(cm.author_email)
             WHERE client_id = ${cid}
             ORDER BY created_at DESC LIMIT ${perSource}`
     ).catch(() => ({ rows: [] as any[] })),
@@ -261,7 +265,13 @@ async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: numb
       smsStatus: m.sms_status ?? null,
       detail:
         m.sender === "firm"
-          ? `${firmActor()} sent a message: "${preview}"`
+          // The person who actually sent it, where the row records one.
+          // Older rows predate author_email and fall back to the firm default.
+          ? `${firmActor(
+              typeof m.author_name === "string" && m.author_name
+                ? m.author_name
+                : (m.author_email as string | null) ?? undefined
+            )} sent a message: "${preview}"`
           : m.sms_status === "inbound"
             ? `${who} texted: "${preview}"`
             : `${who} sent a message: "${preview}"`,

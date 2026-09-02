@@ -37,22 +37,22 @@ export default async function AdminHome({
     // dismissed_activity can never blank the feed.
     sql`
       SELECT * FROM (
-        (SELECT 'chat' AS kind, id::text AS id, client_id, body AS detail, sender, created_at FROM chat_messages
+        (SELECT 'chat' AS kind, id::text AS id, client_id, body AS detail, sender, created_at, author_email FROM chat_messages
            ORDER BY created_at DESC LIMIT 500)
         UNION ALL
-        (SELECT 'message', id::text, client_id, body, 'firm', created_at FROM messages
+        (SELECT 'message', id::text, client_id, body, 'firm', created_at, NULL FROM messages
            ORDER BY created_at DESC LIMIT 500)
         UNION ALL
-        (SELECT 'upload', id::text, client_id, file_name, 'client', created_at FROM task_attachments WHERE scope='client_task'
+        (SELECT 'upload', id::text, client_id, file_name, 'client', created_at, NULL FROM task_attachments WHERE scope='client_task'
            ORDER BY created_at DESC LIMIT 500)
         UNION ALL
-        (SELECT 'form', id::text, client_id, form_key, 'client', updated_at FROM form_responses
+        (SELECT 'form', id::text, client_id, form_key, 'client', updated_at, NULL FROM form_responses
            ORDER BY updated_at DESC LIMIT 500)
         UNION ALL
-        (SELECT kind, id::text, email, COALESCE(provider, ''), 'system', created_at FROM auth_activity
+        (SELECT kind, id::text, email, COALESCE(provider, ''), 'system', created_at, NULL FROM auth_activity
            ORDER BY created_at DESC LIMIT 500)
         UNION ALL
-        (SELECT 'note', id::text, client_id, body_text, 'firm', created_at FROM client_notes
+        (SELECT 'note', id::text, client_id, body_text, 'firm', created_at, NULL FROM client_notes
            ORDER BY created_at DESC LIMIT 500)
       ) a
       WHERE NOT EXISTS (SELECT 1 FROM dismissed_activity d WHERE d.event_id = a.id)
@@ -103,7 +103,18 @@ export default async function AdminHome({
 
   const describe = (a: any): string => {
     if (a.kind === "chat" || a.kind === "message") {
-      const who = a.sender === "firm" || a.kind === "message" ? " - you wrote" : "wrote"
+      // Name the colleague who sent it. "you wrote" is only true when it WAS
+      // you: a message Kayla sent used to read as yours, so searching the log
+      // for her name found nothing and it looked as though the portal had not
+      // recorded it at all. Rows written before author_email existed have no
+      // author, so they keep the old wording rather than crediting a guess.
+      const author = typeof a.author_email === "string" ? a.author_email.trim().toLowerCase() : ""
+      const fromFirm = a.sender === "firm" || a.kind === "message"
+      const who = !fromFirm
+        ? "wrote"
+        : !author || author === me
+          ? " - you wrote"
+          : ` - ${displayNameFromEmail(author).split(" ")[0]} wrote`
       const snippet = messageSnippet(a.detail)
       return snippet ? `${who}: “${snippet}”` : `${who} a message`
     }

@@ -123,6 +123,16 @@ export const MIGRATION_SQL = `
   );
 
   -- Stage grouping + tags for tasks (LaunchBay-style task board)
+  -- WHO at the firm sent a message (2026-08-22).
+  --
+  -- chat_messages only ever recorded sender='firm', so every reply the firm
+  -- sent looked identical in the logs and the case timeline had to guess at a
+  -- name. With one person sending, guessing "Regina" was invisible. With staff
+  -- sending too it is wrong, and a case log that credits the wrong person is
+  -- worse than one that says nothing. Rows written before this stay NULL: we
+  -- genuinely do not know who sent them and will not invent it.
+  ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS author_email TEXT;
+
   ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS stage TEXT;
   ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS tag TEXT;
   ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS stage_order INT NOT NULL DEFAULT 0;

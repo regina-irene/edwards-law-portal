@@ -72,9 +72,11 @@ export async function POST(req: Request) {
   const smsBody = bodyToPlainText(storedBody)
 
   try {
+    // The signed-in admin is stored so the case log can say who actually sent
+    // it. Taken from the session, never the request body.
     const result = await sql`
-      INSERT INTO chat_messages (client_id, sender, body)
-      VALUES (${clientId}, 'firm', ${storedBody})
+      INSERT INTO chat_messages (client_id, sender, body, author_email)
+      VALUES (${clientId}, 'firm', ${storedBody}, ${check.email})
       RETURNING id, sender, body, created_at
     `
 
