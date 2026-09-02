@@ -56,18 +56,56 @@ describe("file links", () => {
     { type: "event", at: "2026-08-11T10:00:00Z", event: { id: "e4", kind: "chat", at: "2026-08-11T10:00:00Z", sender: "client", detail: "Client Cleon Grey sent a message: \"hi\"" } },
   ]
 
+  // The ENTRY is the link now, not a small "Open file" tacked on the end
+  // (2026-08-22), so these look it up by the text on screen. The thing each
+  // test actually cares about - where the entry leads - is unchanged.
   it("links an uploaded file to its download route", () => {
     render(<NotesTimeline clientId="rec1" initialItems={withFiles} />)
-    expect(screen.getByRole("link", { name: /open file/i })).toHaveAttribute("href", "/api/task-files/abc")
+    expect(screen.getByRole("link", { name: /uploaded W2\.pdf/i })).toHaveAttribute(
+      "href",
+      "/api/task-files/abc"
+    )
   })
 
   it("links a Drive delivery straight to Drive", () => {
     render(<NotesTimeline clientId="rec1" initialItems={withFiles} />)
-    expect(screen.getByRole("link", { name: /open in drive/i })).toHaveAttribute("href", "https://drive.google.com/file/d/xyz/view")
+    expect(screen.getByRole("link", { name: /Drive folder/i })).toHaveAttribute(
+      "href",
+      "https://drive.google.com/file/d/xyz/view"
+    )
   })
 
-  it("leaves entries with no file unlinked", () => {
+  it("leaves entries with no destination unlinked", () => {
     render(<NotesTimeline clientId="rec1" initialItems={withFiles} />)
     expect(screen.getAllByRole("link")).toHaveLength(2)
+  })
+
+  it("takes a client's message through to the conversation, in the same tab", () => {
+    const withChat: TimelineItem[] = [
+      {
+        type: "event",
+        at: "2026-08-11T10:00:00Z",
+        event: {
+          id: "e5",
+          kind: "chat",
+          at: "2026-08-11T10:00:00Z",
+          sender: "client",
+          detail: 'Client Cleon Grey sent a message: "can we move Friday"',
+          href: "/admin/messages?c=rec1",
+          linkLabel: "Open conversation",
+        },
+      },
+    ]
+    render(<NotesTimeline clientId="rec1" initialItems={withChat} />)
+    const link = screen.getByRole("link", { name: /can we move Friday/i })
+    expect(link).toHaveAttribute("href", "/admin/messages?c=rec1")
+    // A page inside the portal replaces the current one; only files and
+    // outside addresses get a new tab.
+    expect(link).not.toHaveAttribute("target")
+  })
+
+  it("opens a file in a new tab", () => {
+    render(<NotesTimeline clientId="rec1" initialItems={withFiles} />)
+    expect(screen.getByRole("link", { name: /uploaded W2\.pdf/i })).toHaveAttribute("target", "_blank")
   })
 })

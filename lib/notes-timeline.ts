@@ -18,8 +18,20 @@ export interface TimelineEvent {
   // Which case this belongs to - the running log needs it to label and link
   // each entry; the per-case timeline already knows.
   clientId?: string
-  // Where to open the file this entry is about: a portal download route for
-  // files kept in the portal, or the Google Drive link for files sent there.
+  /**
+   * Where this entry LEADS (2026-08-22).
+   *
+   * It used to mean "open the file" and only uploads carried one, so a client
+   * message in the log named a message you then had to go and find in the
+   * Message Center by hand - which is the entry you most often want to act on,
+   * because it is the one waiting for a reply. Every kind that has somewhere
+   * sensible to go now carries a destination:
+   *
+   *   chat / message   the conversation, with that client already selected
+   *   upload / view    the file, in the portal or in Drive
+   *   form             that client's answers to that form
+   *   task             the client's task list
+   */
   href?: string
   linkLabel?: string
 }
@@ -241,6 +253,10 @@ async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: numb
       kind: "chat",
       at: String(m.created_at),
       clientId: caseOf(m),
+      // ?c= is what the Message Center already reads to preselect a
+      // conversation, so this lands on the thread ready to reply.
+      href: caseOf(m) ? `/admin/messages?c=${encodeURIComponent(caseOf(m)!)}` : undefined,
+      linkLabel: "Open conversation",
       sender: m.sender === "firm" ? "firm" : "client",
       smsStatus: m.sms_status ?? null,
       detail:
@@ -257,6 +273,8 @@ async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: numb
       kind: "message",
       at: String(m.created_at),
       clientId: caseOf(m),
+      href: caseOf(m) ? `/admin/messages?c=${encodeURIComponent(caseOf(m)!)}` : undefined,
+      linkLabel: "Open conversation",
       sender: "firm",
       detail: `${firmActor()} sent a message: "${String(m.body ?? "").slice(0, 120)}"`,
     })
@@ -345,6 +363,10 @@ async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: numb
       clientId: caseOf(f),
       sender: "client",
       detail: `${whoFor(f)} updated the ${String(f.form_key).replace(/-/g, " ")} form (${f.answers} answers)`,
+      href: caseOf(f)
+        ? `/admin/forms/${encodeURIComponent(String(f.form_key))}/${encodeURIComponent(caseOf(f)!)}`
+        : undefined,
+      linkLabel: "Open answers",
     })
   }
   for (const t of doneTasks.rows) {
@@ -355,6 +377,8 @@ async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: numb
       clientId: caseOf(t),
       sender: "client",
       detail: `${whoFor(t)} completed the task: ${t.title}`,
+      href: "/admin/tasks",
+      linkLabel: "Open tasks",
     })
   }
   return events

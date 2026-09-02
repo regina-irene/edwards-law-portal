@@ -43,6 +43,15 @@ const PAGE = 50
 // "Today" and "Yesterday" read faster when scanning the top of the log, but
 // carry the real date with them - a heading that only says "Today" is useless
 // a week later, and worse once printed. (2026-08-18)
+/**
+ * A file or an outside address opens in a new tab; a page inside the portal
+ * does not. Clicking a client's message here is meant to take you TO the
+ * conversation to reply, so a new tab would only leave strays behind.
+ */
+function newTab(href: string): boolean {
+  return !href.startsWith("/") || href.startsWith("/api/")
+}
+
 const dayHeading = dayHeadingWithDate
 const timeOf = timeOfDay
 
@@ -336,12 +345,23 @@ export default async function FieldNotesHub({
                             on hover in the same corner. */}
                         <span className="shrink-0 text-xs text-gray-400 pr-12">{timeOf(entry.at)}</span>
                       </p>
+                      {/* The entry itself is the link, so a client's message
+                          goes straight to the conversation rather than naming
+                          something you then have to hunt for. */}
                       <p className="text-[13px] text-gray-600 mt-0.5">
-                        {entry.event.detail}
-                        {entry.event.href && (
-                          <a href={entry.event.href} target="_blank" rel="noreferrer" className="ml-2 text-blue-600 underline hover:text-blue-800">
-                            {entry.event.linkLabel ?? "Open file"}
+                        {entry.event.href ? (
+                          <a
+                            href={entry.event.href}
+                            {...(newTab(entry.event.href)
+                              ? { target: "_blank", rel: "noreferrer" }
+                              : {})}
+                            className="text-blue-700 hover:underline"
+                            title={entry.event.linkLabel ?? "Open"}
+                          >
+                            {entry.event.detail}
                           </a>
+                        ) : (
+                          entry.event.detail
                         )}
                       </p>
                     </div>

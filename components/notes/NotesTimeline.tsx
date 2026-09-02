@@ -10,6 +10,15 @@ import type { TimelineItem } from "@/lib/notes-timeline"
 import type { ClientNote } from "@/lib/notes"
 
 const EVENT_ICONS: Record<string, string> = { chat: "💬", message: "💬", upload: "📎", form: "📋", task: "✅", view: "👁️" }
+
+/**
+ * A file or an outside address opens in a new tab; a page inside the portal
+ * does not. Navigating away from the case log to open a client's message is the
+ * point of the link, so forcing a new tab there would just leave stray tabs.
+ */
+function newTab(href: string): boolean {
+  return !href.startsWith("/") || href.startsWith("/api/")
+}
 const PAGE = 200
 
 function fmt(at: string): string {
@@ -252,20 +261,27 @@ export default function NotesTimeline({
             >
               <span className="text-sm">{EVENT_ICONS[item.event.kind] ?? "•"}</span>
               <p className="text-[13px] text-gray-600 min-w-0 flex-1">
-                {item.event.detail}
+                {/* The entry itself is the link. It used to be a small "Open
+                    file" tacked on the end, and only uploads had one at all -
+                    so a client's message named the thing you wanted and gave
+                    you no way to reach it. */}
+                {item.event.href ? (
+                  <a
+                    href={item.event.href}
+                    {...(newTab(item.event.href)
+                      ? { target: "_blank", rel: "noreferrer" }
+                      : {})}
+                    className="text-blue-700 hover:underline"
+                    title={item.event.linkLabel ?? "Open"}
+                  >
+                    {item.event.detail}
+                  </a>
+                ) : (
+                  item.event.detail
+                )}
                 <span className="text-gray-400"> · {fmt(item.at)}</span>
                 {hidden.has(item.event.id) && (
                   <span className="ml-2 text-[10px] uppercase tracking-wide text-gray-400">hidden</span>
-                )}
-                {item.event.href && (
-                  <a
-                    href={item.event.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="ml-2 text-blue-600 underline hover:text-blue-800 print:hidden"
-                  >
-                    {item.event.linkLabel ?? "Open file"}
-                  </a>
                 )}
               </p>
               {/* "Hide", never "Delete": the message, file, task or response
