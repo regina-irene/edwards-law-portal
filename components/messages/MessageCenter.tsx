@@ -30,9 +30,31 @@ interface Msg {
   sender: "client" | "firm"
   body: string
   created_at: string
+  /** Who at the firm sent it. Null on messages sent before this was recorded. */
+  author_email?: string | null
+  /** Their name from the Staff access list, when they have one set. */
+  author_name?: string | null
   sms_status?: "notification" | "full" | "inbound" | null
   email_status?: "notification" | null
   files?: { id: string; file_name: string }[]
+}
+
+/**
+ * The first name to put on a firm message.
+ *
+ * Prefers the name on the Staff access list, falls back to the part of the
+ * email before the @, and returns "" for messages sent before the portal
+ * recorded an author - those get no name rather than a guessed one, because a
+ * message wrongly attributed on a case file is worse than one unattributed.
+ */
+function senderFirstName(m: Msg): string {
+  const named = (m.author_name ?? "").trim()
+  if (named) return named.split(/\s+/)[0]
+  const email = (m.author_email ?? "").trim()
+  if (!email) return ""
+  const local = email.split("@")[0]?.split("+")[0] ?? ""
+  const first = local.split(/[._-]+/).filter(Boolean)[0] ?? ""
+  return first ? first.charAt(0).toUpperCase() + first.slice(1) : ""
 }
 
 function initials(name: string) {
@@ -430,8 +452,13 @@ export default function MessageCenter() {
 
   let lastDay = ""
 
+  // Was h-[calc(100vh-14rem)] inside max-w-5xl, so on any normal monitor the
+  // Message Center sat in a small box with empty space either side and a short
+  // thread that needed scrolling for conversations that would otherwise have
+  // fitted. Nothing needed that: it IS the page. It now uses the full width of
+  // the content area and reserves only the room the page header actually takes.
   return (
-    <div className="flex h-[calc(100vh-14rem)] max-w-5xl mx-auto rounded-xl border border-gray-200 overflow-hidden bg-white">
+    <div className="flex h-[calc(100vh-9rem)] min-h-[34rem] w-full rounded-xl border border-gray-200 overflow-hidden bg-white">
       {/* Conversation list */}
       <div className="w-80 shrink-0 border-r border-gray-200 flex flex-col" style={{ background: "#FBF8F3" }}>
         <div className="p-3 border-b border-gray-200">
@@ -580,6 +607,15 @@ export default function MessageCenter() {
                     <div className={`flex ${firm ? "justify-end" : "justify-start"}`}>
                       {/* firm bubbles: navy = portal only; lighter blue = also sent via text */}
                       <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${firm ? "text-white" : "text-gray-800 bg-white border border-gray-200"}`} style={firm ? { background: m.sms_status === "full" ? "#4F86D6" : "#1B2D45" } : undefined}>
+                        {/* Who at the firm sent it. With more than one person
+                            replying, "the firm said" is not enough to answer
+                            "who told the client that?" - which is the question
+                            you actually end up asking. */}
+                        {firm && senderFirstName(m) && (
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-white/70 mb-0.5">
+                            {senderFirstName(m)}
+                          </p>
+                        )}
                         <MessageBody body={m.body} />
                         {m.files?.map((f) => (
                           <a key={f.id} href={`/api/message-files/${f.id}`} target="_blank" rel="noreferrer" className={`block text-xs mt-1 underline ${firm ? "text-white/90" : "text-blue-600"}`}>📎 {f.file_name}</a>

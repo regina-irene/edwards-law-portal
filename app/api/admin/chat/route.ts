@@ -21,11 +21,20 @@ export async function GET(req: Request) {
   }
 
   try {
+    // author_email may not exist on an older database; add it before reading
+    // rather than letting the whole query fail and blank the thread.
+    await ensureChatAuthorColumn()
+
+    // au.name is the staff member's own name where they have one set on the
+    // Staff access list; the email is the fallback the UI shortens to a first
+    // name. Both come back so the bubble can say who sent it.
     const result = await sql`
-      SELECT id, sender, body, created_at, read, sms_status, email_status
-      FROM chat_messages
-      WHERE client_id = ${clientId}
-      ORDER BY created_at ASC
+      SELECT cm.id, cm.sender, cm.body, cm.created_at, cm.read, cm.sms_status, cm.email_status,
+             cm.author_email, au.name AS author_name
+      FROM chat_messages cm
+      LEFT JOIN admin_users au ON LOWER(au.email) = LOWER(cm.author_email)
+      WHERE cm.client_id = ${clientId}
+      ORDER BY cm.created_at ASC
       LIMIT 500
     `
     await sql`UPDATE chat_messages SET read = true WHERE client_id = ${clientId} AND sender = 'client' AND read = false`.catch(() => {})
