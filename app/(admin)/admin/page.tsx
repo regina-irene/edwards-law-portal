@@ -206,12 +206,28 @@ export default async function AdminHome({
               const overdue = t.due_date ? new Date(t.due_date) < today : false
               return (
                 <li key={t.id} className="flex items-center gap-3 px-5 py-2.5">
-                  <Link href="/admin/tasks" className="min-w-0 flex-1">
-                    <p className="text-sm text-gray-800 truncate">
-                      <span className="font-semibold text-gray-900">{nameFor(String(t.client_id))}</span>
-                      {"-"}{t.title}
-                    </p>
-                  </Link>
+                  {/* The client name goes to THEIR case; the task text goes to
+                      the task board. Two destinations because "Hodges, L" and
+                      "Client to do:" are two different things you might be
+                      after, and the name run together with the title read as
+                      one string. */}
+                  <p className="text-sm text-gray-800 truncate min-w-0 flex-1">
+                    <Link
+                      href={`/admin/notes/${encodeURIComponent(String(t.client_id))}`}
+                      className="font-semibold text-gray-900 hover:underline"
+                    >
+                      {nameFor(String(t.client_id))}
+                    </Link>
+                    <span className="text-gray-400"> - </span>
+                    <Link href="/admin/tasks" className="hover:underline">
+                      {t.title}
+                    </Link>
+                    {t.stage && (
+                      <span className="ml-2 px-2 py-0.5 rounded-full text-[11px] font-semibold align-middle" style={{ background: "#eef2f7", color: "#1b2d45" }}>
+                        {t.stage}
+                      </span>
+                    )}
+                  </p>
                   <span className={`text-xs whitespace-nowrap flex-shrink-0 ${overdue ? "text-red-600 font-semibold" : "text-gray-400"}`}>
                     {t.due_date ? `${overdue ? "Overdue - was due " : "Due "}${fmtDue(t.due_date)}` : "No due date"}
                   </span>
