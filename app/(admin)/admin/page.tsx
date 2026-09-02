@@ -10,6 +10,7 @@ import PageTitle from "@/components/ui/PageTitle"
 import { taglineFor } from "@/lib/taglines"
 import ActivityFeed from "@/components/admin/ActivityFeed"
 import { bodyToPlainText } from "@/lib/message-format"
+import { requireAdmin, displayNameFromEmail } from "@/lib/admin"
 
 const num = (r: any) => parseInt(r?.rows?.[0]?.count ?? "0", 10) || 0
 
@@ -20,6 +21,12 @@ export default async function AdminHome({
 }) {
   const { archived: archivedParam } = await searchParams
   const includeArchived = archivedParam === "1"
+
+  // Who is reading this page, so "you wrote" is only said when it was you.
+  // The admin layout already gates access; this is for wording, not for auth,
+  // so an unreadable session just means nothing is credited to "you".
+  const viewer = await requireAdmin()
+  const me = viewer.status === "ok" ? viewer.email.trim().toLowerCase() : ""
 
   const [clients, labels, unreadMessages, openTasksRes, activity] = await Promise.all([
     fetchAllClientsRaw().catch(() => []),
