@@ -9,6 +9,7 @@ import Link from "next/link"
 import PageTitle from "@/components/ui/PageTitle"
 import { taglineFor } from "@/lib/taglines"
 import ActivityFeed from "@/components/admin/ActivityFeed"
+import { bodyToPlainText } from "@/lib/message-format"
 
 const num = (r: any) => parseInt(r?.rows?.[0]?.count ?? "0", 10) || 0
 
@@ -85,9 +86,27 @@ export default async function AdminHome({
     return nameFor(a.client_id)
   }
 
+  /**
+   * The message itself, not just "sent a message" (2026-08-22).
+   *
+   * The body was already being selected and then thrown away, so the feed said
+   * the same eight words for every conversation and you had to open each one to
+   * find out which mattered. Rich messages are stored as HTML, so this is run
+   * through bodyToPlainText rather than sliced raw - otherwise the feed would
+   * show markup.
+   */
+  const messageSnippet = (detail: unknown, max = 90): string => {
+    const text = bodyToPlainText(String(detail ?? "")).replace(/\s+/g, " ").trim()
+    if (!text) return ""
+    return text.length > max ? `${text.slice(0, max - 1)}…` : text
+  }
+
   const describe = (a: any): string => {
-    if (a.kind === "chat") return a.sender === "firm" ? " - you sent a message" : "sent a message"
-    if (a.kind === "message") return " - you sent a message"
+    if (a.kind === "chat" || a.kind === "message") {
+      const who = a.sender === "firm" || a.kind === "message" ? " - you wrote" : "wrote"
+      const snippet = messageSnippet(a.detail)
+      return snippet ? `${who}: “${snippet}”` : `${who} a message`
+    }
     if (a.kind === "upload") return `uploaded ${a.detail}`
     if (a.kind === "form") return `updated the ${String(a.detail).replace(/-/g, " ")} form`
     if (a.kind === "link_sent") return "was emailed a sign-in link"
@@ -99,8 +118,17 @@ export default async function AdminHome({
     return "activity"
   }
 
-  // Where clicking an activity row takes you: messages → that conversation;
-  // uploads & form updates → that client's record page; sign-ins → Field Notes.
+  /**
+   * Where clicking an entry takes you - to the THING, not to a page about the
+   * client (2026-08-22). An upload used to land on that client's page editor,
+   * which is not where anyone wanting to see the file was heading.
+   *
+   *   chat / message  the conversation, ready to reply
+   *   upload          the file itself
+   *   form            that client's answers to that form
+   *   note            the case's field notes
+   *   sign-in         the case's field notes, where sign-ins are logged
+   */
   const hrefFor = (a: any): string => {
     if (AUTH_KINDS.has(a.kind)) {
       const cid = clientIdOf(a)
@@ -109,6 +137,10 @@ export default async function AdminHome({
     const id = encodeURIComponent(String(a.client_id))
     if (a.kind === "chat" || a.kind === "message") return `/admin/messages?c=${id}`
     if (a.kind === "note") return `/admin/notes/${id}`
+    if (a.kind === "upload") return `/api/task-files/${encodeURIComponent(String(a.id))}`
+    if (a.kind === "form") {
+      return `/admin/forms/${encodeURIComponent(String(a.detail))}/${id}`
+    }
     return `/admin/clients/${id}/pages`
   }
 

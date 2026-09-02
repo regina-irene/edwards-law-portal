@@ -97,12 +97,24 @@ export default function ActivityFeed({ items }: { items: ActivityItem[] }) {
         <ul className="divide-y divide-gray-100">
           {paged.map((a) => (
             <li key={a.id} className="flex items-center gap-3 px-5 py-3 group hover:bg-[#FBF8F3] transition-colors">
-              <Link href={a.href} className="flex items-center gap-3 min-w-0 flex-1">
+              {/* A file opens in a new tab so the dashboard is still there
+                  when you come back; a portal page replaces it, because going
+                  to the conversation is the point of the click. */}
+              <Link
+                href={a.href}
+                {...(a.href.startsWith("/api/") || !a.href.startsWith("/")
+                  ? { target: "_blank", rel: "noreferrer" }
+                  : {})}
+                className="flex items-center gap-3 min-w-0 flex-1"
+              >
                 <span className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0" style={{ background: "#F0E7DA" }}>
                   {ICON[a.kind] ?? "📝"}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-gray-800 truncate group-hover:text-gray-900">
+                  {/* Two lines rather than one: the entry now carries the
+                      message itself, and a single truncated line cut most of
+                      them off at the client's name. */}
+                  <p className="text-sm text-gray-800 line-clamp-2 group-hover:text-gray-900">
                     <span className="font-semibold text-gray-900">{a.name}</span> {a.text}
                   </p>
                 </div>
