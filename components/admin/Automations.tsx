@@ -16,11 +16,14 @@ interface Rule {
   key: string
   label: string
   description: string
-  board: string
+  board?: string
   enabled: boolean
   mode: "approve" | "auto"
   subject: string
   body: string
+  kind?: string
+  noun?: string
+  alsoFirm?: boolean
 }
 
 interface Placeholder {
@@ -595,7 +598,7 @@ export default function Automations() {
       <ConfirmDialog
         open={confirmAuto !== null}
         title="Send these without showing you first?"
-        body={`New documents on the ${confirmAuto?.board === "pleadings" ? "Pleadings" : "Correspondence"} board will be emailed to the client within the hour, with a link to the document. Nobody at the firm sees the email before it goes. You can switch this back at any time.`}
+        body={`"${confirmAuto?.label ?? ""}" will email the client within the hour, and nobody at the firm sees the email before it goes. You can switch this back at any time.`}
         confirmLabel="Send automatically"
         onConfirm={() => {
           if (confirmAuto) void patch(confirmAuto.key, { mode: "auto" })

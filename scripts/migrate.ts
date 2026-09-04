@@ -287,6 +287,10 @@ export const MIGRATION_SQL = `
     mode TEXT NOT NULL DEFAULT 'approve',
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
+  -- the editable wording. NULL means "follow the shipped default", so an
+  -- untouched rule is never frozen to a copy of old text.
+  ALTER TABLE automation_rules ADD COLUMN IF NOT EXISTS subject TEXT;
+  ALTER TABLE automation_rules ADD COLUMN IF NOT EXISTS body TEXT;
 
   -- every document an automation has already accounted for. record_id
   -- '__seeded__' marks "this rule has looked at this client before", which is

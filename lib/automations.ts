@@ -27,20 +27,37 @@
 // Tables are created on first use, the same reason as lib/ensure-columns: there
 // must never be a command for Regina to run.
 import { sql } from "@/lib/db"
-import { DEFAULT_SUBJECT, DEFAULT_BODY } from "@/lib/automation-email"
+import { DEFAULTS } from "@/lib/automation-email"
 
 /** More new documents than this in one scan is a re-sync, not a filing day. */
 export const AUTO_SEND_LIMIT = 8
 
 export type AutomationMode = "approve" | "auto"
 
+/**
+ * What a rule watches. Each kind has its own reader in lib/automation-run and
+ * its own default wording in lib/automation-email, but from there on they all
+ * share the same machinery: the same seen-tracking, the same approval queue,
+ * the same editable email, the same three safety rules.
+ */
+export type AutomationKind = "documents" | "status" | "hearing" | "dormant"
+
 export interface AutomationRuleDef {
   key: string
   label: string
   /** What the rule watches, in plain words, shown on the page. */
   description: string
-  /** Which board it reads. */
-  board: "pleadings" | "correspondence"
+  kind: AutomationKind
+  /** Which board it reads. Only for kind "documents". */
+  board?: "pleadings" | "correspondence" | "discovery"
+  /** What to call one of these in the email: "filing", "letter", "update". */
+  noun: string
+  /**
+   * Send the firm a copy as well as the client. Only court dates: a hearing
+   * nobody at the firm has noticed is a different kind of problem from a
+   * document nobody has noticed. (Regina, 2026-09-04)
+   */
+  alsoFirm?: boolean
 }
 
 /**
@@ -53,16 +70,57 @@ export const RULES: AutomationRuleDef[] = [
     label: "New filing on the Pleadings board",
     description:
       "When a document appears on a client's Pleadings board, email that client with the document and a link to their portal.",
+    kind: "documents",
     board: "pleadings",
+    noun: "filing",
   },
   {
     key: "new-correspondence",
     label: "New letter on the Correspondence board",
     description:
       "When a document appears on a client's Correspondence board, email that client with the document and a link to their portal.",
+    kind: "documents",
     board: "correspondence",
+    noun: "letter",
+  },
+  {
+    key: "new-discovery",
+    label: "New discovery marked available to the client",
+    description:
+      "When a Discovery row is ticked Avail. to Client, email that client. Rows that are not ticked are never read, so nothing you have not released can go out.",
+    kind: "documents",
+    board: "discovery",
+    noun: "discovery item",
+  },
+  {
+    key: "status-changed",
+    label: "Case status changed",
+    description:
+      "When you change Case Status - For Client, email that client the new wording. Your internal Case Status - Dashboard column is never read by this.",
+    kind: "status",
+    noun: "update",
+  },
+  {
+    key: "hearing-soon",
+    label: "Court date coming up",
+    description:
+      "Email the client a week before a court date on their calendar, and again the day before, with the date, time and location. The firm gets a copy of each.",
+    kind: "hearing",
+    noun: "court date",
+    alsoFirm: true,
+  },
+  {
+    key: "client-dormant",
+    label: "Client has not signed in lately",
+    description:
+      "When a client with an open case has not opened their portal for 30 days, nudge them that there is something waiting. At most one nudge a month per client.",
+    kind: "dormant",
+    noun: "reminder",
   },
 ]
+
+/** How long without a sign-in before the dormant rule nudges a client. */
+export const DORMANT_DAYS = 30
 
 export function ruleByKey(key: string): AutomationRuleDef | undefined {
   return RULES.find((r) => r.key === key)
@@ -167,8 +225,9 @@ export async function listRules(): Promise<AutomationRule[]> {
   const saved = new Map(r.rows.map((row) => [String(row.key), row]))
   return RULES.map((def) => {
     const row = saved.get(def.key)
-    const subject = row && typeof row.subject === "string" && row.subject.trim() ? row.subject : DEFAULT_SUBJECT
-    const body = row && typeof row.body === "string" && row.body.trim() ? row.body : DEFAULT_BODY
+    const fallback = DEFAULTS[def.kind] ?? DEFAULTS.documents
+    const subject = row && typeof row.subject === "string" && row.subject.trim() ? row.subject : fallback.subject
+    const body = row && typeof row.body === "string" && row.body.trim() ? row.body : fallback.body
     return {
       ...def,
       enabled: row ? Boolean(row.enabled) : false,

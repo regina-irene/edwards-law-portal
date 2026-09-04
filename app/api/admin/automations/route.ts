@@ -144,7 +144,7 @@ export async function POST(req: Request) {
           },
         ],
         portalUrl: process.env.AUTH_URL ?? "https://edwards-law-portal.vercel.app",
-        noun: rule.board === "correspondence" ? "letter" : "filing",
+        noun: rule.noun,
       }
     )
     return NextResponse.json({ ok: true, preview: mail })
@@ -175,7 +175,7 @@ export async function POST(req: Request) {
         clientName: item.clientName,
         documents: item.documents,
         portalUrl: process.env.AUTH_URL ?? "https://edwards-law-portal.vercel.app",
-        noun: rule?.board === "correspondence" ? "letter" : "filing",
+        noun: rule?.noun ?? "filing",
       })
       await sendNewDocumentsEmail({ to: item.clientEmail, ...mail })
       await decideQueueItem(id, "sent", email)

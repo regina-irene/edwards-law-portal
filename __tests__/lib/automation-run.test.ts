@@ -4,6 +4,10 @@
 jest.mock("@/lib/airtable", () => ({ getAllClients: jest.fn() }))
 jest.mock("@/lib/pleadings", () => ({ getPleadings: jest.fn() }))
 jest.mock("@/lib/correspondence", () => ({ getCorrespondence: jest.fn() }))
+jest.mock("@/lib/discovery", () => ({ getDiscovery: jest.fn() }))
+jest.mock("@/lib/calendar", () => ({ getCaseEvents: jest.fn() }))
+jest.mock("@/lib/case-status", () => ({ listAllCaseStatuses: jest.fn() }))
+jest.mock("@/lib/db", () => ({ sql: jest.fn().mockResolvedValue({ rows: [] }) }))
 jest.mock("@/lib/resend", () => ({ sendNewDocumentsEmail: jest.fn() }))
 jest.mock("@/lib/automations", () => {
   const actual = jest.requireActual("@/lib/automations")
@@ -22,11 +26,17 @@ import { runAutomations } from "@/lib/automation-run"
 import { DEFAULT_SUBJECT, DEFAULT_BODY } from "@/lib/automation-email"
 import { getAllClients } from "@/lib/airtable"
 import { getPleadings } from "@/lib/pleadings"
+import { getDiscovery } from "@/lib/discovery"
+import { getCaseEvents } from "@/lib/calendar"
+import { listAllCaseStatuses } from "@/lib/case-status"
 import { sendNewDocumentsEmail } from "@/lib/resend"
 import { listRules, hasSeenClient, seenRecordIds, markSeen, enqueue } from "@/lib/automations"
 
 const mockClients = getAllClients as jest.Mock
 const mockPleadings = getPleadings as jest.Mock
+const mockDiscovery = getDiscovery as jest.Mock
+const mockEvents = getCaseEvents as jest.Mock
+const mockStatuses = listAllCaseStatuses as jest.Mock
 const mockSend = sendNewDocumentsEmail as jest.Mock
 const mockListRules = listRules as jest.Mock
 const mockHasSeen = hasSeenClient as jest.Mock
@@ -53,7 +63,9 @@ function rule(over: Partial<{ enabled: boolean; mode: "auto" | "approve" }> = {}
       key: "new-pleading",
       label: "New filing",
       description: "",
+      kind: "documents",
       board: "pleadings",
+      noun: "filing",
       enabled: true,
       mode: "auto",
       subject: DEFAULT_SUBJECT,
@@ -64,7 +76,9 @@ function rule(over: Partial<{ enabled: boolean; mode: "auto" | "approve" }> = {}
       key: "new-correspondence",
       label: "New letter",
       description: "",
+      kind: "documents",
       board: "correspondence",
+      noun: "letter",
       enabled: false,
       mode: "approve",
       subject: DEFAULT_SUBJECT,
@@ -223,5 +237,141 @@ describe("runAutomations", () => {
     expect(mockEnqueue).not.toHaveBeenCalled()
     expect(mockMarkSeen).toHaveBeenCalled()
     expect(out["new-pleading"].skipped).toBe(1)
+  })
+
+  // ---- the rules added on 2026-09-04 -------------------------------------
+
+  function oneRule(over: Record<string, unknown>) {
+    return [
+      {
+        key: "r",
+        label: "R",
+        description: "",
+        noun: "update",
+        enabled: true,
+        mode: "auto",
+        subject: DEFAULT_SUBJECT,
+        body: DEFAULT_BODY,
+        ...over,
+      },
+    ]
+  }
+
+  it("discovery only ever reads rows already released to the client", async () => {
+    mockListRules.mockResolvedValue(
+      oneRule({ kind: "documents", board: "discovery", noun: "discovery item" })
+    )
+    mockHasSeen.mockResolvedValue(true)
+    mockDiscovery.mockResolvedValue([
+      { id: "recD1", title: "RPD responses", date: "2026-09-01", direction: "", tags: [], notes: "", link: "https://drive.google.com/x" },
+    ])
+
+    await runAutomations()
+
+    // lib/discovery filters on "Avail. to Client" before we ever see a row, so
+    // the guarantee is that this rule reads that function and nothing else.
+    expect(mockDiscovery).toHaveBeenCalledWith("appClientBase")
+    expect(mockPleadings).not.toHaveBeenCalled()
+    expect(mockSend).toHaveBeenCalledTimes(1)
+  })
+
+  it("status reads the client-facing column and tells the client when it changes", async () => {
+    mockListRules.mockResolvedValue(oneRule({ kind: "status" }))
+    mockHasSeen.mockResolvedValue(true)
+    mockStatuses.mockResolvedValue([
+      { recordId: "recClient1", statusText: "Waiting on a hearing date", internalText: "chase the clerk" },
+    ])
+
+    await runAutomations()
+
+    const arg = mockSend.mock.calls[0][0]
+    expect(arg.text).toContain("Waiting on a hearing date")
+    // The firm's own note must never reach the client.
+    expect(arg.text).not.toContain("chase the clerk")
+    expect(arg.html).not.toContain("chase the clerk")
+  })
+
+  it("refuses to run the status rule at all if the status board comes back empty", async () => {
+    mockListRules.mockResolvedValue(oneRule({ kind: "status" }))
+    mockStatuses.mockResolvedValue([])
+
+    const out = await runAutomations()
+
+    // An empty read is a failure, not "every client's status is blank".
+    expect(out["r"].ran).toBe(false)
+    expect(mockSend).not.toHaveBeenCalled()
+    expect(mockMarkSeen).not.toHaveBeenCalled()
+  })
+
+  it("reminds about a court date a week out and again the day before, once each", async () => {
+    mockListRules.mockResolvedValue(oneRule({ kind: "hearing", noun: "court date" }))
+    mockHasSeen.mockResolvedValue(true)
+    const inFiveDays = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()
+    mockEvents.mockResolvedValue([
+      { id: "ev1", title: "Temporary hearing", start: inFiveDays, location: "Courtroom 3B", eventLink: "https://calendar.google.com/x", status: "confirmed" },
+    ])
+
+    await runAutomations()
+
+    const arg = mockSend.mock.calls[0][0]
+    expect(arg.text).toContain("Temporary hearing")
+    expect(arg.text).toContain("Courtroom 3B")
+    // The week reminder and the day reminder are separate items, so the day
+    // one can still fire later without the week one repeating.
+    expect(mockMarkSeen).toHaveBeenCalledWith("r", "recClient1", ["ev1:week"])
+  })
+
+  it("ignores a court date that has already happened, and a cancelled one", async () => {
+    mockListRules.mockResolvedValue(oneRule({ kind: "hearing", noun: "court date" }))
+    mockHasSeen.mockResolvedValue(true)
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const tomorrow = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString()
+    mockEvents.mockResolvedValue([
+      { id: "old", title: "Past", start: yesterday, location: "", eventLink: "", status: "confirmed" },
+      { id: "off", title: "Cancelled", start: tomorrow, location: "", eventLink: "", status: "cancelled" },
+    ])
+
+    await runAutomations()
+
+    expect(mockSend).not.toHaveBeenCalled()
+  })
+
+  it("does not nudge a client who signed in recently", async () => {
+    mockListRules.mockResolvedValue(oneRule({ kind: "dormant", noun: "reminder" }))
+    mockHasSeen.mockResolvedValue(true)
+    const { sql } = jest.requireMock("@/lib/db") as { sql: jest.Mock }
+    sql.mockResolvedValue({
+      rows: [{ email: "client@example.com", last: new Date().toISOString() }],
+    })
+
+    await runAutomations()
+
+    expect(mockSend).not.toHaveBeenCalled()
+  })
+
+  it("nudges a client who has been away longer than the limit", async () => {
+    mockListRules.mockResolvedValue(oneRule({ kind: "dormant", noun: "reminder" }))
+    mockHasSeen.mockResolvedValue(true)
+    const longAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
+    const { sql } = jest.requireMock("@/lib/db") as { sql: jest.Mock }
+    sql.mockResolvedValue({ rows: [{ email: "client@example.com", last: longAgo }] })
+
+    await runAutomations()
+
+    expect(mockSend).toHaveBeenCalledTimes(1)
+    expect(mockSend.mock.calls[0][0].text).toContain("90 days")
+  })
+
+  it("refuses to run the dormant rule if sign-in history comes back empty", async () => {
+    mockListRules.mockResolvedValue(oneRule({ kind: "dormant", noun: "reminder" }))
+    const { sql } = jest.requireMock("@/lib/db") as { sql: jest.Mock }
+    sql.mockResolvedValue({ rows: [] })
+
+    const out = await runAutomations()
+
+    // Otherwise every client looks like they have never been back, and the
+    // whole roster gets nudged at once.
+    expect(out["r"].ran).toBe(false)
+    expect(mockSend).not.toHaveBeenCalled()
   })
 })
