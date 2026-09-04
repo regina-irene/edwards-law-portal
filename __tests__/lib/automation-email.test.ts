@@ -60,19 +60,18 @@ describe("renderEmail", () => {
     expect(render({ noun: "letter" }).subject).toBe("1 new letter on your case")
   })
 
-  // Her wording is text, not markup. A stray angle bracket must not be able to
-  // break the email, and nobody should be able to smuggle markup through it.
-  it("escapes anything HTML-ish in the wording", () => {
-    const out = renderEmail("Subject", "Hi <b>there</b> & welcome\n\n{{documents}}", {
+  // A body with no tags in it is plain wording, and a stray bracket or
+  // ampersand in it must not be able to break the email.
+  it("escapes a plain-text body", () => {
+    const out = renderEmail("Subject", "Cost < 500 & rising\n\n{{documents}}", {
       firstName: "X",
       clientName: "X",
       documents: DOCS,
       portalUrl: "https://example.com",
       noun: "filing",
     })
-    expect(out.html).toContain("&lt;b&gt;there&lt;/b&gt;")
+    expect(out.html).toContain("&lt; 500")
     expect(out.html).toContain("&amp;")
-    expect(out.html).not.toContain("<b>there</b>")
   })
 
   it("escapes a document title too", () => {
@@ -110,5 +109,66 @@ describe("renderEmail", () => {
       noun: "filing",
     })
     expect(out.subject.trim()).not.toBe("")
+  })
+
+  // ---- rich bodies, written in the editor ---------------------------------
+
+  const RICH =
+    '<p>Dear {{first_name}},</p><p><strong>Important:</strong> ' +
+    '<span style="color:#b91c1c">something new</span> is on your case.</p>' +
+    "<p>{{documents}}</p><ul><li>Sign in: {{portal_link}}</li></ul>"
+
+  function renderRich() {
+    return renderEmail("Subject", RICH, {
+      firstName: "Regina",
+      clientName: "Edwards, Regina",
+      documents: DOCS,
+      portalUrl: "https://clients.edwardsfamilylaw.com",
+      noun: "filing",
+    })
+  }
+
+  it("keeps bold, colour and lists from the editor instead of escaping them", () => {
+    const { html } = renderRich()
+    expect(html).toContain("<strong>Important:</strong>")
+    expect(html).toContain('style="color:#b91c1c"')
+    expect(html).toContain("<li>")
+    // The giveaway that it went down the rich path rather than the plain one.
+    expect(html).not.toContain("&lt;strong&gt;")
+  })
+
+  it("still fills the placeholders inside rich wording", () => {
+    const { html } = renderRich()
+    expect(html).toContain("Dear Regina,")
+    expect(html).toContain("2026.09.02 Notice of Hearing")
+    expect(html).toContain(">Click here</a>")
+    expect(html).not.toMatch(/\{\{|\}\}/)
+  })
+
+  it("still sends a readable plain-text version of a rich body", () => {
+    const { text } = renderRich()
+    expect(text).toContain("Dear Regina,")
+    expect(text).toContain("Important:")
+    // No tags, and the raw address is present for clients that refuse HTML.
+    expect(text).not.toContain("<")
+    expect(text).toContain(DOCS[0].link)
+  })
+
+  it("strips scripts and event handlers out of a rich body", () => {
+    const out = renderEmail(
+      "S",
+      '<p onclick="steal()">Hello</p><script>alert(1)</script><p>Bye</p>',
+      {
+        firstName: "A",
+        clientName: "A",
+        documents: DOCS,
+        portalUrl: "https://example.com",
+        noun: "filing",
+      }
+    )
+    expect(out.html).not.toContain("<script")
+    expect(out.html).not.toContain("onclick")
+    expect(out.html).toContain("Hello")
+    expect(out.html).toContain("Bye")
   })
 })

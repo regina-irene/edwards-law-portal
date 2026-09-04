@@ -6,6 +6,7 @@
 // POST   send or dismiss a queued email, or run a scan now
 import { NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin"
+import { sanitizeNotesHtml } from "@/lib/sanitize"
 import { clientFirstName } from "@/lib/client-ids"
 import { sendNewDocumentsEmail } from "@/lib/resend"
 import { renderEmail, DEFAULT_SUBJECT, DEFAULT_BODY, PLACEHOLDERS } from "@/lib/automation-email"
@@ -77,9 +78,18 @@ export async function PATCH(req: Request) {
   // null puts a field back to the shipped default; a string saves her wording.
   // Capped so a paste accident cannot fill the column with a novel.
   if (body?.subject === null) patch.subject = null
-  else if (typeof body?.subject === "string") patch.subject = body.subject.slice(0, 300)
+  else if (typeof body?.subject === "string") {
+    // A subject line is plain text in every mail client there is, so markup in
+    // one would simply be shown to the client as angle brackets.
+    patch.subject = body.subject.replace(/<[^>]*>/g, "").slice(0, 300)
+  }
   if (body?.emailBody === null) patch.body = null
-  else if (typeof body?.emailBody === "string") patch.body = body.emailBody.slice(0, 8000)
+  else if (typeof body?.emailBody === "string") {
+    // The editor sends HTML now. Sanitised here as well as at render time, so
+    // nothing dangerous is ever stored, not just never shown. Plain-text
+    // wording passes through this untouched.
+    patch.body = sanitizeNotesHtml(body.emailBody).slice(0, 20000)
+  }
 
   try {
     // Switching a rule ON draws the line here and now: everything already on

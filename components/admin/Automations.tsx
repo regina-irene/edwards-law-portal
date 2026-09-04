@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { InlineError } from "@/components/ui/InlineError"
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
+import { RichTextEditor } from "@/components/ui/RichTextEditor"
 
 interface Rule {
   key: string
@@ -457,19 +458,17 @@ export default function Automations() {
                   </div>
 
                   <div>
-                    <label
-                      htmlFor={`body-${r.key}`}
-                      className="block text-xs font-semibold text-gray-500 mb-1"
-                    >
-                      Message
-                    </label>
-                    <textarea
-                      id={`body-${r.key}`}
-                      value={draftBody}
-                      onChange={(e) => setDraftBody(e.target.value)}
-                      rows={14}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white font-mono resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <p className="block text-xs font-semibold text-gray-500 mb-1">Message</p>
+                    {/* The portal's own editor, the same one as notes and page
+                        content, so bold, colour, size and lists all work and
+                        behave the way they do everywhere else in the portal. */}
+                    <div className="bg-white rounded-lg">
+                      <RichTextEditor value={draftBody} onChange={setDraftBody} />
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      Formatting and colour carry through to the email. A plain version is sent
+                      alongside it for anyone whose email program refuses formatted mail.
+                    </p>
                   </div>
 
                   <div className="text-xs text-gray-500 space-y-1">
