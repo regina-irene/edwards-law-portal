@@ -9,7 +9,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
 import type { TimelineItem } from "@/lib/notes-timeline"
 import type { ClientNote } from "@/lib/notes"
 
-const EVENT_ICONS: Record<string, string> = { chat: "💬", message: "💬", upload: "📎", form: "📋", task: "✅", view: "👁️" }
+const EVENT_ICONS: Record<string, string> = { chat: "💬", message: "💬", upload: "📎", form: "📋", task: "✅", view: "👁️", automation: "⚡" }
 
 /**
  * A file or an outside address opens in a new tab; a page inside the portal
@@ -46,7 +46,9 @@ export default function NotesTimeline({
   const [showHidden, setShowHidden] = useState(false)
   const [draft, setDraft] = useState("")
   const [saving, setSaving] = useState(false)
-  const [notesOnly, setNotesOnly] = useState(false)
+  // "all" | "notes" | "automations". Was a boolean until Automations needed a
+  // view of its own (2026-09-04).
+  const [view, setView] = useState<"all" | "notes" | "automations">("all")
   const [author, setAuthor] = useState("")
   const [shown, setShown] = useState(PAGE)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -152,7 +154,11 @@ export default function NotesTimeline({
   const visible = items.filter((i) => {
     if (author) return i.type === "note" && i.note.author_name === author
     if (i.type === "event" && hidden.has(i.event.id) && !showHidden) return false
-    return notesOnly ? i.type === "note" : true
+    // "Automations" is its own view because it answers a specific question -
+    // what has gone out to clients without me pressing send - and that is
+    // otherwise buried among every message, upload and sign-in.
+    if (view === "automations") return i.type === "event" && i.event.kind === "automation"
+    return view === "notes" ? i.type === "note" : true
   })
   const paged = visible.slice(0, shown)
 
@@ -175,23 +181,22 @@ export default function NotesTimeline({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 print:hidden">
-        <button
-          type="button"
-          onClick={() => setNotesOnly(false)}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border ${!notesOnly ? "text-white border-transparent" : "bg-white text-gray-700 border-gray-300"}`}
-          style={!notesOnly ? { background: "#1b2d45" } : undefined}
-        >
-          Everything
-        </button>
-        <button
-          type="button"
-          onClick={() => setNotesOnly(true)}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border ${notesOnly ? "text-white border-transparent" : "bg-white text-gray-700 border-gray-300"}`}
-          style={notesOnly ? { background: "#1b2d45" } : undefined}
-        >
-          Just my notes
-        </button>
+      <div className="flex items-center gap-2 print:hidden flex-wrap">
+        {([
+          ["all", "Everything"],
+          ["notes", "Just my notes"],
+          ["automations", "Automations"],
+        ] as const).map(([v, label]) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setView(v)}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border ${view === v ? "text-white border-transparent" : "bg-white text-gray-700 border-gray-300"}`}
+            style={view === v ? { background: "#1b2d45" } : undefined}
+          >
+            {label}
+          </button>
+        ))}
         {hidden.size > 0 && (
           <button
             type="button"

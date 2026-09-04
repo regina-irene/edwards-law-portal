@@ -171,4 +171,35 @@ describe("renderEmail", () => {
     expect(out.html).toContain("Hello")
     expect(out.html).toContain("Bye")
   })
+
+  // The marker used while escaping must not be something anybody could type.
+  it("does not eat the word DOCS if it appears in the wording", () => {
+    const out = renderEmail("S", "<p>Please review the DOCS attached.</p><p>{{documents}}</p>", {
+      firstName: "A",
+      clientName: "A",
+      documents: DOCS,
+      portalUrl: "https://example.com",
+      noun: "filing",
+    })
+    expect(out.html).toContain("Please review the DOCS attached.")
+    expect(out.html).toContain("2026.09.02 Notice of Hearing")
+  })
+
+  // The firm logo is inserted as a public URL on purpose; a private one would
+  // arrive as a broken box in the client's inbox.
+  it("keeps an image in the wording", () => {
+    const out = renderEmail(
+      "S",
+      '<p><img src="https://clients.edwardsfamilylaw.com/efl-logo-email.png" width="120" /></p><p>Hello</p>',
+      {
+        firstName: "A",
+        clientName: "A",
+        documents: DOCS,
+        portalUrl: "https://example.com",
+        noun: "filing",
+      }
+    )
+    expect(out.html).toContain("efl-logo-email.png")
+    expect(out.html).toContain('width="120"')
+  })
 })

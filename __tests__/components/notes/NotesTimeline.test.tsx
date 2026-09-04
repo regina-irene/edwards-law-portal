@@ -17,6 +17,20 @@ const items: TimelineItem[] = [
   { type: "note", at: "2026-07-24T10:00:00Z", note: { id: "n1", body: "<p>Strategy call</p>", created_at: "2026-07-24T10:00:00Z", updated_at: null, author_name: "Regina", author_email: "regina@x.com" } },
   { type: "note", at: "2026-07-22T10:00:00Z", note: { id: "n2", body: "<p>Filed answer</p>", created_at: "2026-07-22T10:00:00Z", updated_at: null, author_name: "Paralegal Pat", author_email: "pat@x.com" } },
   { type: "event", at: "2026-07-23T10:00:00Z", event: { id: "e1", kind: "upload", at: "2026-07-23T10:00:00Z", sender: "client", detail: "Client uploaded W2.pdf" } },
+  {
+    type: "event",
+    at: "2026-07-25T10:00:00Z",
+    event: {
+      id: "a1",
+      kind: "automation",
+      at: "2026-07-25T10:00:00Z",
+      sender: "firm",
+      detail:
+        "Automation emailed Culix Gichana - New filing on the Pleadings board: 2026.07.25 Motion to Compel",
+      href: "/admin/automations",
+      linkLabel: "Open automations",
+    },
+  },
 ]
 
 describe("NotesTimeline", () => {
@@ -107,5 +121,28 @@ describe("file links", () => {
   it("opens a file in a new tab", () => {
     render(<NotesTimeline clientId="rec1" initialItems={withFiles} />)
     expect(screen.getByRole("link", { name: /uploaded W2\.pdf/i })).toHaveAttribute("target", "_blank")
+  })
+
+  // Regina asked for automations to be visible here and filterable on their
+  // own, because "what has gone out to clients without me pressing send" is a
+  // question you cannot answer from a feed of everything (2026-09-04).
+  it("shows what an automation sent, naming the document", () => {
+    render(<NotesTimeline clientId="rec1" initialItems={items} />)
+    expect(screen.getByText(/2026.07.25 Motion to Compel/)).toBeInTheDocument()
+    expect(screen.getByText(/New filing on the Pleadings board/)).toBeInTheDocument()
+  })
+
+  it("the Automations filter shows only automations", () => {
+    render(<NotesTimeline clientId="rec1" initialItems={items} />)
+    fireEvent.click(screen.getByRole("button", { name: /^automations$/i }))
+    expect(screen.getByText(/Motion to Compel/)).toBeInTheDocument()
+    expect(screen.queryByText(/Client uploaded W2.pdf/)).not.toBeInTheDocument()
+    expect(screen.queryAllByTestId("view")).toHaveLength(0)
+  })
+
+  it("'Just my notes' still hides automations", () => {
+    render(<NotesTimeline clientId="rec1" initialItems={items} />)
+    fireEvent.click(screen.getByRole("button", { name: /just my notes/i }))
+    expect(screen.queryByText(/Motion to Compel/)).not.toBeInTheDocument()
   })
 })

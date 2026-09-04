@@ -12,6 +12,7 @@ import ActivityFeed from "@/components/admin/ActivityFeed"
 import { bodyToPlainText } from "@/lib/message-format"
 import { requireAdmin, displayNameFromEmail } from "@/lib/admin"
 import { ensureChatAuthorColumn } from "@/lib/ensure-columns"
+import { describeQueueItem, ensureAutomationTables } from "@/lib/automations"
 import { countFormsAwaitingReview } from "@/lib/form-review"
 
 const num = (r: any) => parseInt(r?.rows?.[0]?.count ?? "0", 10) || 0
@@ -33,6 +34,11 @@ export default async function AdminHome({
   // Same reason as lib/notes-timeline: the activity query reads author_email,
   // and on a database without the column the whole feed would come back empty.
   await ensureChatAuthorColumn()
+  // The activity query below reads automation_queue as part of one UNION, so a
+  // missing table would not just drop automations from the feed - it would
+  // fail the whole statement and leave the dashboard showing no activity at
+  // all. Created on first use, like the chat column above.
+  await ensureAutomationTables().catch(() => {})
 
   const [clients, labels, unreadMessages, formsWaiting, openTasksRes, activity] = await Promise.all([
     fetchAllClientsRaw().catch(() => []),
@@ -70,6 +76,16 @@ export default async function AdminHome({
         UNION ALL
         (SELECT 'note', id::text, client_id, body_text, 'firm', created_at, NULL FROM client_notes
            ORDER BY created_at DESC LIMIT 500)
+        UNION ALL
+        -- What the automations actually emailed. Only rows that were sent: a
+        -- queued email she dismissed never reached anybody, so showing it in
+        -- the feed would be a record of something that did not happen.
+        -- rule_key rides in the author_email slot, which is otherwise unused
+        -- here, so describe() can name which automation it was.
+        (SELECT 'automation', id::text, client_id, documents::text, 'firm',
+                COALESCE(decided_at, created_at), rule_key
+           FROM automation_queue WHERE status = 'sent'
+           ORDER BY COALESCE(decided_at, created_at) DESC LIMIT 500)
       ) a
       WHERE NOT EXISTS (SELECT 1 FROM dismissed_activity d WHERE d.event_id = a.id)
       ORDER BY created_at DESC LIMIT 500
@@ -134,6 +150,16 @@ export default async function AdminHome({
       const snippet = messageSnippet(a.detail)
       return snippet ? `${who}: “${snippet}”` : `${who} a message`
     }
+    if (a.kind === "automation") {
+      let docs: { title: string }[] = []
+      try {
+        const parsed = JSON.parse(String(a.detail ?? "[]"))
+        if (Array.isArray(parsed)) docs = parsed
+      } catch {
+        // A row we cannot read still deserves a line saying something went out.
+      }
+      return ` - ${describeQueueItem(String(a.author_email ?? ""), docs)}`
+    }
     if (a.kind === "upload") return `uploaded ${a.detail}`
     if (a.kind === "form") return `updated the ${String(a.detail).replace(/-/g, " ")} form`
     if (a.kind === "link_sent") return "was emailed a sign-in link"
@@ -164,6 +190,7 @@ export default async function AdminHome({
     const id = encodeURIComponent(String(a.client_id))
     if (a.kind === "chat" || a.kind === "message") return `/admin/messages?c=${id}`
     if (a.kind === "note") return `/admin/notes/${id}`
+    if (a.kind === "automation") return "/admin/automations"
     if (a.kind === "upload") return `/api/task-files/${encodeURIComponent(String(a.id))}`
     if (a.kind === "form") {
       return `/admin/forms/${encodeURIComponent(String(a.detail))}/${id}`

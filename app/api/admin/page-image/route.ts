@@ -25,7 +25,17 @@ export async function POST(req: Request) {
 
   try {
     const safe = file.name.replace(/[^\w.\-]+/g, "_") || "image"
-    const blob = await put(`pages/${clientId}/${page}/${safe}`, file, { ...blobAuth(), access: "private" })
+    // addRandomSuffix, or a second upload of a file with the same name FAILS.
+    // @vercel/blob throws on a repeat pathname unless told otherwise, so
+    // uploading "logo.png" once worked and every attempt after that 500'd
+    // (Regina, 2026-09-04). A suffix is the right fix rather than
+    // allowOverwrite: two different images that happen to share a filename
+    // should both survive, not silently replace one another.
+    const blob = await put(`pages/${clientId}/${page}/${safe}`, file, {
+      ...blobAuth(),
+      access: "private",
+      addRandomSuffix: true,
+    })
     await sql`
       INSERT INTO page_content (client_id, page, image_pathname, image_url, image_name)
       VALUES (${clientId}, ${page}, ${blob.pathname}, ${blob.url}, ${file.name})

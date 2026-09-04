@@ -181,6 +181,25 @@ export default function Automations() {
     await load()
   }
 
+  /**
+   * Drop the firm logo into the wording.
+   *
+   * Points at /efl-logo-email.png, a PUBLIC file, and that is the whole point.
+   * Images uploaded through the editor's own button land in private storage
+   * behind a sign-in, which is right for a note only the firm reads and wrong
+   * here: email clients fetch images anonymously, so a private one arrives as a
+   * broken box in the client's inbox. Width is set in the markup because
+   * Outlook ignores CSS sizing on images.
+   */
+  function insertLogo() {
+    const origin = typeof window !== "undefined" ? window.location.origin : ""
+    setDraftBody(
+      `<p><img src="${origin}/efl-logo-email.png" alt="Edwards Family Law" width="120" height="120" style="width:120px;height:auto" /></p>` +
+        draftBody
+    )
+    setPreview(null)
+  }
+
   function openEditor(r: Rule) {
     setEditing(r.key)
     setDraftSubject(r.subject)
@@ -469,6 +488,18 @@ export default function Automations() {
                       Formatting and colour carry through to the email. A plain version is sent
                       alongside it for anyone whose email program refuses formatted mail.
                     </p>
+                    {/* Images added with the editor's own image button are stored
+                        privately and need a sign-in, so they show as a broken box
+                        in a client's inbox. Worth saying plainly rather than
+                        letting her find out from a client. */}
+                    {/(<img[^>]+src=")(?!https?:\/\/)?[^"]*\/api\/content-image\//.test(draftBody) && (
+                      <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 mt-1">
+                        One of the images here was uploaded through the editor, which stores it
+                        behind your sign-in. Clients will see a broken image. Use{" "}
+                        <strong>Add the firm logo</strong> instead, or ask me to make another image
+                        public.
+                      </p>
+                    )}
                   </div>
 
                   <div className="text-xs text-gray-500 space-y-1">
@@ -506,6 +537,13 @@ export default function Automations() {
                       className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-white"
                     >
                       Preview
+                    </button>
+                    <button
+                      type="button"
+                      onClick={insertLogo}
+                      className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-white"
+                    >
+                      Add the firm logo
                     </button>
                     <button
                       type="button"
@@ -567,14 +605,36 @@ export default function Automations() {
             {history.map((it) => (
               <div key={it.id} className="px-5 py-3 flex items-baseline justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="text-sm text-gray-800 truncate">
-                    {clientLabel(it.clientName)}
+                  <p className="text-sm text-gray-800">
+                    <span className="font-semibold">{clientLabel(it.clientName)}</span>
                     <span className="text-gray-400">
                       {" "}
-                      · {it.documents.length}{" "}
-                      {it.documents.length === 1 ? "document" : "documents"}
+                      · {rules.find((r) => r.key === it.ruleKey)?.label ?? it.ruleKey}
                     </span>
                   </p>
+                  {/* What actually went out. "3 documents" told her nothing;
+                      the question when you look at this list is always which
+                      filing, letter or update it was. */}
+                  <ul className="mt-1 space-y-0.5">
+                    {it.documents.map((d) => (
+                      <li key={d.id} className="text-[13px] text-gray-600">
+                        {d.link ? (
+                          <a
+                            href={d.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            {d.title}
+                          </a>
+                        ) : (
+                          d.title
+                        )}
+                        {d.date && <span className="text-gray-400 ml-2 text-xs">{d.date}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-gray-400 mt-0.5">{it.clientEmail}</p>
                   {it.error && <p className="text-xs text-red-600 mt-0.5">{it.error}</p>}
                 </div>
                 <span className="shrink-0 text-xs text-gray-400">

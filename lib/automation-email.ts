@@ -60,6 +60,16 @@ export const DEFAULT_BODY = `<p>Dear {{first_name}},</p>
 <p>If you have questions, reply to this email or send us a message through the portal.</p>
 <p>Edwards Family Law</p>`
 
+/**
+ * Where the document list goes while the body is being escaped.
+ *
+ * A private-use character, so nothing anybody could type into the wording can
+ * collide with it. It was a literal NUL byte at first, which worked but made
+ * this file read as binary to git and grep, and then briefly the word "DOCS",
+ * which would have been swallowed if she ever wrote it.
+ */
+const DOCS_MARK = "\uE000DOCS\uE000"
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -111,7 +121,7 @@ function documentsText(docs: EmailVars["documents"]): string {
  * enough to tell them apart - the rich editor always emits at least one.
  */
 export function isHtmlTemplate(s: string): boolean {
-  return /<(p|div|br|ul|ol|li|b|strong|i|em|u|span|h[1-6]|a)\b[^>]*>/i.test(s)
+  return /<(p|div|br|ul|ol|li|b|strong|i|em|u|span|h[1-6]|a|img)\b[^>]*>/i.test(s)
 }
 
 /**
@@ -212,8 +222,13 @@ ${htmlRich}
 
   // Built from the escaped body so her wording is safe, then the document list
   // and portal link are dropped in as the only real markup.
+  //
+  // The marker below uses a private-use character rather than anything
+  // typeable, so no wording she writes can collide with it. It was a literal
+  // NUL byte at first, which worked but made this file read as binary to git
+  // and grep.
   const htmlBody = escapeHtml(base)
-    .replace(/\{\{documents\}\}/g, " DOCS ")
+    .replace(/\{\{documents\}\}/g, "DOCS")
     .replace(
       /\{\{portal_link\}\}/g,
       `<a href="${escapeHtml(vars.portalUrl)}" style="color:#1b2d45;font-weight:600">Click here</a>`
@@ -221,8 +236,8 @@ ${htmlRich}
     .split("\n")
     .map((line) => (line.trim() === "" ? "" : `<p style="margin:0 0 12px 0">${line}</p>`))
     .join("\n")
-    .replace(/<p[^>]*> DOCS <\/p>/g, documentsHtml(vars.documents))
-    .replace(/ DOCS /g, documentsHtml(vars.documents))
+    .replace(/<p[^>]*>DOCS<\/p>/g, documentsHtml(vars.documents))
+    .replace(/DOCS/g, documentsHtml(vars.documents))
 
   const html = `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.5;color:#111827">
 ${htmlBody}

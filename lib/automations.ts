@@ -367,3 +367,35 @@ export async function decideQueueItem(
     WHERE id = ${id}
   `
 }
+
+/**
+ * What an automation sent, as one line (2026-09-04).
+ *
+ * Lives here rather than in any one screen because THREE places show it now -
+ * the Recently list on the Automations page, the dashboard activity feed, and
+ * Field Notes - and three copies of this wording would drift apart within a
+ * month. "3 documents" told you nothing useful: the whole question when you see
+ * one of these is which filing went out.
+ *
+ * Names up to two documents and counts the rest, so a line stays readable in a
+ * feed while still being specific.
+ */
+export function describeSentDocuments(documents: { title: string }[], max = 2): string {
+  const titles = documents.map((d) => (d.title ?? "").trim()).filter(Boolean)
+  if (titles.length === 0) return "a document"
+  const shown = titles.slice(0, max).join(", ")
+  const rest = titles.length - max
+  return rest > 0 ? `${shown} and ${rest} more` : shown
+}
+
+/**
+ * The whole sentence: which automation, and what it sent.
+ * "Court date coming up: Temporary hearing - Friday, October 3 at 9:00 AM"
+ */
+export function describeQueueItem(
+  ruleKey: string,
+  documents: { title: string }[]
+): string {
+  const label = ruleByKey(ruleKey)?.label ?? ruleKey
+  return `${label}: ${describeSentDocuments(documents)}`
+}

@@ -7,11 +7,12 @@
 // Every source is fail-soft: one broken source never blanks the log.
 import { sql } from "@/lib/db"
 import { ensureChatAuthorColumn } from "@/lib/ensure-columns"
+import { describeQueueItem, ensureAutomationTables } from "@/lib/automations"
 import type { ClientNote } from "@/lib/notes"
 
 export interface TimelineEvent {
   id: string
-  kind: "chat" | "message" | "upload" | "form" | "task" | "view"
+  kind: "chat" | "message" | "upload" | "form" | "task" | "view" | "automation"
   at: string
   sender?: "client" | "firm"
   smsStatus?: string | null
@@ -32,6 +33,7 @@ export interface TimelineEvent {
    *   upload / view    the file, in the portal or in Drive
    *   form             that client's answers to that form
    *   task             the client's task list
+   *   automation       the Automations page, where the record of it lives
    */
   href?: string
   linkLabel?: string
@@ -110,6 +112,10 @@ async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: numb
   // every message from the case log - so make sure it exists first. Cached, so
   // this costs one statement per server instance, not one per page view.
   await ensureChatAuthorColumn()
+  // Each source here has its own catch, so a missing table would only empty
+  // this one branch rather than the log - but creating it means the very first
+  // automation shows up without waiting for something else to make the table.
+  await ensureAutomationTables().catch(() => {})
 
   // An empty id means "every case". Each source therefore has TWO shapes - an
   // unfiltered read and one narrowed to a single client_id - picked here. The
@@ -118,7 +124,7 @@ async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: numb
   // falls back to scanning the table even when a case is named.
   const cid = String(clientId ?? "")
   const everyCase = cid === ""
-  const [chat, legacy, taskFiles, firmTaskFiles, msgFiles, driveFiles, taskViews, msgViews, forms, doneTasks] = await Promise.all([
+  const [chat, legacy, taskFiles, firmTaskFiles, msgFiles, driveFiles, taskViews, msgViews, forms, doneTasks, automations] = await Promise.all([
     (everyCase
       ? sql`SELECT cm.id, cm.client_id, cm.sender, cm.body, cm.sms_status, cm.created_at,
                    cm.author_email, au.name AS author_name
@@ -249,6 +255,17 @@ async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: numb
             WHERE status = 'done' AND completed_at IS NOT NULL
               AND client_id = ${cid}
             ORDER BY completed_at DESC LIMIT ${perSource}`
+    ).catch(() => ({ rows: [] as any[] })),
+    // Emails an automation actually sent. Only 'sent' rows: something queued
+    // and then dismissed never reached the client, so putting it in the case
+    // log would be a record of a thing that did not happen.
+    (everyCase
+      ? sql`SELECT id, rule_key, client_id, documents, COALESCE(decided_at, created_at) AS at
+            FROM automation_queue WHERE status = 'sent'
+            ORDER BY COALESCE(decided_at, created_at) DESC LIMIT ${perSource}`
+      : sql`SELECT id, rule_key, client_id, documents, COALESCE(decided_at, created_at) AS at
+            FROM automation_queue WHERE status = 'sent' AND client_id = ${cid}
+            ORDER BY COALESCE(decided_at, created_at) DESC LIMIT ${perSource}`
     ).catch(() => ({ rows: [] as any[] })),
   ])
 
@@ -386,6 +403,23 @@ async function fetchEvents(clientId: string, nameOf: NameLookup, perSource: numb
       linkLabel: "Open answers",
     })
   }
+  for (const a of automations.rows) {
+    const docs = Array.isArray(a.documents) ? (a.documents as { title: string }[]) : []
+    events.push({
+      id: `automation-${a.id}`,
+      kind: "automation",
+      at: String(a.at),
+      clientId: caseOf(a),
+      // From the firm, because that is what it is: a message the firm sent,
+      // even though nobody pressed send. Filing it as anything else would make
+      // it look like the client did something.
+      sender: "firm",
+      detail: `Automation emailed ${clientProseName(nameOf(String(a.client_id ?? ""))) || "the client"} - ${describeQueueItem(String(a.rule_key), docs)}`,
+      href: "/admin/automations",
+      linkLabel: "Open automations",
+    })
+  }
+
   for (const t of doneTasks.rows) {
     events.push({
       id: `task-${t.id}`,
