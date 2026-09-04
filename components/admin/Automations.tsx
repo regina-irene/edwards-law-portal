@@ -99,6 +99,14 @@ export default function Automations() {
       body: JSON.stringify({ key, ...body }),
     }).catch(() => null)
     if (!res?.ok) setError("Couldn't save that change.")
+    else if (body.enabled === true) {
+      // Switching on marks everything currently on the boards as history, so
+      // say so - otherwise the obvious test (add a document, press Check now)
+      // looks broken when it correctly sends nothing.
+      setNote(
+        "On. Everything already on the boards is marked as history. Anything that arrives from now on gets emailed."
+      )
+    }
     await load()
   }
 
@@ -281,13 +289,23 @@ export default function Automations() {
           )}
         </div>
 
-        <p className="text-xs text-gray-400">
-          The portal checks every hour. The first time an automation looks at a client, everything
-          already on their board is treated as history and nothing is sent, so switching one on
-          never emails anyone their old filings. If more than 8 documents appear at once, that goes
-          to &ldquo;Waiting for you&rdquo; even on automatic, because it is usually Drive re-syncing
-          rather than a filing day.
-        </p>
+        <div className="text-xs text-gray-400 space-y-2">
+          <p>
+            The portal checks every hour. Switching an automation on marks everything already on
+            your clients&apos; boards as history, so it never emails anyone their old filings. Only
+            documents that arrive after that count as new.
+          </p>
+          <p>
+            If more than 8 documents appear at once, that goes to &ldquo;Waiting for you&rdquo; even
+            on automatic, because it is usually Drive re-syncing rather than a filing day.
+          </p>
+          <p>
+            <strong className="text-gray-500">To test it:</strong> switch the automation on, then
+            add a document to a client&apos;s Drive folder and wait for it to show on their Airtable
+            board, then press Check now. If the document is not on the Airtable board yet, there is
+            nothing for the portal to see.
+          </p>
+        </div>
       </section>
 
       {/* 3. What has gone out */}

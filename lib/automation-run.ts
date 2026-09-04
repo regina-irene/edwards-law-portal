@@ -182,3 +182,51 @@ export async function runAutomations(): Promise<Record<string, RunSummary>> {
   }
   return out
 }
+
+/**
+ * Draw the line at the moment a rule is switched on (2026-09-04).
+ *
+ * Every document currently on every active client's board is recorded as
+ * history, so "new" means "arrived after Regina turned this on" rather than
+ * "arrived after the next scheduled check". Two reasons that matters:
+ *
+ *   - It is what someone switching a rule on actually expects. Otherwise there
+ *     is a silent gap between switching on and the first hourly check, and
+ *     anything that lands in that gap is swallowed as history.
+ *   - It makes the thing testable. Switch on, add a document, press Check now,
+ *     get the email. Before this, the first Check now was always the silent
+ *     one, which looks exactly like a broken feature.
+ *
+ * Sends nothing. Ever. That is the whole point of it.
+ */
+export async function seedRule(ruleKey: string): Promise<{ seeded: number; skipped: number }> {
+  await ensureAutomationTables()
+  const rule = (await listRules()).find((r) => r.key === ruleKey)
+  if (!rule) return { seeded: 0, skipped: 0 }
+
+  const clients = (await getAllClients()).filter((c) => !c.archived)
+  let seeded = 0
+  let skipped = 0
+
+  for (const client of clients) {
+    const clientId = String(client.clientId ?? "")
+    if (!clientId || !client.clientBaseId) {
+      skipped++
+      continue
+    }
+    try {
+      const docs = await documentsFor(rule, client.clientBaseId)
+      // An unreadable board is left unseeded on purpose, so the next run treats
+      // it as a first look rather than pretending the client has no documents.
+      if (docs === null) {
+        skipped++
+        continue
+      }
+      await markSeen(rule.key, clientId, docs.map((d) => d.id))
+      seeded++
+    } catch {
+      skipped++
+    }
+  }
+  return { seeded, skipped }
+}

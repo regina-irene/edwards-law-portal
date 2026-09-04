@@ -7,7 +7,7 @@
 import { NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin"
 import { sendNewDocumentsEmail } from "@/lib/resend"
-import { runAutomations } from "@/lib/automation-run"
+import { runAutomations, seedRule } from "@/lib/automation-run"
 import {
   listRules,
   setRule,
@@ -61,6 +61,15 @@ export async function PATCH(req: Request) {
   if (body?.mode === "auto" || body?.mode === "approve") patch.mode = body.mode
 
   try {
+    // Switching a rule ON draws the line here and now: everything already on
+    // the boards becomes history, so the first thing this ever emails about is
+    // something that arrived after she turned it on. Done before setRule, so a
+    // rule is never briefly on with nothing marked as seen - that window would
+    // let the hourly check fire and email a client their whole file.
+    const before = (await listRules()).find((r) => r.key === key)
+    if (patch.enabled === true && before && !before.enabled) {
+      await seedRule(key)
+    }
     await setRule(key, patch)
     return NextResponse.json({ ok: true, rules: await listRules() })
   } catch (e) {
