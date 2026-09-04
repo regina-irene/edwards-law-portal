@@ -1,4 +1,5 @@
 // app/api/admin/tasks/route.ts
+import { seedForms } from "@/lib/seed-forms"
 import { requireAdmin } from "@/lib/admin"
 import { sql } from "@/lib/db"
 import { sanitizeNotesHtml } from "@/lib/sanitize"
@@ -10,6 +11,11 @@ export async function GET() {
   if (check.status !== "ok") return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
+    // Creates any firm form and its task template that this database has not
+    // got yet, so a seeded form is assignable without wiring anything up.
+    // One-shot and non-destructive; see lib/seed-forms.
+    await seedForms()
+
     const [templates, tasks] = await Promise.all([
       sql`SELECT id, title, description, stage, tag, notes, form_key, embed_url, stage_order, sort_order, created_at
           FROM task_templates ORDER BY stage_order ASC, sort_order ASC, created_at ASC`,

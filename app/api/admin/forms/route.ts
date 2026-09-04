@@ -1,4 +1,5 @@
 // app/api/admin/forms/route.ts - the form builder's CRUD. Admin only.
+import { seedForms } from "@/lib/seed-forms"
 import { requireAdmin } from "@/lib/admin"
 import {
   listPortalForms,
@@ -49,6 +50,9 @@ export async function GET(req: Request) {
   }
 
   try {
+    // Puts any firm form that has not been created yet into the list.
+    // One-shot and non-destructive; see lib/seed-forms.
+    await seedForms()
     const [forms, stages] = await Promise.all([listPortalForms(), listStages()])
     return NextResponse.json({
       stages,
