@@ -20,6 +20,7 @@ const TAGLINES: Record<string, string> = {
   "admin:discovery": "What each client can see, and what they cannot",
   "admin:messages": "Every client conversation",
   "admin:pages": "What clients see on every page",
+  "admin:automations": "Rules that write to your clients so you don't have to",
   "admin:settings": "Pages, navigation, and defaults",
 }
 

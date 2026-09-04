@@ -15,6 +15,7 @@ const ITEMS = [
   { href: "/admin/discovery", label: "Discovery", icon: "🔎", match: (p: string) => p.startsWith("/admin/discovery") },
   { href: "/admin/forms", label: "Forms", icon: "📋", match: (p: string) => p.startsWith("/admin/forms") },
   { href: "/admin/pages", label: "Pages", icon: "📄", match: (p: string) => p.startsWith("/admin/pages") },
+  { href: "/admin/automations", label: "Automations", icon: "⚡", match: (p: string) => p.startsWith("/admin/automations") },
   { href: "/admin/settings", label: "Settings", icon: "⚙️", match: (p: string) => p.startsWith("/admin/settings") },
 ]
 

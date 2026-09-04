@@ -278,6 +278,45 @@ export const MIGRATION_SQL = `
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
 
+  -- automations: rules that email a client when a new document lands on their
+  -- board. Also created on first use by lib/automations (so nothing has to be
+  -- run by hand); kept here so a fresh database has them from the start.
+  CREATE TABLE IF NOT EXISTS automation_rules (
+    key TEXT PRIMARY KEY,
+    enabled BOOLEAN NOT NULL DEFAULT false,
+    mode TEXT NOT NULL DEFAULT 'approve',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+
+  -- every document an automation has already accounted for. record_id
+  -- '__seeded__' marks "this rule has looked at this client before", which is
+  -- what stops a newly enabled rule emailing a client their whole history.
+  CREATE TABLE IF NOT EXISTS automation_seen (
+    rule_key TEXT NOT NULL,
+    client_id TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (rule_key, client_id, record_id)
+  );
+
+  -- emails found by an automation: pending ones await approval, the rest are
+  -- the record of what went out.
+  CREATE TABLE IF NOT EXISTS automation_queue (
+    id SERIAL PRIMARY KEY,
+    rule_key TEXT NOT NULL,
+    client_id TEXT NOT NULL,
+    client_name TEXT NOT NULL DEFAULT '',
+    client_email TEXT NOT NULL DEFAULT '',
+    documents JSONB NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at TIMESTAMPTZ,
+    decided_by TEXT,
+    error TEXT
+  );
+  CREATE INDEX IF NOT EXISTS automation_queue_status_idx
+    ON automation_queue (status, created_at DESC);
+
   -- embeddable form URL on tasks (e.g. an Airtable contact-info form)
   ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS embed_url TEXT;
   ALTER TABLE client_tasks ADD COLUMN IF NOT EXISTS embed_url TEXT;

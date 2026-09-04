@@ -235,3 +235,58 @@ Edwards Family Law portal`
     text: body,
   })
 }
+
+/**
+ * "Something new has been filed on your case" - to the CLIENT (2026-09-04).
+ *
+ * Sent by the automations in lib/automations, so it is the one email in the
+ * portal that can reach a client without somebody at the firm pressing send.
+ * It therefore says only what is already on the client's own portal pages: the
+ * document's name, its date, and a link.
+ *
+ * The document links are the Drive links the portal already shows. Anyone
+ * holding this email can open them without signing in, which Regina chose
+ * deliberately (2026-09-04) because clients ask for the document, not for a
+ * sign-in page. The portal link is included too, for everything else.
+ */
+export async function sendNewDocumentsEmail(opts: {
+  to: string
+  firstName: string
+  /** "filing" / "letter" - what to call these in the sentence. */
+  noun: string
+  documents: { title: string; link: string; date: string | null }[]
+}): Promise<void> {
+  if (!opts.to || opts.documents.length === 0) return
+  const resend = getClient()
+  const FROM = process.env.EMAIL_FROM ?? "Edwards Family Law <portal@edwardsfamilylaw.com>"
+  const PORTAL_URL = process.env.AUTH_URL ?? "https://edwards-law-portal.vercel.app"
+
+  const n = opts.documents.length
+  const greeting = opts.firstName ? `Dear ${opts.firstName},` : "Hello,"
+  const noun = n === 1 ? opts.noun : `${opts.noun}s`
+
+  const list = opts.documents
+    .map((d) => `  ${d.title}${d.date ? ` (${d.date})` : ""}\n  ${d.link}`)
+    .join("\n\n")
+
+  const body = `${greeting}
+
+${n === 1 ? `A new ${opts.noun} has` : `${n} new ${noun} have`} been added to your case file.
+
+${list}
+
+You can see everything on your case, including your status, documents and messages, on your portal:
+
+  ${PORTAL_URL}
+
+If you have questions about ${n === 1 ? "this document" : "these documents"}, reply to this email or send us a message through the portal.
+
+Edwards Family Law`
+
+  await resend.emails.send({
+    from: FROM,
+    to: opts.to,
+    subject: n === 1 ? `A new ${opts.noun} on your case` : `${n} new ${noun} on your case`,
+    text: body,
+  })
+}
