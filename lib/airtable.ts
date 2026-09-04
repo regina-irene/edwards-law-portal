@@ -1,3 +1,6 @@
+import { normalizeBaseId, clientFirstName } from "@/lib/client-ids"
+// Re-exported so existing callers keep importing them from here.
+export { normalizeBaseId, clientFirstName }
 import { unstable_cache, revalidateTag } from "next/cache"
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!
@@ -35,7 +38,7 @@ function mapClientRecord(r: any): AirtableClient {
     name: r.fields["Name"] ?? "",
     email: r.fields["Email"] ?? "",
     phone: r.fields["Phone"] ?? "",
-    clientBaseId: r.fields["Client Base ID"] ?? "",
+    clientBaseId: normalizeBaseId(r.fields["Client Base ID"]),
     statusOfCase: r.fields["Status of Case"] ?? "",
     smsReminders: r.fields["SMS Reminders"] === true,
     // Opt-OUT checkbox: unchecked (default) = email the client on every firm message

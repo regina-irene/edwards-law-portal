@@ -8,9 +8,11 @@
 // Read lib/automations first: the three safety rules live there and this file
 // is the thing that has to honour them.
 import { getAllClients, type AirtableClient } from "@/lib/airtable"
+import { clientFirstName } from "@/lib/client-ids"
 import { getPleadings } from "@/lib/pleadings"
 import { getCorrespondence } from "@/lib/correspondence"
 import { sendNewDocumentsEmail } from "@/lib/resend"
+import { renderEmail } from "@/lib/automation-email"
 import {
   AUTO_SEND_LIMIT,
   listRules,
@@ -34,9 +36,14 @@ export interface RunSummary {
   errors: string[]
 }
 
-/** "Lastname | Firstname" is how the Clients board stores it. */
+/** Tolerant of "Lastname | Firstname" and "Lastname, Firstname" alike. */
 function firstNameOf(client: AirtableClient): string {
-  return (String(client.name ?? "").split("|")[1] ?? "").trim()
+  return clientFirstName(String(client.name ?? ""))
+}
+
+/** Where the client signs in. Same fallback the other emails use. */
+function PORTAL_URL(): string {
+  return process.env.AUTH_URL ?? "https://edwards-law-portal.vercel.app"
 }
 
 /** What to call these documents in the client's email. */
@@ -83,8 +90,12 @@ export async function runAutomations(): Promise<Record<string, RunSummary>> {
 
     for (const client of clients) {
       const clientId = String(client.clientId ?? "")
+      const who = client.name || clientId || "A client"
       if (!clientId || !client.clientBaseId) {
+        // Named, because this is fixable: somebody has to put the base id on
+        // the Clients board. A bare count of "skipped" hides that for ever.
         s.skipped++
+        s.errors.push(`${who}: no Airtable base id on the Clients board.`)
         continue
       }
 
@@ -94,8 +105,15 @@ export async function runAutomations(): Promise<Record<string, RunSummary>> {
         // or Airtable having a bad minute. Do NOTHING. Treating an unreadable
         // board as an empty one would mark every real document as seen and the
         // client would never be told about any of them.
+        //
+        // Named for the same reason. A malformed base id on ONE client is what
+        // caused this exact silence in September 2026, and the only symptom was
+        // the skipped counter going up by one.
         if (docs === null) {
           s.skipped++
+          s.errors.push(
+            `${who}: couldn't read their ${rule.board === "pleadings" ? "Pleadings" : "Correspondence"} board. Check the Client Base ID on the Clients board, and that the base has a table with that name.`
+          )
           continue
         }
 
@@ -139,12 +157,14 @@ export async function runAutomations(): Promise<Record<string, RunSummary>> {
         }
 
         try {
-          await sendNewDocumentsEmail({
-            to: client.email,
+          const mail = renderEmail(rule.subject, rule.body, {
             firstName: firstNameOf(client),
-            noun: nounFor(rule),
+            clientName: client.name ?? "",
             documents: fresh,
+            portalUrl: PORTAL_URL(),
+            noun: nounFor(rule),
           })
+          await sendNewDocumentsEmail({ to: client.email, ...mail })
           await enqueue({
             ruleKey: rule.key,
             clientId,

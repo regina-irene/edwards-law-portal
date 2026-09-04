@@ -19,6 +19,13 @@ interface Rule {
   board: string
   enabled: boolean
   mode: "approve" | "auto"
+  subject: string
+  body: string
+}
+
+interface Placeholder {
+  token: string
+  explain: string
 }
 
 interface QueuedDoc {
@@ -26,6 +33,17 @@ interface QueuedDoc {
   title: string
   link: string
   date: string | null
+}
+
+/** What one rule did on one run. Mirrors RunSummary in lib/automation-run. */
+interface RunSummary {
+  ran: boolean
+  reason?: string
+  seeded: number
+  sent: number
+  queued: number
+  skipped: number
+  errors: string[]
 }
 
 interface Item {
@@ -47,6 +65,37 @@ function clientLabel(name: string): string {
   return first ? `${last}, ${first}` : last || name
 }
 
+/**
+ * Say what a check actually did, in words (2026-09-04).
+ *
+ * The button used to report "Checked. Anything new is below." for every
+ * outcome, which made four very different situations look identical: the rule
+ * being off, thirty clients read with nothing new, a client skipped because
+ * their board could not be read, and something genuinely found. There was no
+ * way to tell them apart from the outside, so a working check and a broken one
+ * looked the same.
+ */
+function describeRun(results: Record<string, RunSummary>, rules: Rule[]): string[] {
+  const lines: string[] = []
+  for (const [key, r] of Object.entries(results)) {
+    const label = rules.find((x) => x.key === key)?.label ?? key
+    if (!r.ran) {
+      lines.push(`${label}: off, so nothing was checked.`)
+      continue
+    }
+    const bits: string[] = []
+    if (r.sent) bits.push(`${r.sent} ${r.sent === 1 ? "email" : "emails"} sent`)
+    if (r.queued) bits.push(`${r.queued} waiting for you above`)
+    if (r.seeded) bits.push(`${r.seeded} ${r.seeded === 1 ? "client" : "clients"} looked at for the first time (nothing sent)`)
+    if (r.skipped) bits.push(`${r.skipped} skipped`)
+    lines.push(`${label}: ${bits.length ? bits.join(", ") : "nothing new"}.`)
+    // Named individually: "skipped" on its own tells her nothing actionable,
+    // and the usual cause is one client's board that cannot be read.
+    for (const e of r.errors.slice(0, 5)) lines.push(`   ${e}`)
+  }
+  return lines
+}
+
 function when(iso: string): string {
   return new Date(iso).toLocaleString("en-US", {
     month: "short",
@@ -66,7 +115,17 @@ export default function Automations() {
   const [note, setNote] = useState("")
   const [busy, setBusy] = useState<number | null>(null)
   const [checking, setChecking] = useState(false)
+  const [lastRun, setLastRun] = useState<string[]>([])
   const [confirmAuto, setConfirmAuto] = useState<Rule | null>(null)
+
+  // The email editor: which rule is open, and the unsaved text in it.
+  const [editing, setEditing] = useState<string | null>(null)
+  const [draftSubject, setDraftSubject] = useState("")
+  const [draftBody, setDraftBody] = useState("")
+  const [savingText, setSavingText] = useState(false)
+  const [preview, setPreview] = useState<{ subject: string; html: string } | null>(null)
+  const [placeholders, setPlaceholders] = useState<Placeholder[]>([])
+  const [defaults, setDefaults] = useState<{ subject: string; body: string } | null>(null)
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/automations").catch(() => null)
@@ -76,11 +135,19 @@ export default function Automations() {
       return
     }
     const data = (await res.json().catch(() => null)) as
-      | { rules?: Rule[]; pending?: Item[]; history?: Item[] }
+      | {
+          rules?: Rule[]
+          pending?: Item[]
+          history?: Item[]
+          defaults?: { subject: string; body: string }
+          placeholders?: Placeholder[]
+        }
       | null
     setRules(data?.rules ?? [])
     setPending(data?.pending ?? [])
     setHistory(data?.history ?? [])
+    setPlaceholders(data?.placeholders ?? [])
+    setDefaults(data?.defaults ?? null)
     setError("")
   }, [])
 
@@ -110,6 +177,60 @@ export default function Automations() {
     await load()
   }
 
+  function openEditor(r: Rule) {
+    setEditing(r.key)
+    setDraftSubject(r.subject)
+    setDraftBody(r.body)
+    setPreview(null)
+    setNote("")
+    setError("")
+  }
+
+  async function saveText(key: string, useDefault = false) {
+    setSavingText(true)
+    setError("")
+    setNote("")
+    const res = await fetch("/api/admin/automations", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        key,
+        // null is the signal for "back to the wording we shipped".
+        subject: useDefault ? null : draftSubject,
+        emailBody: useDefault ? null : draftBody,
+      }),
+    }).catch(() => null)
+    setSavingText(false)
+    if (!res?.ok) {
+      setError("Couldn't save the wording.")
+      return
+    }
+    setNote(useDefault ? "Put back to the standard wording." : "Saved.")
+    setPreview(null)
+    await load()
+    if (useDefault && defaults) {
+      setDraftSubject(defaults.subject)
+      setDraftBody(defaults.body)
+    }
+  }
+
+  async function showPreview(key: string) {
+    setError("")
+    const res = await fetch("/api/admin/automations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "preview", key, subject: draftSubject, emailBody: draftBody }),
+    }).catch(() => null)
+    if (!res?.ok) {
+      setError("Couldn't build the preview.")
+      return
+    }
+    const data = (await res.json().catch(() => null)) as
+      | { preview?: { subject: string; html: string } }
+      | null
+    setPreview(data?.preview ?? null)
+  }
+
   async function decide(id: number, action: "send" | "dismiss") {
     setBusy(id)
     setError("")
@@ -134,6 +255,7 @@ export default function Automations() {
     setChecking(true)
     setError("")
     setNote("")
+    setLastRun([])
     const res = await fetch("/api/admin/automations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -144,8 +266,11 @@ export default function Automations() {
       setError("The check couldn't finish.")
       return
     }
-    setNote("Checked. Anything new is below.")
+    const data = (await res.json().catch(() => null)) as
+      | { results?: Record<string, RunSummary> }
+      | null
     await load()
+    setLastRun(data?.results ? describeRun(data.results, rules) : [])
   }
 
   const anyOn = rules.some((r) => r.enabled)
@@ -158,15 +283,34 @@ export default function Automations() {
           <h2 className="text-sm font-semibold text-gray-800">
             Waiting for you{pending.length > 0 && ` (${pending.length})`}
           </h2>
-          <button
-            type="button"
-            onClick={checkNow}
-            disabled={checking || !anyOn}
-            className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-          >
-            {checking ? "Checking…" : "Check now"}
-          </button>
+          <div className="flex items-center gap-2">
+            {!anyOn && !loading && (
+              <span className="text-xs text-gray-400">Switch an automation on first</span>
+            )}
+            <button
+              type="button"
+              onClick={checkNow}
+              disabled={checking || !anyOn}
+              className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              {checking ? "Checking…" : "Check now"}
+            </button>
+          </div>
         </div>
+
+        {lastRun.length > 0 && (
+          <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 space-y-1">
+            {lastRun.map((line, i) => (
+              <p key={i} className="text-xs text-gray-600 whitespace-pre-wrap">
+                {line}
+              </p>
+            ))}
+            <p className="text-[11px] text-gray-400 pt-1">
+              &ldquo;Nothing new&rdquo; means the document is not on the client&apos;s Airtable board
+              yet. The portal reads Airtable, not Drive, so a file still syncing is invisible to it.
+            </p>
+          </div>
+        )}
 
         {loading ? (
           <p className="text-sm text-gray-400">Loading…</p>
@@ -280,6 +424,111 @@ export default function Automations() {
                     />
                     <span className="text-sm text-gray-700">Send automatically</span>
                   </label>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => (editing === r.key ? setEditing(null) : openEditor(r))}
+                className="text-xs text-blue-600 hover:underline"
+              >
+                {editing === r.key ? "Close the email" : "Edit the email"}
+              </button>
+
+              {editing === r.key && (
+                <div className="border border-gray-200 rounded-lg p-4 space-y-3 bg-gray-50">
+                  <div>
+                    <label
+                      htmlFor={`subject-${r.key}`}
+                      className="block text-xs font-semibold text-gray-500 mb-1"
+                    >
+                      Subject
+                    </label>
+                    <input
+                      id={`subject-${r.key}`}
+                      type="text"
+                      value={draftSubject}
+                      onChange={(e) => setDraftSubject(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor={`body-${r.key}`}
+                      className="block text-xs font-semibold text-gray-500 mb-1"
+                    >
+                      Message
+                    </label>
+                    <textarea
+                      id={`body-${r.key}`}
+                      value={draftBody}
+                      onChange={(e) => setDraftBody(e.target.value)}
+                      rows={14}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white font-mono resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <p className="font-semibold text-gray-600">
+                      Anything in double braces is filled in when the email is sent:
+                    </p>
+                    {placeholders.map((ph) => (
+                      <p key={ph.token}>
+                        <code className="bg-white border border-gray-200 rounded px-1 py-0.5">
+                          {ph.token}
+                        </code>{" "}
+                        {ph.explain}
+                      </p>
+                    ))}
+                    <p className="pt-1 text-gray-400">
+                      Each document becomes its name, its date, and a <strong>Click here</strong>{" "}
+                      link. The link is embedded, so a long Drive address can&apos;t be broken up by
+                      the client&apos;s email program.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => saveText(r.key)}
+                      disabled={savingText}
+                      className="px-3 py-1.5 rounded-lg text-white text-sm font-semibold hover:opacity-90 disabled:opacity-60"
+                      style={{ background: "#1b2d45" }}
+                    >
+                      {savingText ? "Saving…" : "Save wording"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => showPreview(r.key)}
+                      className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-white"
+                    >
+                      Preview
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => saveText(r.key, true)}
+                      disabled={savingText}
+                      className="text-xs text-gray-400 hover:text-gray-700 underline"
+                    >
+                      Back to the standard wording
+                    </button>
+                  </div>
+
+                  {preview && (
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <p className="text-xs text-gray-400 mb-2">
+                        Preview, with made-up documents. This is what a client sees.
+                      </p>
+                      <p className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-100">
+                        {preview.subject}
+                      </p>
+                      {/* The HTML here is built by lib/automation-email from her
+                          own text, escaped on the way through, so the only
+                          markup in it is the links that file put there. */}
+                      <div dangerouslySetInnerHTML={{ __html: preview.html }} />
+                    </div>
+                  )}
                 </div>
               )}
             </div>

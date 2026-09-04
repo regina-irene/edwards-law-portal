@@ -2,6 +2,7 @@
 import { seedForms } from "@/lib/seed-forms"
 import { sendNewTasksEmail } from "@/lib/resend"
 import { fetchAllClientsRaw, clientDisplayLabel } from "@/lib/airtable"
+import { clientFirstName } from "@/lib/client-ids"
 
 /**
  * Tell the clients they have something to do (2026-08-22).
@@ -38,8 +39,8 @@ async function notifyAssigned(
       const client = clients.find((c) => String(c.clientId) === cid)
       // No address, opted out, or a closed case: say nothing.
       if (!client?.email || client.noMessageEmails || client.archived) continue
-      // Airtable names read "Last | First".
-      const firstName = (String(client.name ?? "").split("|")[1] ?? "").trim()
+      // Airtable names read "Last | First", though some read "Last, First".
+      const firstName = clientFirstName(String(client.name ?? ""))
       await sendNewTasksEmail({
         to: client.email,
         firstName: firstName || clientDisplayLabel(client.name) || "",

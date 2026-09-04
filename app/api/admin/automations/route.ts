@@ -6,7 +6,9 @@
 // POST   send or dismiss a queued email, or run a scan now
 import { NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin"
+import { clientFirstName } from "@/lib/client-ids"
 import { sendNewDocumentsEmail } from "@/lib/resend"
+import { renderEmail, DEFAULT_SUBJECT, DEFAULT_BODY, PLACEHOLDERS } from "@/lib/automation-email"
 import { runAutomations, seedRule } from "@/lib/automation-run"
 import {
   listRules,
@@ -39,7 +41,15 @@ export async function GET() {
       listQueue("pending"),
       listQueue("history", 25),
     ])
-    return NextResponse.json({ rules, pending, history })
+    return NextResponse.json({
+      rules,
+      pending,
+      history,
+      // So the editor can show what is available and offer "back to default"
+      // without the wording being duplicated in the browser code.
+      defaults: { subject: DEFAULT_SUBJECT, body: DEFAULT_BODY },
+      placeholders: PLACEHOLDERS,
+    })
   } catch (e) {
     console.error("[admin/automations] list failed:", e)
     return NextResponse.json({ error: "Couldn't load the automations." }, { status: 500 })
@@ -51,14 +61,25 @@ export async function PATCH(req: Request) {
   if (denied) return denied
 
   const body = (await req.json().catch(() => null)) as
-    | { key?: unknown; enabled?: unknown; mode?: unknown }
+    | { key?: unknown; enabled?: unknown; mode?: unknown; subject?: unknown; emailBody?: unknown }
     | null
   const key = typeof body?.key === "string" ? body.key : ""
   if (!ruleByKey(key)) return NextResponse.json({ error: "Unknown automation." }, { status: 400 })
 
-  const patch: { enabled?: boolean; mode?: AutomationMode } = {}
+  const patch: {
+    enabled?: boolean
+    mode?: AutomationMode
+    subject?: string | null
+    body?: string | null
+  } = {}
   if (typeof body?.enabled === "boolean") patch.enabled = body.enabled
   if (body?.mode === "auto" || body?.mode === "approve") patch.mode = body.mode
+  // null puts a field back to the shipped default; a string saves her wording.
+  // Capped so a paste accident cannot fill the column with a novel.
+  if (body?.subject === null) patch.subject = null
+  else if (typeof body?.subject === "string") patch.subject = body.subject.slice(0, 300)
+  if (body?.emailBody === null) patch.body = null
+  else if (typeof body?.emailBody === "string") patch.body = body.emailBody.slice(0, 8000)
 
   try {
     // Switching a rule ON draws the line here and now: everything already on
@@ -97,6 +118,38 @@ export async function POST(req: Request) {
     }
   }
 
+  if (action === "preview") {
+    const key = typeof (body as { key?: unknown })?.key === "string" ? String((body as { key: string }).key) : ""
+    const rule = (await listRules()).find((r) => r.key === key)
+    if (!rule) return NextResponse.json({ error: "Unknown automation." }, { status: 400 })
+    const raw = body as { subject?: unknown; emailBody?: unknown }
+    // Previewed from what is on screen, not from what is saved, so she can see
+    // an edit before committing to it.
+    const mail = renderEmail(
+      typeof raw.subject === "string" ? raw.subject : rule.subject,
+      typeof raw.emailBody === "string" ? raw.emailBody : rule.body,
+      {
+        firstName: "Jane",
+        clientName: "Sample | Jane",
+        documents: [
+          {
+            title: "2026.09.02 Notice of Hearing",
+            link: "https://drive.google.com/file/d/EXAMPLE/view",
+            date: "2026-09-02",
+          },
+          {
+            title: "2026.09.03 Letter to Opposing Counsel",
+            link: "https://drive.google.com/file/d/EXAMPLE2/view",
+            date: "2026-09-03",
+          },
+        ],
+        portalUrl: process.env.AUTH_URL ?? "https://edwards-law-portal.vercel.app",
+        noun: rule.board === "correspondence" ? "letter" : "filing",
+      }
+    )
+    return NextResponse.json({ ok: true, preview: mail })
+  }
+
   const id = Number(body?.id)
   if (!Number.isInteger(id) || id <= 0) {
     return NextResponse.json({ error: "Bad request" }, { status: 400 })
@@ -115,14 +168,16 @@ export async function POST(req: Request) {
   }
 
   if (action === "send") {
-    const rule = ruleByKey(item.ruleKey)
+    const rule = (await listRules()).find((r) => r.key === item.ruleKey)
     try {
-      await sendNewDocumentsEmail({
-        to: item.clientEmail,
-        firstName: (item.clientName.split("|")[1] ?? "").trim(),
-        noun: rule?.board === "correspondence" ? "letter" : "filing",
+      const mail = renderEmail(rule?.subject ?? DEFAULT_SUBJECT, rule?.body ?? DEFAULT_BODY, {
+        firstName: clientFirstName(item.clientName),
+        clientName: item.clientName,
         documents: item.documents,
+        portalUrl: process.env.AUTH_URL ?? "https://edwards-law-portal.vercel.app",
+        noun: rule?.board === "correspondence" ? "letter" : "filing",
       })
+      await sendNewDocumentsEmail({ to: item.clientEmail, ...mail })
       await decideQueueItem(id, "sent", email)
       return NextResponse.json({ ok: true })
     } catch (e) {

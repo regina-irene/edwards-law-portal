@@ -27,6 +27,7 @@
 // Tables are created on first use, the same reason as lib/ensure-columns: there
 // must never be a command for Regina to run.
 import { sql } from "@/lib/db"
+import { DEFAULT_SUBJECT, DEFAULT_BODY } from "@/lib/automation-email"
 
 /** More new documents than this in one scan is a re-sync, not a filing day. */
 export const AUTO_SEND_LIMIT = 8
@@ -70,6 +71,9 @@ export function ruleByKey(key: string): AutomationRuleDef | undefined {
 export interface AutomationRule extends AutomationRuleDef {
   enabled: boolean
   mode: AutomationMode
+  /** The wording Regina has saved, or the shipped default. */
+  subject: string
+  body: string
 }
 
 /** One document a client is about to be told about. */
@@ -147,6 +151,11 @@ export function ensureAutomationTables(): Promise<void> {
       CREATE INDEX IF NOT EXISTS automation_queue_status_idx
         ON automation_queue (status, created_at DESC)
     `
+    // The editable wording, added after the table shipped. Null means "use the
+    // default", so an untouched rule follows the shipped wording for ever
+    // rather than freezing a copy of whatever it said the day she opened it.
+    await sql`ALTER TABLE automation_rules ADD COLUMN IF NOT EXISTS subject TEXT`
+    await sql`ALTER TABLE automation_rules ADD COLUMN IF NOT EXISTS body TEXT`
   })()
   return ready
 }
@@ -154,21 +163,25 @@ export function ensureAutomationTables(): Promise<void> {
 /** Every rule with its current setting. Rules never seen before read as off. */
 export async function listRules(): Promise<AutomationRule[]> {
   await ensureAutomationTables()
-  const r = await sql`SELECT key, enabled, mode FROM automation_rules`
+  const r = await sql`SELECT key, enabled, mode, subject, body FROM automation_rules`
   const saved = new Map(r.rows.map((row) => [String(row.key), row]))
   return RULES.map((def) => {
     const row = saved.get(def.key)
+    const subject = row && typeof row.subject === "string" && row.subject.trim() ? row.subject : DEFAULT_SUBJECT
+    const body = row && typeof row.body === "string" && row.body.trim() ? row.body : DEFAULT_BODY
     return {
       ...def,
       enabled: row ? Boolean(row.enabled) : false,
       mode: row && String(row.mode) === "auto" ? "auto" : "approve",
+      subject,
+      body,
     }
   })
 }
 
 export async function setRule(
   key: string,
-  patch: { enabled?: boolean; mode?: AutomationMode }
+  patch: { enabled?: boolean; mode?: AutomationMode; subject?: string | null; body?: string | null }
 ): Promise<void> {
   await ensureAutomationTables()
   const def = ruleByKey(key)
@@ -176,11 +189,17 @@ export async function setRule(
   const current = (await listRules()).find((r) => r.key === key)!
   const enabled = patch.enabled ?? current.enabled
   const mode = patch.mode ?? current.mode
+  // null means "put it back to the default", which is why the column is
+  // nullable rather than holding a copy of the default text.
+  const subject =
+    patch.subject === undefined ? current.subject : patch.subject === null ? null : patch.subject
+  const body = patch.body === undefined ? current.body : patch.body === null ? null : patch.body
   await sql`
-    INSERT INTO automation_rules (key, enabled, mode, updated_at)
-    VALUES (${key}, ${enabled}, ${mode}, now())
+    INSERT INTO automation_rules (key, enabled, mode, subject, body, updated_at)
+    VALUES (${key}, ${enabled}, ${mode}, ${subject}, ${body}, now())
     ON CONFLICT (key) DO UPDATE
-      SET enabled = EXCLUDED.enabled, mode = EXCLUDED.mode, updated_at = now()
+      SET enabled = EXCLUDED.enabled, mode = EXCLUDED.mode,
+          subject = EXCLUDED.subject, body = EXCLUDED.body, updated_at = now()
   `
 }
 

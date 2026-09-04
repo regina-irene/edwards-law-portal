@@ -19,6 +19,7 @@ jest.mock("@/lib/automations", () => {
 })
 
 import { runAutomations } from "@/lib/automation-run"
+import { DEFAULT_SUBJECT, DEFAULT_BODY } from "@/lib/automation-email"
 import { getAllClients } from "@/lib/airtable"
 import { getPleadings } from "@/lib/pleadings"
 import { sendNewDocumentsEmail } from "@/lib/resend"
@@ -55,6 +56,8 @@ function rule(over: Partial<{ enabled: boolean; mode: "auto" | "approve" }> = {}
       board: "pleadings",
       enabled: true,
       mode: "auto",
+      subject: DEFAULT_SUBJECT,
+      body: DEFAULT_BODY,
       ...over,
     },
     {
@@ -64,6 +67,8 @@ function rule(over: Partial<{ enabled: boolean; mode: "auto" | "approve" }> = {}
       board: "correspondence",
       enabled: false,
       mode: "approve",
+      subject: DEFAULT_SUBJECT,
+      body: DEFAULT_BODY,
     },
   ]
 }
@@ -122,9 +127,13 @@ describe("runAutomations", () => {
     expect(mockSend).toHaveBeenCalledTimes(1)
     const arg = mockSend.mock.calls[0][0]
     expect(arg.to).toBe("client@example.com")
-    expect(arg.firstName).toBe("Culix")
-    expect(arg.documents).toHaveLength(1)
-    expect(arg.documents[0].id).toBe("recDoc1")
+    // The wording is built by lib/automation-email from the rule's template, so
+    // what arrives here is a finished email. Check it names the right document
+    // and greets the right person.
+    expect(arg.subject).toContain("1 new filing")
+    expect(arg.text).toContain("Dear Culix,")
+    expect(arg.html).toContain("2026.09.01 Motion")
+    expect(arg.html).toContain(">Click here</a>")
     expect(out["new-pleading"].sent).toBe(1)
   })
 
@@ -175,6 +184,10 @@ describe("runAutomations", () => {
     expect(mockMarkSeen).not.toHaveBeenCalled()
     expect(mockSend).not.toHaveBeenCalled()
     expect(out["new-pleading"].skipped).toBe(1)
+    // Named, not just counted: a silent counter is what hid a malformed base id
+    // for a whole afternoon.
+    expect(out["new-pleading"].errors[0]).toContain("Gichana")
+    expect(out["new-pleading"].errors[0]).toContain("Pleadings board")
   })
 
   it("skips archived clients entirely", async () => {
@@ -187,6 +200,15 @@ describe("runAutomations", () => {
 
     expect(mockPleadings).not.toHaveBeenCalled()
     expect(mockSend).not.toHaveBeenCalled()
+  })
+
+  it("names a client who has no base id at all", async () => {
+    mockClients.mockResolvedValue([{ ...CLIENT, clientBaseId: "" }])
+    mockListRules.mockResolvedValue(rule())
+
+    const out = await runAutomations()
+
+    expect(out["new-pleading"].errors[0]).toContain("no Airtable base id")
   })
 
   it("honours a client who has asked not to be emailed, but still records the document", async () => {
