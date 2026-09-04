@@ -1,5 +1,58 @@
 // app/api/admin/tasks/route.ts
 import { seedForms } from "@/lib/seed-forms"
+import { sendNewTasksEmail } from "@/lib/resend"
+import { fetchAllClientsRaw, clientDisplayLabel } from "@/lib/airtable"
+
+/**
+ * Tell the clients they have something to do (2026-08-22).
+ *
+ * Assigning used to send nothing, so a task sat unseen until the client next
+ * signed in. This is fired AFTER the rows are safely written and is never
+ * awaited into the response: a mail failure must not make a successful
+ * assignment look like it failed, because the task really is assigned.
+ *
+ * Honours the same per-client "No Message Emails" opt-out the message emails
+ * use. A client who asked not to be emailed does not get emailed.
+ *
+ * One email per client per assignment, listing every task, rather than one per
+ * task - five emails for one action reads as a fault.
+ */
+async function notifyAssigned(
+  rows: { client_id: unknown; title: unknown; due_date?: unknown }[]
+): Promise<void> {
+  try {
+    const byClient = new Map<string, { titles: string[]; dueDate: string | null }>()
+    for (const r of rows) {
+      const cid = String(r.client_id ?? "")
+      const title = String(r.title ?? "").trim()
+      if (!cid || !title) continue
+      const entry = byClient.get(cid) ?? { titles: [], dueDate: null }
+      entry.titles.push(title)
+      if (!entry.dueDate && r.due_date) entry.dueDate = String(r.due_date).slice(0, 10)
+      byClient.set(cid, entry)
+    }
+    if (byClient.size === 0) return
+
+    const clients = await fetchAllClientsRaw()
+    for (const [cid, entry] of byClient) {
+      const client = clients.find((c) => String(c.clientId) === cid)
+      // No address, opted out, or a closed case: say nothing.
+      if (!client?.email || client.noMessageEmails || client.archived) continue
+      // Airtable names read "Last | First".
+      const firstName = (String(client.name ?? "").split("|")[1] ?? "").trim()
+      await sendNewTasksEmail({
+        to: client.email,
+        firstName: firstName || clientDisplayLabel(client.name) || "",
+        taskTitles: entry.titles,
+        dueDate: entry.dueDate,
+      }).catch((e) => {
+        console.error(`[tasks] assignment email failed for ${cid}:`, e instanceof Error ? e.message : e)
+      })
+    }
+  } catch (e) {
+    console.error("[tasks] assignment emails failed:", e instanceof Error ? e.message : e)
+  }
+}
 import { requireAdmin } from "@/lib/admin"
 import { sql } from "@/lib/db"
 import { sanitizeNotesHtml } from "@/lib/sanitize"
@@ -163,6 +216,9 @@ export async function POST(req: Request) {
           if (result.rows[0]) createdCustom.push(result.rows[0])
         }
         if (createdCustom.length === 0) return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+        // Not awaited: the tasks are saved, and a mail problem must not turn a
+        // successful assignment into an error on Regina's screen.
+        void notifyAssigned(createdCustom as { client_id: unknown; title: unknown; due_date?: unknown }[])
         return NextResponse.json({ task: createdCustom[0], tasks: createdCustom }, { status: 201 })
       }
 
@@ -188,6 +244,7 @@ export async function POST(req: Request) {
         created.push(...assigned.rows)
       }
       if (created.length === 0) return NextResponse.json({ error: "Template not found" }, { status: 404 })
+      void notifyAssigned(created as { client_id: unknown; title: unknown; due_date?: unknown }[])
       return NextResponse.json({ task: created[0], tasks: created }, { status: 201 })
     } catch {
       return NextResponse.json({ error: "Internal server error" }, { status: 500 })

@@ -8,8 +8,18 @@ import { getPortalClient } from "@/lib/portal-client"
 import { assertClientCanWrite } from "@/lib/client-write-guard"
 import { getForm } from "@/lib/fileflow"
 import { getPortalForm } from "@/lib/portal-forms"
+import { notifyFormSaved } from "@/lib/form-notify"
 import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
+
+/**
+ * The form's human title, for the notification email. Falls back to the key,
+ * which is ugly but readable, rather than failing the save.
+ */
+async function formLabelFor(formKey: string): Promise<string> {
+  const portal = await getPortalForm(formKey).catch(() => null)
+  return portal?.definition?.label || portal?.label || formKey
+}
 
 export async function GET(_req: Request, { params }: { params: Promise<{ formKey: string }> }) {
   const client = await getPortalClient()
@@ -59,6 +69,20 @@ export async function PUT(req: Request, { params }: { params: Promise<{ formKey:
         DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
       `
     }
+
+    // Tell the firm. Deliberately NOT awaited: the answers are already safely
+    // in the database, and an email problem must not turn a successful save
+    // into a red error on the client's screen. notifyFormSaved rate-limits
+    // itself, so pressing Save five times in an afternoon still sends one.
+    const answered = entries.filter(([, v]) => typeof v === "string" && v.trim() !== "").length
+    void notifyFormSaved({
+      clientId: cid,
+      clientName: client.name || client.email || "A client",
+      formKey,
+      formLabel: await formLabelFor(formKey),
+      answered,
+    })
+
     return NextResponse.json({ ok: true })
   } catch (e) {
     console.error("[forms] save failed:", e)

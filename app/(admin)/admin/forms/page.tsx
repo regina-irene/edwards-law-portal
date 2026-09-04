@@ -17,6 +17,8 @@ interface FormRow {
   updated_at: string
   fieldCount: number
   sections: number
+  /** Clients who have answered this since anyone here last looked. */
+  unread?: number
 }
 
 const STANDALONE = "Standalone - not in a stage"
@@ -170,6 +172,11 @@ export default function AdminFormsPage() {
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-gray-900">
                   {f.label}
+                  {(f.unread ?? 0) > 0 && (
+                    <span className="ml-2 align-middle text-[10px] font-semibold uppercase tracking-wide text-blue-700 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5">
+                      {f.unread} new
+                    </span>
+                  )}
                   {f.source === "fileflow" && <span className="ml-2 text-[11px] font-normal text-gray-400">from FileFlow</span>}
                 </p>
                 <p className="text-sm text-gray-500">

@@ -19,16 +19,14 @@ beforeEach(() => {
 describe("GET /api/messages", () => {
   it("returns 401 when not authenticated", async () => {
     mockAuth.mockResolvedValueOnce(null)
-    const req = new Request("http://localhost/api/messages")
-    const res = await GET(req)
+    const res = await GET()
     expect(res.status).toBe(401)
   })
 
   it("returns 404 when client not found", async () => {
     mockAuth.mockResolvedValueOnce({ user: { email: "unknown@test.com" } })
     mockGetClient.mockResolvedValueOnce(null)
-    const req = new Request("http://localhost/api/messages")
-    const res = await GET(req)
+    const res = await GET()
     expect(res.status).toBe(404)
   })
 
@@ -42,8 +40,7 @@ describe("GET /api/messages", () => {
           { id: "uuid-1", body: "Please submit your tax returns.", created_at: "2026-03-01T10:00:00Z", read: false },
         ],
       })
-    const req = new Request("http://localhost/api/messages")
-    const res = await GET(req)
+    const res = await GET()
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.messages).toHaveLength(1)

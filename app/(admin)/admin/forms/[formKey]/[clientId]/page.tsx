@@ -12,6 +12,7 @@ import { getForm } from "@/lib/fileflow"
 import { loadAnswers, buildCompletedForm } from "@/lib/form-responses"
 import { fetchAllClientsRaw, clientDisplayLabel } from "@/lib/airtable"
 import { getClientLabels } from "@/lib/client-labels"
+import { markFormReviewed } from "@/lib/form-review"
 
 export const dynamic = "force-dynamic"
 
@@ -35,6 +36,11 @@ export default async function CompletedFormPage({
     fetchAllClientsRaw().catch(() => []),
     getClientLabels().catch(() => ({}) as Record<string, string>),
   ])
+
+  // Opening this page IS reading the answers, so the dashboard's "Forms to
+  // review" count clears here. Not awaited: it must never delay or fail the
+  // page she came here to read.
+  void markFormReviewed(cid, key)
 
   const match = clients.find((c) => String(c.clientId) === cid)
   const clientLabel = labels[cid] || (match ? clientDisplayLabel(match.name) : "") || cid

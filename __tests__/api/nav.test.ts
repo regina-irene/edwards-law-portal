@@ -27,8 +27,7 @@ beforeEach(() => {
 describe("GET /api/nav", () => {
   it("returns default order when no row exists", async () => {
     mockSql.mockResolvedValueOnce({ rows: [] })
-    const req = new Request("http://localhost/api/nav")
-    const res = await GET(req)
+    const res = await GET()
     const body = await res.json()
     expect(body.pages).toEqual(DEFAULT_PAGES)
   })
@@ -36,16 +35,14 @@ describe("GET /api/nav", () => {
   it("returns stored order when row exists", async () => {
     const custom = ["chat", "dashboard", "messages"]
     mockSql.mockResolvedValueOnce({ rows: [{ pages: custom }] })
-    const req = new Request("http://localhost/api/nav")
-    const res = await GET(req)
+    const res = await GET()
     const body = await res.json()
     expect(body.pages).toEqual(custom)
   })
 
   it("returns 401 when not authenticated", async () => {
     mockAuth.mockResolvedValueOnce(null)
-    const req = new Request("http://localhost/api/nav")
-    const res = await GET(req)
+    const res = await GET()
     expect(res.status).toBe(401)
   })
 })

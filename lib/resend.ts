@@ -136,3 +136,102 @@ export async function sendReminderEmail(opts: ReminderEmailOptions): Promise<voi
     text: body,
   })
 }
+
+/**
+ * "You have new tasks" - sent the moment the firm assigns them (2026-08-22).
+ *
+ * Assigning a task used to send nothing at all. It appeared on the client's
+ * Tasks page and they found out whenever they next happened to sign in, which
+ * for some clients is not for days. The daily reminder job did not cover it
+ * either: that one only looks at tasks with a due date, and reads them from
+ * Airtable rather than the portal.
+ *
+ * One email per assignment, however many tasks it contained, because five
+ * separate emails for one action reads as a malfunction.
+ *
+ * Deliberately says only the task TITLES. Anything sensitive lives behind the
+ * sign-in, the same way sendNewMessageEmail never puts the message in the body.
+ */
+export async function sendNewTasksEmail(opts: {
+  to: string
+  firstName: string
+  taskTitles: string[]
+  dueDate?: string | null
+}): Promise<void> {
+  const resend = getClient()
+  const FROM = process.env.EMAIL_FROM ?? "Edwards Family Law <portal@edwardsfamilylaw.com>"
+  const PORTAL_URL = process.env.AUTH_URL ?? "https://edwards-law-portal.vercel.app"
+
+  const many = opts.taskTitles.length > 1
+  const greeting = opts.firstName ? `Dear ${opts.firstName},` : "Hello,"
+  const list = opts.taskTitles.map((t) => `  - ${t}`).join("\n")
+  const due = opts.dueDate
+    ? `\nPlease complete ${many ? "these" : "this"} by ${new Date(opts.dueDate + "T00:00:00").toLocaleDateString(
+        "en-US",
+        { month: "long", day: "numeric", year: "numeric" }
+      )}.\n`
+    : ""
+
+  const body = `${greeting}
+
+We have added ${many ? "some items" : "an item"} to your list in the client portal:
+
+${list}
+${due}
+You can complete ${many ? "them" : "it"} here:
+
+  ${PORTAL_URL}/tasks
+
+Sign in using this email address - with Google, or by requesting a sign-in link on the login page.
+
+If you have any questions, reply to us in the portal and we will get back to you.
+
+Warm regards,
+Edwards Family Law`
+
+  await resend.emails.send({
+    from: FROM,
+    to: opts.to,
+    subject: many ? "New items on your client portal list" : "A new item on your client portal list",
+    text: body,
+  })
+}
+
+/**
+ * "A client has filled in a form" - to the FIRM, not the client (2026-08-22).
+ *
+ * A client could complete a whole form and nobody at the firm would know until
+ * somebody happened to open the Answers page. The portal's activity feed showed
+ * it, but only to whoever was looking.
+ *
+ * Names the client and the form and nothing else: their answers stay behind the
+ * sign-in, the same rule the client-facing emails follow.
+ */
+export async function sendFormSubmittedEmail(opts: {
+  to: string[]
+  clientName: string
+  formLabel: string
+  answered: number
+}): Promise<void> {
+  if (opts.to.length === 0) return
+  const resend = getClient()
+  const FROM = process.env.EMAIL_FROM ?? "Edwards Family Law <portal@edwardsfamilylaw.com>"
+  const PORTAL_URL = process.env.AUTH_URL ?? "https://edwards-law-portal.vercel.app"
+
+  const body = `${opts.clientName} has filled in the ${opts.formLabel}.
+
+${opts.answered} ${opts.answered === 1 ? "question" : "questions"} answered.
+
+Read their answers here:
+
+  ${PORTAL_URL}/admin/forms
+
+Edwards Family Law portal`
+
+  await resend.emails.send({
+    from: FROM,
+    to: opts.to,
+    subject: `${opts.clientName} filled in the ${opts.formLabel}`,
+    text: body,
+  })
+}

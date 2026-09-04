@@ -12,6 +12,7 @@ import ActivityFeed from "@/components/admin/ActivityFeed"
 import { bodyToPlainText } from "@/lib/message-format"
 import { requireAdmin, displayNameFromEmail } from "@/lib/admin"
 import { ensureChatAuthorColumn } from "@/lib/ensure-columns"
+import { countFormsAwaitingReview } from "@/lib/form-review"
 
 const num = (r: any) => parseInt(r?.rows?.[0]?.count ?? "0", 10) || 0
 
@@ -33,10 +34,13 @@ export default async function AdminHome({
   // and on a database without the column the whole feed would come back empty.
   await ensureChatAuthorColumn()
 
-  const [clients, labels, unreadMessages, openTasksRes, activity] = await Promise.all([
+  const [clients, labels, unreadMessages, formsWaiting, openTasksRes, activity] = await Promise.all([
     fetchAllClientsRaw().catch(() => []),
     getClientLabels().catch(() => ({} as Record<string, string>)),
     sql`SELECT COUNT(*) AS count FROM chat_messages WHERE sender='client' AND read=false`.catch(() => ({ rows: [{ count: "0" }] })),
+    // Forms a client has answered that nobody here has opened since. Clears
+    // itself when you read them, exactly like unread messages.
+    countFormsAwaitingReview(),
     sql`
       SELECT id, client_id, title, due_date, stage
       FROM client_tasks WHERE status='pending'
@@ -187,6 +191,7 @@ export default async function AdminHome({
       href: includeArchived ? "/admin/clients?archived=1" : "/admin/clients",
     },
     { label: "Unread messages", value: num(unreadMessages), href: "/admin/messages" },
+    { label: "Forms to review", value: formsWaiting, href: "/admin/forms" },
     { label: "Pending tasks", value: openTasks.length, href: "/admin/tasks" },
   ]
 

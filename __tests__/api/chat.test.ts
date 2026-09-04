@@ -21,8 +21,7 @@ beforeEach(() => {
 describe("GET /api/chat", () => {
   it("returns 401 when not authenticated", async () => {
     mockAuth.mockResolvedValueOnce(null)
-    const req = new Request("http://localhost/api/chat")
-    const res = await GET(req)
+    const res = await GET()
     expect(res.status).toBe(401)
   })
 
@@ -32,8 +31,7 @@ describe("GET /api/chat", () => {
       .mockResolvedValueOnce({
         rows: [{ id: "uuid-1", sender: "firm", body: "Hello!", created_at: "2026-03-01T10:00:00Z" }],
       })
-    const req = new Request("http://localhost/api/chat")
-    const res = await GET(req)
+    const res = await GET()
     const body = await res.json()
     expect(body.messages).toHaveLength(1)
   })

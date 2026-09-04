@@ -8,6 +8,7 @@ import { getForm } from "@/lib/fileflow"
 import { clientsWithAnswers } from "@/lib/form-responses"
 import { fetchAllClientsRaw, clientDisplayLabel } from "@/lib/airtable"
 import { getClientLabels } from "@/lib/client-labels"
+import { unreviewedClientIds } from "@/lib/form-review"
 
 export const dynamic = "force-dynamic"
 
@@ -25,10 +26,11 @@ export default async function FormAnswersPage({ params }: { params: Promise<{ fo
   const portal = await getPortalForm(key).catch(() => null)
   const definition = portal ? portal.definition : await getForm(key).catch(() => null)
 
-  const [responders, clients, labels] = await Promise.all([
+  const [responders, clients, labels, unread] = await Promise.all([
     clientsWithAnswers(key).catch(() => []),
     fetchAllClientsRaw().catch(() => []),
     getClientLabels().catch(() => ({}) as Record<string, string>),
+    unreviewedClientIds(key),
   ])
 
   const labelOf = (id: string) => {
@@ -66,7 +68,14 @@ export default async function FormAnswersPage({ params }: { params: Promise<{ fo
               className="flex items-baseline justify-between gap-4 px-5 py-3.5 hover:bg-gray-50"
             >
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-900">{labelOf(r.clientId)}</p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {labelOf(r.clientId)}
+                  {unread.has(String(r.clientId)) && (
+                    <span className="ml-2 align-middle text-[10px] font-semibold uppercase tracking-wide text-blue-700 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5">
+                      New
+                    </span>
+                  )}
+                </p>
                 <p className="text-sm text-gray-500">
                   {r.answers} of {total || "?"} answered
                 </p>

@@ -1,5 +1,6 @@
 // app/api/admin/forms/route.ts - the form builder's CRUD. Admin only.
 import { seedForms } from "@/lib/seed-forms"
+import { unreviewedCountByForm } from "@/lib/form-review"
 import { requireAdmin } from "@/lib/admin"
 import {
   listPortalForms,
@@ -53,7 +54,13 @@ export async function GET(req: Request) {
     // Puts any firm form that has not been created yet into the list.
     // One-shot and non-destructive; see lib/seed-forms.
     await seedForms()
-    const [forms, stages] = await Promise.all([listPortalForms(), listStages()])
+    const [forms, stages, unread] = await Promise.all([
+      listPortalForms(),
+      listStages(),
+      // How many clients have answered but nobody here has read yet, so the
+      // list can say which form is waiting rather than only how many.
+      unreviewedCountByForm(),
+    ])
     return NextResponse.json({
       stages,
       forms: forms.map((f) => ({
@@ -65,6 +72,7 @@ export async function GET(req: Request) {
         updated_at: f.updated_at,
         fieldCount: countFields(f.definition),
         sections: f.definition.sections.length,
+        unread: unread[f.key] ?? 0,
       })),
     })
   } catch (e) {
