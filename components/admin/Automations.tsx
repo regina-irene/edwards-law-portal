@@ -27,6 +27,21 @@ interface Rule {
   alsoFirm?: boolean
 }
 
+interface SendWindow {
+  enabled: boolean
+  startHour: number
+  endHour: number
+  days: number[]
+}
+
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+function hourLabel(h: number): string {
+  if (h === 0) return "midnight"
+  if (h === 12) return "noon"
+  return h < 12 ? `${h} am` : `${h - 12} pm`
+}
+
 interface Placeholder {
   token: string
   explain: string
@@ -129,6 +144,10 @@ export default function Automations() {
   const [savingText, setSavingText] = useState(false)
   const [preview, setPreview] = useState<{ subject: string; html: string } | null>(null)
   const [placeholders, setPlaceholders] = useState<Placeholder[]>([])
+  const [sendWindow, setSendWindow] = useState<SendWindow | null>(null)
+  const [windowLabel, setWindowLabel] = useState("")
+  const [sendingNow, setSendingNow] = useState(true)
+  const [savingWindow, setSavingWindow] = useState(false)
   const [defaults, setDefaults] = useState<{ subject: string; body: string } | null>(null)
 
   const load = useCallback(async () => {
@@ -145,6 +164,9 @@ export default function Automations() {
           history?: Item[]
           defaults?: { subject: string; body: string }
           placeholders?: Placeholder[]
+          sendWindow?: SendWindow
+          sendWindowLabel?: string
+          sendingNow?: boolean
         }
       | null
     setRules(data?.rules ?? [])
@@ -152,6 +174,9 @@ export default function Automations() {
     setHistory(data?.history ?? [])
     setPlaceholders(data?.placeholders ?? [])
     setDefaults(data?.defaults ?? null)
+    if (data?.sendWindow) setSendWindow(data.sendWindow)
+    setWindowLabel(data?.sendWindowLabel ?? "")
+    setSendingNow(data?.sendingNow !== false)
     setError("")
   }, [])
 
@@ -191,6 +216,26 @@ export default function Automations() {
    * broken box in the client's inbox. Width is set in the markup because
    * Outlook ignores CSS sizing on images.
    */
+  async function saveWindow(next: SendWindow) {
+    setSendWindow(next)
+    setSavingWindow(true)
+    setError("")
+    setNote("")
+    const res = await fetch("/api/admin/automations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "window", window: next }),
+    }).catch(() => null)
+    setSavingWindow(false)
+    if (!res?.ok) {
+      setError("Couldn't save the sending hours.")
+      await load()
+      return
+    }
+    setNote("Sending hours saved.")
+    await load()
+  }
+
   function insertLogo() {
     const origin = typeof window !== "undefined" ? window.location.origin : ""
     setDraftBody(
@@ -290,10 +335,16 @@ export default function Automations() {
       return
     }
     const data = (await res.json().catch(() => null)) as
-      | { results?: Record<string, RunSummary> }
+      | { results?: Record<string, RunSummary>; outsideHours?: boolean; sendWindowLabel?: string }
       | null
     await load()
-    setLastRun(data?.results ? describeRun(data.results, rules) : [])
+    const lines = data?.results ? describeRun(data.results, rules) : []
+    if (data?.outsideHours) {
+      lines.unshift(
+        `Note: it is outside your sending hours (${data.sendWindowLabel ?? ""}). Pressing Check now sends anyway, because you asked for it. The hourly check would have waited.`
+      )
+    }
+    setLastRun(lines)
   }
 
   const anyOn = rules.some((r) => r.enabled)
@@ -403,7 +454,118 @@ export default function Automations() {
         )}
       </section>
 
-      {/* 2. The rules */}
+      {/* 2. When mail may go out */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-gray-800">Sending hours</h2>
+        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm text-gray-700">
+                Automatic emails only leave during these hours. Anything found outside them is{" "}
+                <strong>held, not skipped</strong>, and goes out when they next open.
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Currently {windowLabel || "not set"}
+                {sendWindow?.enabled && (
+                  <span className={sendingNow ? "text-green-700" : "text-amber-700"}>
+                    {" "}
+                    · {sendingNow ? "open now" : "closed now"}
+                  </span>
+                )}
+              </p>
+            </div>
+            <label className="shrink-0 inline-flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={sendWindow?.enabled ?? true}
+                disabled={!sendWindow || savingWindow}
+                onChange={(e) =>
+                  sendWindow && saveWindow({ ...sendWindow, enabled: e.target.checked })
+                }
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <span className="text-sm text-gray-700">
+                {sendWindow?.enabled ? "On" : "Off"}
+              </span>
+            </label>
+          </div>
+
+          {sendWindow?.enabled && (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                {DAY_LABELS.map((d, i) => {
+                  const on = sendWindow.days.includes(i)
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      disabled={savingWindow}
+                      onClick={() =>
+                        saveWindow({
+                          ...sendWindow,
+                          days: on
+                            ? sendWindow.days.filter((x) => x !== i)
+                            : [...sendWindow.days, i].sort(),
+                        })
+                      }
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${on ? "text-white border-transparent" : "bg-white text-gray-600 border-gray-300"}`}
+                      style={on ? { background: "#1b2d45" } : undefined}
+                    >
+                      {d}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="flex flex-wrap items-end gap-3">
+                <div>
+                  <label htmlFor="win-start" className="block text-xs font-semibold text-gray-500 mb-1">
+                    From
+                  </label>
+                  <select
+                    id="win-start"
+                    value={sendWindow.startHour}
+                    disabled={savingWindow}
+                    onChange={(e) =>
+                      saveWindow({ ...sendWindow, startHour: Number(e.target.value) })
+                    }
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white"
+                  >
+                    {Array.from({ length: 24 }, (_, h) => (
+                      <option key={h} value={h}>
+                        {hourLabel(h)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="win-end" className="block text-xs font-semibold text-gray-500 mb-1">
+                    Until
+                  </label>
+                  <select
+                    id="win-end"
+                    value={sendWindow.endHour}
+                    disabled={savingWindow}
+                    onChange={(e) => saveWindow({ ...sendWindow, endHour: Number(e.target.value) })}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white"
+                  >
+                    {Array.from({ length: 24 }, (_, h) => (
+                      <option key={h} value={h}>
+                        {hourLabel(h)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className="text-xs text-gray-400 pb-2">
+                  Eastern time. &ldquo;Until 4 pm&rdquo; means the last email can leave at 3:59.
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* 3. The rules */}
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-gray-800">Automations</h2>
         <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">

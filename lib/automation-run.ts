@@ -15,6 +15,7 @@ import { getDiscovery } from "@/lib/discovery"
 import { getCaseEvents } from "@/lib/calendar"
 import { listAllCaseStatuses } from "@/lib/case-status"
 import { sql } from "@/lib/db"
+import { getSendWindow, isWithinWindow, describeWindow } from "@/lib/automation-window"
 import { sendNewDocumentsEmail } from "@/lib/resend"
 import { renderEmail } from "@/lib/automation-email"
 import {
@@ -220,10 +221,27 @@ function dormantFor(email: string, signIns: Map<string, number>): QueuedDoc[] {
  * misnamed should not stop the client after them from hearing about their
  * hearing notice. Errors are collected and reported.
  */
-export async function runAutomations(): Promise<Record<string, RunSummary>> {
+export async function runAutomations(opts: { ignoreWindow?: boolean } = {}): Promise<Record<string, RunSummary>> {
   await ensureAutomationTables()
   const rules = await listRules()
   const out: Record<string, RunSummary> = {}
+
+  // Sending hours. Checked HERE, before anything is read or marked, so that
+  // outside the window the run is a complete no-op: the documents stay new and
+  // the first run after the window opens sends them. Checking at the point of
+  // sending instead would have already recorded them as accounted for, and the
+  // client would never have heard about them at all.
+  const window = await getSendWindow()
+  if (!opts.ignoreWindow && !isWithinWindow(window)) {
+    for (const r of rules) {
+      out[r.key] = {
+        ran: false,
+        reason: `Outside sending hours (${describeWindow(window)}). Anything new is held and goes out when they open.`,
+        seeded: 0, sent: 0, queued: 0, skipped: 0, errors: [],
+      }
+    }
+    return out
+  }
 
   const enabled = rules.filter((r) => r.enabled)
   if (enabled.length === 0) {

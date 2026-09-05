@@ -8,6 +8,10 @@ jest.mock("@/lib/discovery", () => ({ getDiscovery: jest.fn() }))
 jest.mock("@/lib/calendar", () => ({ getCaseEvents: jest.fn() }))
 jest.mock("@/lib/case-status", () => ({ listAllCaseStatuses: jest.fn() }))
 jest.mock("@/lib/db", () => ({ sql: jest.fn().mockResolvedValue({ rows: [] }) }))
+jest.mock("@/lib/automation-window", () => {
+  const actual = jest.requireActual("@/lib/automation-window")
+  return { ...actual, getSendWindow: jest.fn() }
+})
 jest.mock("@/lib/resend", () => ({ sendNewDocumentsEmail: jest.fn() }))
 jest.mock("@/lib/automations", () => {
   const actual = jest.requireActual("@/lib/automations")
@@ -31,6 +35,7 @@ import { getCaseEvents } from "@/lib/calendar"
 import { listAllCaseStatuses } from "@/lib/case-status"
 import { sendNewDocumentsEmail } from "@/lib/resend"
 import { listRules, hasSeenClient, seenRecordIds, markSeen, enqueue } from "@/lib/automations"
+import { getSendWindow, DEFAULT_WINDOW } from "@/lib/automation-window"
 
 const mockClients = getAllClients as jest.Mock
 const mockPleadings = getPleadings as jest.Mock
@@ -43,6 +48,7 @@ const mockHasSeen = hasSeenClient as jest.Mock
 const mockSeenIds = seenRecordIds as jest.Mock
 const mockMarkSeen = markSeen as jest.Mock
 const mockEnqueue = enqueue as jest.Mock
+const mockWindow = getSendWindow as jest.Mock
 
 const CLIENT = {
   id: "rec1",
@@ -105,6 +111,9 @@ beforeEach(() => {
   jest.clearAllMocks()
   mockClients.mockResolvedValue([CLIENT])
   mockSeenIds.mockResolvedValue(new Set<string>())
+  // Most tests are about what the scan does, not when, so the hours are off by
+  // default here and switched on only by the tests that care.
+  mockWindow.mockResolvedValue({ ...DEFAULT_WINDOW, enabled: false })
 })
 
 describe("runAutomations", () => {
@@ -373,5 +382,55 @@ describe("runAutomations", () => {
     // whole roster gets nudged at once.
     expect(out["r"].ran).toBe(false)
     expect(mockSend).not.toHaveBeenCalled()
+  })
+
+  // ---- sending hours ------------------------------------------------------
+
+  it("does nothing at all outside the sending hours, and marks nothing as seen", async () => {
+    mockWindow.mockResolvedValue(DEFAULT_WINDOW) // weekdays 8-4
+    jest.useFakeTimers().setSystemTime(new Date("2026-09-06T03:00:00Z")) // Sat 11pm ET
+    mockListRules.mockResolvedValue(rule())
+    mockHasSeen.mockResolvedValue(true)
+    mockPleadings.mockResolvedValue(docs(1))
+
+    const out = await runAutomations()
+    jest.useRealTimers()
+
+    expect(mockSend).not.toHaveBeenCalled()
+    expect(mockEnqueue).not.toHaveBeenCalled()
+    // Nothing read and nothing recorded, which is what makes the document still
+    // count as new on Monday morning. If it were marked seen here the client
+    // would never be told about it at all.
+    expect(mockMarkSeen).not.toHaveBeenCalled()
+    expect(mockPleadings).not.toHaveBeenCalled()
+    expect(out["new-pleading"].ran).toBe(false)
+    expect(out["new-pleading"].reason).toMatch(/Outside sending hours/)
+  })
+
+  it("sends the held document once the hours open", async () => {
+    mockWindow.mockResolvedValue(DEFAULT_WINDOW)
+    jest.useFakeTimers().setSystemTime(new Date("2026-09-07T14:00:00Z")) // Mon 10am ET
+    mockListRules.mockResolvedValue(rule())
+    mockHasSeen.mockResolvedValue(true)
+    mockPleadings.mockResolvedValue(docs(1))
+
+    const out = await runAutomations()
+    jest.useRealTimers()
+
+    expect(mockSend).toHaveBeenCalledTimes(1)
+    expect(out["new-pleading"].sent).toBe(1)
+  })
+
+  it("Check now can override the hours, because a person asked for it", async () => {
+    mockWindow.mockResolvedValue(DEFAULT_WINDOW)
+    jest.useFakeTimers().setSystemTime(new Date("2026-09-06T03:00:00Z")) // Sat 11pm ET
+    mockListRules.mockResolvedValue(rule())
+    mockHasSeen.mockResolvedValue(true)
+    mockPleadings.mockResolvedValue(docs(1))
+
+    await runAutomations({ ignoreWindow: true })
+    jest.useRealTimers()
+
+    expect(mockSend).toHaveBeenCalledTimes(1)
   })
 })

@@ -7,6 +7,13 @@
 import { NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin"
 import { sanitizeNotesHtml } from "@/lib/sanitize"
+import {
+  getSendWindow,
+  setSendWindow,
+  normalizeWindow,
+  describeWindow,
+  isWithinWindow,
+} from "@/lib/automation-window"
 import { clientFirstName } from "@/lib/client-ids"
 import { sendNewDocumentsEmail } from "@/lib/resend"
 import { renderEmail, DEFAULT_SUBJECT, DEFAULT_BODY, PLACEHOLDERS } from "@/lib/automation-email"
@@ -37,10 +44,11 @@ export async function GET() {
   if (denied) return denied
 
   try {
-    const [rules, pending, history] = await Promise.all([
+    const [rules, pending, history, sendWindow] = await Promise.all([
       listRules(),
       listQueue("pending"),
       listQueue("history", 25),
+      getSendWindow(),
     ])
     return NextResponse.json({
       rules,
@@ -50,6 +58,9 @@ export async function GET() {
       // without the wording being duplicated in the browser code.
       defaults: { subject: DEFAULT_SUBJECT, body: DEFAULT_BODY },
       placeholders: PLACEHOLDERS,
+      sendWindow,
+      sendWindowLabel: describeWindow(sendWindow),
+      sendingNow: isWithinWindow(sendWindow),
     })
   } catch (e) {
     console.error("[admin/automations] list failed:", e)
@@ -118,10 +129,27 @@ export async function POST(req: Request) {
     | null
   const action = typeof body?.action === "string" ? body.action : ""
 
+  if (action === "window") {
+    try {
+      const w = normalizeWindow((body as { window?: unknown })?.window)
+      await setSendWindow(w)
+      return NextResponse.json({ ok: true, sendWindow: w, sendWindowLabel: describeWindow(w) })
+    } catch (e) {
+      console.error("[admin/automations] window save failed:", e)
+      return NextResponse.json({ error: "Couldn't save the sending hours." }, { status: 500 })
+    }
+  }
+
   if (action === "run") {
     try {
-      const results = await runAutomations()
-      return NextResponse.json({ ok: true, results })
+      // Pressing the button is a deliberate act by somebody at the firm, so it
+      // is allowed outside the sending hours - otherwise testing the thing at
+      // 6pm looks identical to it being broken. The page says plainly that the
+      // hours were bypassed.
+      const w = await getSendWindow()
+      const outsideHours = !isWithinWindow(w)
+      const results = await runAutomations({ ignoreWindow: true })
+      return NextResponse.json({ ok: true, results, outsideHours, sendWindowLabel: describeWindow(w) })
     } catch (e) {
       console.error("[admin/automations] run failed:", e)
       return NextResponse.json({ error: "The check couldn't finish." }, { status: 500 })
